@@ -120,6 +120,11 @@ def run_interpolation()->None:
         run_fun = run_spider
     elif args.model == "run_tree":
         run_fun = run_tree
+        
+    import torch
+    print(torch.cuda.is_available())
+    print(torch.cuda.device_count())
+    print(torch.cuda.current_device())
 
     run_fun(N = args.N, 
             lam = args.lam, 
