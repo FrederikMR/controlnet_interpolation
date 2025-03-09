@@ -172,9 +172,9 @@ class ContextManager:
 
             image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
             if self.clip:
-            	Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
-	    else:
-	    	Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
+                	Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
+            else:
+                Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
 
         return
 
