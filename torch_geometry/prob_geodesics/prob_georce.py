@@ -76,7 +76,8 @@ class ProbGEORCE(ABC):
             self.init_fun = lambda z0, zN, N: (zN-z0)*torch.linspace(0.0,
                                                                      1.0,
                                                                      N+1,
-                                                                     dtype=z0.dtype)[1:-1].reshape(-1,1)+z0
+                                                                     dtype=z0.dtype,
+                                                                     device="cuda:0")[1:-1].reshape(-1,1)+z0
         else:   
             self.init_fun = init_fun
         
@@ -348,13 +349,13 @@ class ProbGEORCE(ABC):
         self.z0 = z0.reshape(-1).detach()
         self.zN = zN.reshape(-1).detach()
         self.diff = self.zN-self.z0
-        self.dim = len(z0)
+        self.dim = len(self.z0)
 
         self.G0 = self.M.G(z0).detach()
         self.Ginv0 = torch.linalg.inv(self.G0).reshape(1,self.dim,self.dim)
         
-        zi = self.init_fun(z0,zN,self.N)
-        model = GeoCurve(z0, zi, zN)
+        zi = self.init_fun(self.z0,self.zN,self.N)
+        model = GeoCurve(self.z0, zi, self.zN)
         ui = model.ui(zi)
 
         energy_init = self.energy(zi).item()
@@ -377,7 +378,7 @@ class ProbGEORCE(ABC):
                                                                     idx,
                                                                     )
 
-        zi = torch.vstack((z0, model.zi, zN)).detach()
+        zi = torch.vstack((self.z0, model.zi, self.zN)).detach()
             
         return zi.reshape(-1,*shape)
 
@@ -431,7 +432,8 @@ class ProbEuclideanGEORCE(ABC):
             self.init_fun = lambda z0, zN, N: (zN-z0)*torch.linspace(0.0,
                                                                      1.0,
                                                                      N+1,
-                                                                     dtype=z0.dtype)[1:-1].reshape(-1,1)+z0
+                                                                     dtype=z0.dtype,
+                                                                     device='cuda:0')[1:-1].reshape(-1,1)+z0
         else:
             self.init_fun = init_fun
         
@@ -570,7 +572,7 @@ class ProbEuclideanGEORCE(ABC):
         """
         
         g_cumsum = torch.vstack((torch.flip(torch.cumsum(torch.flip(gi, dims=[0]), dim=0), dims=[0]), 
-                                 torch.zeros(self.dim)))
+                                 torch.zeros(self.dim, device="cuda:0")))
         g_sum = torch.sum(g_cumsum, dim=0)/self.N
         
         return self.diff/self.N+0.5*(g_sum-g_cumsum)
@@ -650,10 +652,13 @@ class ProbEuclideanGEORCE(ABC):
         self.z0 = z0.reshape(-1).detach()
         self.zN = zN.reshape(-1).detach()
         self.diff = self.zN-self.z0
-        self.dim = len(z0)
+        self.dim = len(self.z0)
         
-        zi = self.init_fun(z0,zN,self.N)
-        model = GeoCurve(z0, zi, zN)
+        print(self.z0.get_device())
+        print(self.zN.get_device())
+        
+        zi = self.init_fun(self.z0,self.zN,self.N)
+        model = GeoCurve(self.z0, zi, self.zN)
 
         energy_init = self.energy(zi).item()
         reg_norm2_init = self.reg_norm2(zi).item()
@@ -666,6 +671,6 @@ class ProbEuclideanGEORCE(ABC):
         while self.cond_fun(grad_val, idx):
             model, gi, grad_val, idx = self.georce_step(model, gi, grad_val, idx)
         
-        zi = torch.vstack((z0, model.zi, zN)).detach()
+        zi = torch.vstack((self.z0, model.zi, self.zN)).detach()
             
         return zi.reshape(-1, *shape)

@@ -54,7 +54,7 @@ class LinearInterpolation(ABC):
         z0 = z0.reshape(-1)
         zN = zN.reshape(-1)
         
-        curve = (zN-z0)*torch.linspace(0.0,1.0,self.N+1,dtype=z0.dtype)[1:-1].reshape(-1,1)+z0
+        curve = (zN-z0)*torch.linspace(0.0,1.0,self.N+1,dtype=z0.dtype, device="cuda:0")[1:-1].reshape(-1,1)+z0
         
         curve = torch.vstack((z0, curve, zN))
         

@@ -62,7 +62,7 @@ class SphericalInterpolation(ABC):
         
         sin_theta = torch.sin(theta)
         
-        s = torch.linspace(0,1,self.N+1)[1:-1].reshape(-1,1)
+        s = torch.linspace(0,1,self.N+1, device="cuda:0")[1:-1].reshape(-1,1)
         
         curve = ((z0*torch.sin((1.-s)*theta) + zN*torch.sin(s*theta))/sin_theta)
         
