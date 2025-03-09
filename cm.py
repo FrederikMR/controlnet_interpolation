@@ -75,7 +75,7 @@ class ContextManager:
         
         s = torch.linspace(0,1,self.N+1,
                            device='cuda:0',
-                           )[1:-1].reshape(-1,1)
+                           )[1:-1]
         
         coef=2.0
         gamma=0
@@ -107,9 +107,9 @@ class ContextManager:
         print("End shape print")
         
         noisy_latent= torch.vmap(lambda alpha, beta, mu, nu: alpha*l1+beta*l2+\
-                                 (mu-alpha)*ldm.sqrt_alphas_cumprod[t] * left_image+ \
-                                     (nu-beta)*ldm.sqrt_alphas_cumprod[t] * right_image+ \
-                                         gamma*noise*ldm.sqrt_one_minus_alphas_cumprod[t])(alpha, beta, mu, nu)
+                                 (mu-alpha)*ldm.sqrt_alphas_cumprod[t].reshape(-1) * left_image+ \
+                                     (nu-beta)*ldm.sqrt_alphas_cumprod[t].reshape(-1) * right_image+ \
+                                         gamma*noise*ldm.sqrt_one_minus_alphas_cumprod[t].reshape(-1))(alpha, beta, mu, nu)
         
         curve=torch.clip(noisy_latent,-coef,coef)   
         
