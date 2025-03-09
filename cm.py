@@ -79,8 +79,11 @@ class ContextManager:
         
         coef=2.0
         gamma=0
-        alpha=math.cos(math.radians(s*90))
-        beta=math.sin(math.radians(s*90))
+        #alpha=math.cos(math.radians(s*90))
+        #beta=math.sin(math.radians(s*90))
+        alpha = torch.cos(0.5*torch.pi*s)
+        beta = torch.sin(0.5*torch.pi*s)
+        
         l=alpha/beta
         
         alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
