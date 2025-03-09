@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J bedroom_noise
+    #BSUB -J bedroom_noisediffusion
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -18,7 +18,7 @@
     
     python3 run_interpolation.py \
         --model bedroom \
-        --method noise \
+        --method noisediffusion \
         --lam 1.0 \
         --clip 0 \
         --N 10 \
