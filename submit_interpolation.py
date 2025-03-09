@@ -64,7 +64,7 @@ def loop_jobs(wait_time = 1.0):
     
     N = 10
     max_iter = 100
-    model = ['bedroom']
+    model = ['bedroom', 'cat']
     method = ['linear', 'ProbGEORCE_N', 'ProbGEORCE_D', 'noisediffusion', 'slerp', 'noise']
     clip = [0] #[0,1]
     lam = [1.0] #[0.1, 0.5, 1.0, 10.0, 50.0 100.0]

@@ -30,6 +30,7 @@ class ContextManager:
                  
         self.inter_method = inter_method
         self.lam = lam
+        self.N = N
         self.SInt = SphericalInterpolation(N=N)
         self.LInt = LinearInterpolation(N=N)
         self.PGEORCE_N = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum(x**2),
@@ -72,7 +73,9 @@ class ContextManager:
         left_image = left_image.reshape(-1)
         right_image = right_image.reshape(-1)
         
-        s = torch.linspace(0,1,self.N+1)[1:-1].reshape(-1,1)
+        s = torch.linspace(0,1,self.N+1,
+                           device='cuda:0',
+                           )[1:-1].reshape(-1,1)
         
         coef=2.0
         gamma=0
@@ -163,7 +166,7 @@ class ContextManager:
         if self.clip:
             noisy_curve = torch.clip(noisy_curve, -2.0, 2.0)
             
-        for i, noisy_latent in enumerate(noisy_curve):
+        for i, noisy_latent in enumerate(noisy_curve, start=0):
             samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
                 unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
                 use_original_steps=False)  
@@ -171,10 +174,11 @@ class ContextManager:
             image = ldm.decode_first_stage(samples)
 
             image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+            lam = str(self.lam).replace('.','')
             if self.clip:
-                	Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
+                Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{lam}_clip_{i}.png')
             else:
-                Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
+                Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{lam}_{i}.png')
 
         return
 
