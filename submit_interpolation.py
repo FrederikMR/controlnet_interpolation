@@ -69,8 +69,8 @@ def loop_jobs(wait_time = 1.0):
     clip = [0] #[0,1]
     lam = [1.0] #[0.1, 0.5, 1.0, 10.0, 50.0 100.0]
     
-    model = ['bedroom']
-    method = ['ProbGEORCE_N']
+    #model = ['bedroom']
+    #method = ['ProbGEORCE_N']
     
     for mod in model:
         for meth in method:
