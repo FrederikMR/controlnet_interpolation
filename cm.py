@@ -112,7 +112,12 @@ class ContextManager:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
-        out_dir = ''.join((out_dir, f'/{self.inter_method}'))
+        clip_str = '_clip' if self.clip else ''
+        if "ProbGEORCE" in self.inter_method:
+            lam = str(self.lam).replace('.', 'd')
+            out_dir = ''.join((out_dir, f'/{self.inter_method}_{lam}{clip_str}'))
+        else:            
+            out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}'))
         shutil.rmtree(out_dir, ignore_errors=True)
         os.makedirs(out_dir)
         
@@ -181,11 +186,11 @@ class ContextManager:
             image = ldm.decode_first_stage(samples)
 
             image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-            lam = str(self.lam).replace('.','')
+            lam = str(self.lam).replace('.','d')
             if self.clip:
-                Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{lam}_clip_{i}.png')
+                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
             else:
-                Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{lam}_{i}.png')
+                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
 
         return
 
