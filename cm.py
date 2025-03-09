@@ -95,7 +95,7 @@ class ContextManager:
         l1=torch.clip(l1,-coef,coef)  
         l2=torch.clip(l2,-coef,coef)   
         
-        noisy_latent= alpha*l1+beta*l2+(mu-alpha)*ldm.sqrt_alphas_cumprod[t] * left_image+(nu-beta)*ldm.sqrt_alphas_cumprod[t] * right_image+gamma*noise*ldm.sqrt_one_minus_alphas_cumprod[t]
+        noisy_latent= alpha*l1+beta*l2+(mu-alpha)*ldm.sqrt_alphas_cumprod[t].reshape(-1,1) * left_image+(nu-beta)*ldm.sqrt_alphas_cumprod[t].reshape(-1,1) * right_image+gamma*noise*ldm.sqrt_one_minus_alphas_cumprod[t].reshape(-1,1)
         
         curve=torch.clip(noisy_latent,-coef,coef)   
         
@@ -109,6 +109,7 @@ class ContextManager:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
+        out_dir = ''.join((out_dir, f'/{self.inter_method}'))
         shutil.rmtree(out_dir, ignore_errors=True)
         os.makedirs(out_dir)
         
