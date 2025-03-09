@@ -110,6 +110,7 @@ class ContextManager:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
+        base_dir = out_dir
         clip_str = '_clip' if self.clip else ''
         if "ProbGEORCE" in self.inter_method:
             lam = str(self.lam).replace('.', 'd')
@@ -120,8 +121,8 @@ class ContextManager:
         os.makedirs(out_dir)
         
         if isinstance(img1, Image.Image):
-            img1.save(f'{out_dir}/{0:03d}.png')
-            img2.save(f'{out_dir}/{2:03d}.png')
+            img1.save(f'{base_dir}/{0:03d}.png')
+            img2.save(f'{base_dir}/{2:03d}.png')
             if img1.mode == 'RGBA':#
                     img1 = img1.convert('RGB')
             if img2.mode == 'RGBA':
@@ -156,6 +157,10 @@ class ContextManager:
         l2, _ = self.ddim_sampler.encode(right_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
+        
+        if self.clip:
+            l1 = torch.clip(l1, -2.0, 2.0)
+            l2 = torch.clip(l2, -2.0, 2.0)
         
         noise = torch.randn_like(left_image)
         if self.inter_method=="noise":
