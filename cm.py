@@ -72,10 +72,11 @@ class ContextManager:
         l2 = l2.reshape(-1)
         left_image = left_image.reshape(-1)
         right_image = right_image.reshape(-1)
+        noise = noise.reshape(-1)
         
         s = torch.linspace(0,1,self.N+1,
                            device='cuda:0',
-                           )[1:-1]
+                           )[1:-1].reshape(-1,1)
         
         coef=2.0
         gamma=0
@@ -95,23 +96,9 @@ class ContextManager:
         l1=torch.clip(l1,-coef,coef)  
         l2=torch.clip(l2,-coef,coef)   
         
-        print("Shape print")
-        print(l1.shape)
-        print(l2.shape)
-        print(alpha.shape)
-        print(beta.shape)
-        print(mu.shape)
-        print(nu.shape)
-        print(ldm.sqrt_one_minus_alphas_cumprod[t].shape)
-        print(noise.shape)
-        print("End shape print")
+        noise_latent = alpha*l1+beta*l2+(mu-alpha)*ldm.sqrt_alphas_cumprod[t].reshape(-1) * left_image+(nu-beta)*ldm.sqrt_alphas_cumprod[t].reshape(-1) * right_image+gamma*noise*ldm.sqrt_one_minus_alphas_cumprod[t].reshape(-1)
         
-        noisy_latent= torch.vmap(lambda alpha, beta, mu, nu: alpha*l1+beta*l2+\
-                                 (mu-alpha)*ldm.sqrt_alphas_cumprod[t].reshape(-1) * left_image+ \
-                                     (nu-beta)*ldm.sqrt_alphas_cumprod[t].reshape(-1) * right_image+ \
-                                         gamma*noise*ldm.sqrt_one_minus_alphas_cumprod[t].reshape(-1))(alpha, beta, mu, nu)
-        
-        curve=torch.clip(noisy_latent,-coef,coef)   
+        curve=torch.clip(noise_latent,-coef,coef)   
         
         curve = torch.vstack((l1, curve, l2))
         
