@@ -95,6 +95,7 @@ class ContextManager:
         l1=torch.clip(l1,-coef,coef)  
         l2=torch.clip(l2,-coef,coef)   
         
+        print("Shape print")
         print(l1.shape)
         print(l2.shape)
         print(alpha.shape)
@@ -103,6 +104,7 @@ class ContextManager:
         print(nu.shape)
         print(ldm.sqrt_one_minus_alphas_cumprod[t].shape)
         print(noise.shape)
+        print("End shape print")
         
         noisy_latent= torch.vmap(lambda alpha, beta, mu, nu: alpha*l1+beta*l2+\
                                  (mu-alpha)*ldm.sqrt_alphas_cumprod[t] * left_image+ \
