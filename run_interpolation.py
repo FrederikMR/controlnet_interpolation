@@ -9,7 +9,6 @@ Created on Sun Mar  9 03:05:05 2025
 #%% Sources
 
 #Checkpoints: https://huggingface.co/thibaud/controlnet-sd21/tree/main
-#place under models/
 
 #%% Modules
 

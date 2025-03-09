@@ -27,8 +27,9 @@ class ContextManager:
                  clip:bool=False,
                  ckpt_path:str = "models/control_v11p_sd21_openpose.ckpt",
                  ):
-        
+                 
         self.inter_method = inter_method
+        self.lam = lam
         self.SInt = SphericalInterpolation(N=N)
         self.LInt = LinearInterpolation(N=N)
         self.PGEORCE_N = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum(x**2),
@@ -170,7 +171,10 @@ class ContextManager:
             image = ldm.decode_first_stage(samples)
 
             image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-            Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_{i}.png')
-            
+            if self.clip:
+            	Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
+	    else:
+	    	Image.fromarray(image[0]).save(f'{out_dir}/{self.inter_method}_lam{self.lam}_clip_{i}.png')
+
         return
 

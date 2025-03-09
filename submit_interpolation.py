@@ -53,7 +53,7 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
         --clip {clip} \\
         --N {N} \\
         --max_iter {max_iter} \\
-        --ckpt_path /work3/fmry/models/controlnet/albatross/control_v11p_sd21_openpose.ckpt \\
+        --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \\
     ''')
     
     return
