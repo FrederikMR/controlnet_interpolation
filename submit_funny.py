@@ -66,7 +66,7 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 100
     model = ['funny']
     method = ['ProbGEORCE_D']
-    clip = [0]
+    clip = [1]
     lam = [1.0]
     
     for mod in model:
