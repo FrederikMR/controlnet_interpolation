@@ -103,6 +103,116 @@ class ContextManager:
         curve = torch.vstack((l1, curve, l2))
         
         return curve.reshape(-1, *shape)
+    
+    def pgeorce_dnd(self,
+                   l1, 
+                   l2,
+                   left_image,
+                   right_image,
+                   noise,
+                   ldm,
+                   t,
+                   ):
+        
+        coef=2.0
+        gamma=0
+        
+        shape = l1.shape
+        
+        l1 = l1.reshape(-1)
+        l2 = l2.reshape(-1)
+        left_image = left_image.reshape(-1)
+        right_image = right_image.reshape(-1)
+        noise = noise.reshape(-1)
+        
+        l1=torch.clip(l1,-coef,coef)
+        l2=torch.clip(l2,-coef,coef)
+        
+        noise_curve = self.PGEORCE_D(l1,l2)[1:-1]
+        data_curve = self.PGEORCE_D(left_image, right_image)[1:-1]
+        
+        
+        
+        s = torch.linspace(0,1,self.N+1,
+                           device='cuda:0',
+                           )[1:-1].reshape(-1,1)
+
+        #alpha=math.cos(math.radians(s*90))
+        #beta=math.sin(math.radians(s*90))
+        alpha = torch.cos(0.5*torch.pi*s)
+        beta = torch.sin(0.5*torch.pi*s)
+        
+        l=alpha/beta
+        
+        alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
+        beta=((1-gamma*gamma)/(l*l+1))**0.5
+
+        mu=1.2*alpha/(alpha+beta)
+        nu=1.2*beta/(alpha+beta)
+        t_cumprod = ldm.sqrt_alphas_cumprod[t].reshape(-1)
+        
+        noise_latent = noise_curve - t_cumprod*data_curve + \
+            t_cumprod*(mu*left_image + nu * right_image)+gamma*noise*t_cumprod
+
+        curve=torch.clip(noise_latent,-coef,coef)
+        curve = torch.vstack((l1, curve, l2))
+        
+        return curve.reshape(-1, *shape)
+    
+    def pgeorce_nnd(self,
+                   l1, 
+                   l2,
+                   left_image,
+                   right_image,
+                   noise,
+                   ldm,
+                   t,
+                   ):
+        
+        coef=2.0
+        gamma=0
+        
+        shape = l1.shape
+        
+        l1 = l1.reshape(-1)
+        l2 = l2.reshape(-1)
+        left_image = left_image.reshape(-1)
+        right_image = right_image.reshape(-1)
+        noise = noise.reshape(-1)
+        
+        l1=torch.clip(l1,-coef,coef)
+        l2=torch.clip(l2,-coef,coef)
+        
+        noise_curve = self.NGEORCE_D(l1,l2)[1:-1]
+        data_curve = self.NGEORCE_D(left_image, right_image)[1:-1]
+        
+        
+        
+        s = torch.linspace(0,1,self.N+1,
+                           device='cuda:0',
+                           )[1:-1].reshape(-1,1)
+
+        #alpha=math.cos(math.radians(s*90))
+        #beta=math.sin(math.radians(s*90))
+        alpha = torch.cos(0.5*torch.pi*s)
+        beta = torch.sin(0.5*torch.pi*s)
+        
+        l=alpha/beta
+        
+        alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
+        beta=((1-gamma*gamma)/(l*l+1))**0.5
+
+        mu=1.2*alpha/(alpha+beta)
+        nu=1.2*beta/(alpha+beta)
+        t_cumprod = ldm.sqrt_alphas_cumprod[t].reshape(-1)
+        
+        noise_latent = noise_curve - t_cumprod*data_curve + \
+            t_cumprod*(mu*left_image + nu * right_image)+gamma*noise*t_cumprod
+
+        curve=torch.clip(noise_latent,-coef,coef)
+        curve = torch.vstack((l1, curve, l2))
+        
+        return curve.reshape(-1, *shape)
 
     def interpolate_new(self, img1, img2,  scale_control=1.5, prompt=None, n_prompt=None, min_steps=.3, max_steps=.55, ddim_steps=250,  guide_scale=7.5,  optimize_cond=0,  cond_lr=1e-4, bias=0, ddim_eta=0, out_dir='blend'):
         torch.manual_seed(49)
@@ -177,6 +287,10 @@ class ContextManager:
             noisy_curve = self.PGEORCE_N(l1, l2)
         elif self.inter_method == "ProbGEORCE_D":
             noisy_curve = self.PGEORCE_D(l1, l2)
+        elif self.inter_method == "ProbGEORCE_DND":
+            noisy_curve = self.pgeorce_dnd(l1, l2, left_image, right_image, noise, ldm, t)
+        elif self.inter_method == "ProbGEORCE_NND":
+            noisy_curve = self.pgeorce_nnd(l1, l2, left_image, right_image, noise, ldm, t)
             
         if self.clip:
             noisy_curve = torch.clip(noisy_curve, -2.0, 2.0)

@@ -40,6 +40,7 @@ from sample_scripts.pumpkin import run_pumpkin
 from sample_scripts.shoes import run_shoes
 from sample_scripts.spider import run_spider
 from sample_scripts.tree import run_tree
+from sample_scripts.run_funny import run_funny
 
 #%% Args Parser
 
@@ -118,8 +119,10 @@ def run_interpolation()->None:
         run_fun = run_shoes
     elif args.model == "spider":
         run_fun = run_spider
-    elif args.model == "run_tree":
+    elif args.model == "tree":
         run_fun = run_tree
+    elif args.model == "funny":
+        run_fun = run_funny
         
     import torch
     print(torch.cuda.is_available())
