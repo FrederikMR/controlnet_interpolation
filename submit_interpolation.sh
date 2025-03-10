@@ -1,6 +1,6 @@
     #! /bin/bash
-    #BSUB -q gpua100
-    #BSUB -J funny_ProbGEORCE_D
+    #BSUB -q gpuv100
+    #BSUB -J funny_noisediffusion
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -18,9 +18,9 @@
     
     python3 run_interpolation.py \
         --model funny \
-        --method ProbGEORCE_D \
+        --method noisediffusion \
         --lam 1.0 \
-        --clip 0 \
+        --clip 1 \
         --N 10 \
         --max_iter 100 \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
