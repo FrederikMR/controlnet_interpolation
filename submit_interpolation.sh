@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J funny_noisediffusion
+    #BSUB -J cat_noise
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,10 +17,10 @@
     module swap python3/3.10.12
     
     python3 run_interpolation.py \
-        --model funny \
-        --method noisediffusion \
+        --model cat \
+        --method noise \
         --lam 1.0 \
-        --clip 1 \
+        --clip 0 \
         --N 10 \
         --max_iter 100 \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
