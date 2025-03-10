@@ -78,7 +78,7 @@ class ProbGEORCE(ABC):
         self.clip = clip
         self.boundary = boundary
         
-        if self.device is None:
+        if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
@@ -452,7 +452,7 @@ class ProbEuclideanGEORCE(ABC):
         self.clip = clip
         self.boundary = boundary
         
-        if self.device is None:
+        if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
@@ -759,7 +759,7 @@ class ProbGEORCE_ND(ABC):
         self.gamma = gamma
         self.sigma = sigma
         self.boundary = boundary
-        if self.device is None:
+        if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device

@@ -82,7 +82,7 @@ class Backtracking(ABC):
           boolean indicating if improvement of objective function
         """
         
-        val1 = self.obj0+self.c1*alpha*torch.dot(self.pk, self.grad0)
+        val1 = self.obj0+self.c1*alpha*torch.sum(self.pk*self.grad0)#torch.dot(self.pk, self.grad0)
         
         return obj>val1
     
