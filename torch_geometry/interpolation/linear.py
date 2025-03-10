@@ -24,6 +24,7 @@ class LinearInterpolation(ABC):
     """
     def __init__(self,
                  N:int=100,
+                 device:str=None,
                  )->None:
         """Initilization of Linear Interpolation
 
@@ -32,6 +33,11 @@ class LinearInterpolation(ABC):
         """
         
         self.N = N
+        
+        if self.device is None:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
         
         return
     
@@ -54,7 +60,7 @@ class LinearInterpolation(ABC):
         z0 = z0.reshape(-1)
         zN = zN.reshape(-1)
         
-        curve = (zN-z0)*torch.linspace(0.0,1.0,self.N+1,dtype=z0.dtype, device="cuda:0")[1:-1].reshape(-1,1)+z0
+        curve = (zN-z0)*torch.linspace(0.0,1.0,self.N+1,dtype=z0.dtype, device=self.device)[1:-1].reshape(-1,1)+z0
         
         curve = torch.vstack((z0, curve, zN))
         

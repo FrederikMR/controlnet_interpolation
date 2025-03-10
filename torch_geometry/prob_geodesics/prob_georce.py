@@ -49,6 +49,9 @@ class ProbGEORCE(ABC):
                  tol:float=1e-4,
                  max_iter:int=1000,
                  line_search_params:Dict = {'max_iter': 100, 'rho': 0.5},
+                 clip:bool=False,
+                 boundary:float=2.0,
+                 device:str=None,
                  )->None:
         """Initializes the instance of ProbGEORCE.
 
@@ -72,12 +75,20 @@ class ProbGEORCE(ABC):
         self.max_iter = max_iter
         self.line_search_params = line_search_params
         
+        self.clip = clip
+        self.boundary = boundary
+        
+        if self.device is None:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
+        
         if init_fun is None:
             self.init_fun = lambda z0, zN, N: (zN-z0)*torch.linspace(0.0,
                                                                      1.0,
                                                                      N+1,
                                                                      dtype=z0.dtype,
-                                                                     device="cuda:0")[1:-1].reshape(-1,1)+z0
+                                                                     device=self.device)[1:-1].reshape(-1,1)+z0
         else:   
             self.init_fun = init_fun
         
@@ -341,6 +352,10 @@ class ProbGEORCE(ABC):
         
         shape = z0.shape
         
+        if self.clip:
+            z0 = torch.clip(z0, -self.boundary, self.boundary)
+            zN = torch.clip(zN, -self.boundary, self.boundary)
+        
         self.line_search = Backtracking(obj_fun=self.reg_energy,
                                         update_fun=self.update_zi,
                                         **self.line_search_params,
@@ -379,6 +394,9 @@ class ProbGEORCE(ABC):
                                                                     )
 
         zi = torch.vstack((self.z0, model.zi, self.zN)).detach()
+        
+        if self.clip:
+            zi = torch.clip(zi, -self.boundary, self.boundary)
             
         return zi.reshape(-1,*shape)
 
@@ -407,6 +425,9 @@ class ProbEuclideanGEORCE(ABC):
                  tol:float=1e-4,
                  max_iter:int=1000,
                  line_search_params:Dict = {'rho': 0.5},
+                 device:str=None,
+                 clip:bool=True,
+                 boundary:float=2.0,
                  )->None:
         """Initializes the instance of ProbGEORCE with Euclidean background metric.
 
@@ -428,12 +449,20 @@ class ProbEuclideanGEORCE(ABC):
         self.max_iter = max_iter
         self.line_search_params = line_search_params
         
+        self.clip = clip
+        self.boundary = boundary
+        
+        if self.device is None:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
+        
         if init_fun is None:
             self.init_fun = lambda z0, zN, N: (zN-z0)*torch.linspace(0.0,
                                                                      1.0,
                                                                      N+1,
                                                                      dtype=z0.dtype,
-                                                                     device='cuda:0')[1:-1].reshape(-1,1)+z0
+                                                                     device=self.device)[1:-1].reshape(-1,1)+z0
         else:
             self.init_fun = init_fun
         
@@ -572,7 +601,7 @@ class ProbEuclideanGEORCE(ABC):
         """
         
         g_cumsum = torch.vstack((torch.flip(torch.cumsum(torch.flip(gi, dims=[0]), dim=0), dims=[0]), 
-                                 torch.zeros(self.dim, device="cuda:0")))
+                                 torch.zeros(self.dim, device=self.device)))
         g_sum = torch.sum(g_cumsum, dim=0)/self.N
         
         return self.diff/self.N+0.5*(g_sum-g_cumsum)
@@ -644,6 +673,10 @@ class ProbEuclideanGEORCE(ABC):
         
         shape = z0.shape
         
+        if self.clip:
+            z0 = torch.clip(z0, -self.boundary, self.boundary)
+            zN = torch.clip(zN, -self.boundary, self.boundary)
+        
         self.line_search = Backtracking(obj_fun=self.reg_energy,
                                         update_fun=self.update_zi,
                                         **self.line_search_params,
@@ -653,9 +686,6 @@ class ProbEuclideanGEORCE(ABC):
         self.zN = zN.reshape(-1).detach()
         self.diff = self.zN-self.z0
         self.dim = len(self.z0)
-        
-        print(self.z0.get_device())
-        print(self.zN.get_device())
         
         zi = self.init_fun(self.z0,self.zN,self.N)
         model = GeoCurve(self.z0, zi, self.zN)
@@ -672,5 +702,111 @@ class ProbEuclideanGEORCE(ABC):
             model, gi, grad_val, idx = self.georce_step(model, gi, grad_val, idx)
         
         zi = torch.vstack((self.z0, model.zi, self.zN)).detach()
+        
+        if self.clip:
+            zi = torch.clip(zi, -self.boundary, self.boundary)
             
         return zi.reshape(-1, *shape)
+    
+#%% ProbGEORCE NoiseDiffusion
+
+class ProbGEORCE_ND(ABC):
+    """Probabilistic GEORCE with NoiseDiffusion
+
+    Estimates geodesics for the Euclidean metric under the constaint that
+    these are within the probability distribituon using the score function.
+
+    Attributes:
+        reg_fun: regularizing function that is vectorized and returns a scalar
+        init_fun: initilization function for the initial curve
+        lam: lambda that determines the deviation between the geodesic and probaility flow
+        N: number of grid points, in total the outputet curve will have (N+1) grid points
+        tol: the tolerance for convergence
+        max_iter: the maximum number of iterations
+        line_search_params: the parameters for the line search (max_iter and rho), where rho is backtracking parameter
+    """
+    def __init__(self,
+                 interpolater:Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+                 alpha:Callable=lambda s: torch.cos(0.5*torch.pi*s),
+                 beta:Callable=lambda s: torch.sin(0.5*torch.pi*s),
+                 mu:Callable|None= lambda s: None,
+                 nu:Callable|None= lambda s: None,
+                 gamma:float=0.0,
+                 sigma:float=1.0,
+                 boundary:float=2.0,
+                 device:str=None,
+                 )->None:
+        """Initializes the instance of ProbGEORCE with Euclidean background metric.
+
+        Args:
+          reg_fun: regularizing function that is vectorized
+          init_fun: initilization function for the initial curve
+          lam: lambda that determines the deviation between the geodesic and probaility flow
+          N: number of grid points, in total the outputet curve will have (N+1) grid points
+          tol: the tolerance for convergence
+          max_iter: the maximum number of iterations
+          line_search_params: the parameters for the line search (max_iter and rho), where rho is backtracking parameter
+        """
+        
+        self.interpolater = interpolater
+        
+        self.alpha = alpha
+        self.beta = beta
+
+        self.mu = mu if mu is None else lambda s: 1.2*self.alpha(s)/(self.alpha(s)+self.beta(s))
+        self.nu = nu if nu is None else lambda s: 1.2*self.beta(s)/(self.alpha(s)+self.beta(s))
+        
+        self.gamma = gamma
+        self.sigma = sigma
+        self.boundary = boundary
+        if self.device is None:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
+        
+    def __str__(self)->str:
+        
+        return "NoiseDiffusion with different ProbGEORCE interpolation"
+
+    def __call__(self,
+                 z0:Tensor,
+                 zN:Tensor,
+                 x0:Tensor,
+                 xN:Tensor,
+                 )->Tensor:
+        
+        shape = z0.shape
+        
+        z0 = z0.reshape(-1)
+        zN = zN.reshape(-1)
+        x0 = x0.reshape(-1)
+        xN = xN.reshape(-1)
+        
+        s = torch.linspace(0,1,self.interpolater.N+1,
+                           device=self.device,
+                           )[1:-1].reshape(-1,1)
+
+        #alpha=math.cos(math.radians(s*90))
+        #beta=math.sin(math.radians(s*90))
+        alpha = torch.cos(0.5*torch.pi*s)
+        beta = torch.sin(0.5*torch.pi*s)
+        
+        mu = vmap(self.mu)(s)
+        nu = vmap(self.nu)(s)
+        eps = self.sigma*torch.randn_like(z0)
+        
+        l=alpha/beta
+        
+        alpha=((1-self.gamma*self.gamma)*l*l/(l*l+1))**0.5
+        beta=((1-self.gamma*self.gamma)/(l*l+1))**0.5
+        
+        noise_curve = self.interpolater(z0,zN)[1:-1]
+        data_curve = self.interpolater(x0, xN)[1:-1]
+        
+        noise_latent = noise_curve - data_curve + \
+            (mu*x0 + nu * xN)+self.gamma*eps
+
+        curve=torch.clip(noise_latent,-self.boundary,self.boundary)
+        curve = torch.vstack((z0, curve, zN))
+        
+        return curve.reshape(-1, *shape)

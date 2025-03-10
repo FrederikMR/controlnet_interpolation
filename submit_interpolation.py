@@ -65,10 +65,8 @@ def loop_jobs(wait_time = 1.0):
     N = 10
     max_iter = 100
     model = ['bedroom', 'cat']
-    method = ['linear', 'ProbGEORCE_D', 'noisediffusion', 'slerp', 'noise',
-              'ProbGEORCE_DND']#, 'ProbGEORCE_N', 'ProbGEORCE_NND']
-    #method = ['ProbGEORCE_DND', 'ProbGEORCE_NND']
-    clip = [1]
+    method = ['ProbGEORCE_DND', 'ProbGEORCE_D', 'linear', 'noisediffusion', 'slerp', 'noise']
+    clip = [0]
     lam = [0.1, 0.5, 1.0, 10.0]
     
     for mod in model:

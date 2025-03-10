@@ -31,8 +31,8 @@ class ContextManager:
         self.inter_method = inter_method
         self.lam = lam
         self.N = N
-        self.SInt = SphericalInterpolation(N=N)
-        self.LInt = LinearInterpolation(N=N)
+        self.SInt = SphericalInterpolation(N=N, device="cuda:0")
+        self.LInt = LinearInterpolation(N=N, device="cuda:0")
         self.PGEORCE_N = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum(x**2),
                                              init_fun=None,
                                              lam = lam,
@@ -40,6 +40,9 @@ class ContextManager:
                                              tol=1e-4,
                                              max_iter=max_iter,
                                              line_search_params = {'rho': 0.5},
+                                             clip=True,
+                                             boundary=2.0,
+                                             device="cuda:0",
                                              )
         self.PGEORCE_D = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum((torch.sum(x**2,axis=-1)-x.shape[-1])**2),
                                              init_fun=None,
@@ -48,6 +51,9 @@ class ContextManager:
                                              tol=1e-4,
                                              max_iter=max_iter,
                                              line_search_params = {'rho': 0.5},
+                                             clip=True,
+                                             boundary=2.0,
+                                             device="cuda:0",
                                              )
         self.clip = clip
         
@@ -130,9 +136,7 @@ class ContextManager:
         
         noise_curve = self.PGEORCE_D(l1,l2)[1:-1]
         data_curve = self.PGEORCE_D(left_image, right_image)[1:-1]
-        
-        
-        
+
         s = torch.linspace(0,1,self.N+1,
                            device='cuda:0',
                            )[1:-1].reshape(-1,1)
@@ -183,10 +187,8 @@ class ContextManager:
         l1=torch.clip(l1,-coef,coef)
         l2=torch.clip(l2,-coef,coef)
         
-        noise_curve = self.NGEORCE_D(l1,l2)[1:-1]
-        data_curve = self.NGEORCE_D(left_image, right_image)[1:-1]
-        
-        
+        noise_curve = self.PGEORCE_N(l1,l2)[1:-1]
+        data_curve = self.PGEORCE_N(left_image, right_image)[1:-1]
         
         s = torch.linspace(0,1,self.N+1,
                            device='cuda:0',
