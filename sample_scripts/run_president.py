@@ -16,6 +16,6 @@ def run_president(N:int=10, lam:float=1.0, max_iter:int=100, inter_method:str="l
     
     prompt = 'a photo of face'
     n_prompt='text, president, serious, reasonable'
-    CM.interpolate_new(img1, img2,  prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir='sample_results/face')
+    CM.interpolate_new(img1, img2,  prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir='../president_results')
     
     return
