@@ -41,6 +41,7 @@ from sample_scripts.shoes import run_shoes
 from sample_scripts.spider import run_spider
 from sample_scripts.tree import run_tree
 from sample_scripts.run_funny import run_funny
+from sample_scripts.run_president import run_president
 
 #%% Args Parser
 
@@ -123,6 +124,8 @@ def run_interpolation()->None:
         run_fun = run_tree
     elif args.model == "funny":
         run_fun = run_funny
+    elif args.model == "president":
+        run_fun = run_president
         
     import torch
     print(torch.cuda.is_available())
