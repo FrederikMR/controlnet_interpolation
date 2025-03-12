@@ -42,9 +42,9 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     #BSUB -o sendmeemail/error_%J.out 
     #BSUB -e sendmeemail/output_%J.err 
     
+    module swap python3/3.10.12
     module swap cuda/12.0
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
-    module swap python3/3.10.12
     
     python3 run_interpolation.py \\
         --model {model} \\
