@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J cat_noise
+    #BSUB -J aircraft_noise
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -12,12 +12,12 @@
     #BSUB -o sendmeemail/error_%J.out 
     #BSUB -e sendmeemail/output_%J.err 
     
+    module swap python3/3.10.12
     module swap cuda/12.0
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
-    module swap python3/3.10.12
     
     python3 run_interpolation.py \
-        --model cat \
+        --model aircraft \
         --method noise \
         --lam 1.0 \
         --clip 0 \
