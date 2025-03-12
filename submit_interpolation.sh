@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J australia_ProbGEORCE_D
+    #BSUB -J face_linear
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,8 +17,8 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --model australia \
-        --method ProbGEORCE_D \
+        --model face \
+        --method linear \
         --lam 1.0 \
         --clip 0 \
         --N 10 \
