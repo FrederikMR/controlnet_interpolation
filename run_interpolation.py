@@ -12,6 +12,8 @@ Created on Sun Mar  9 03:05:05 2025
 
 #%% Modules
 
+import torch
+
 #argparse
 import argparse
 
@@ -127,7 +129,6 @@ def run_interpolation()->None:
     elif args.model == "president":
         run_fun = run_president
         
-    import torch
     print(torch.cuda.is_available())
     print(torch.cuda.device_count())
     print(torch.cuda.current_device())

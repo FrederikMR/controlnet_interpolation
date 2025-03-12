@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J aircraft_noise
+    #BSUB -J bedroom_noise
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,7 +17,7 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --model aircraft \
+        --model bedroom \
         --method noise \
         --lam 1.0 \
         --clip 0 \
