@@ -40,7 +40,7 @@ class ContextManager:
                                              tol=1e-4,
                                              max_iter=max_iter,
                                              line_search_params = {'rho': 0.5},
-                                             clip=False,
+                                             clip=True,
                                              boundary=2.0,
                                              device="cuda:0",
                                              )
@@ -51,7 +51,7 @@ class ContextManager:
                                              tol=1e-4,
                                              max_iter=max_iter,
                                              line_search_params = {'rho': 0.5},
-                                             clip=False,
+                                             clip=True,
                                              boundary=2.0,
                                              device="cuda:0",
                                              )
