@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J bedroom_noise
+    #BSUB -J australia_ProbGEORCE_D
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,8 +17,8 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --model bedroom \
-        --method noise \
+        --model australia \
+        --method ProbGEORCE_D \
         --lam 1.0 \
         --clip 0 \
         --N 10 \
