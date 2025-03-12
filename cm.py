@@ -59,6 +59,12 @@ class ContextManager:
         
         self.model = create_model('models/cldm_v21.yaml').cuda()
         self.ddim_sampler = DDIMSampler(self.model)
+        
+        
+        print(torch.cuda.is_available())
+        print(torch.cuda.device_count())
+        print(torch.cuda.current_device())
+        
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
         
