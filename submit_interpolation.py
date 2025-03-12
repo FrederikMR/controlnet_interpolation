@@ -70,7 +70,8 @@ def loop_jobs(wait_time = 1.0):
     lam = [0.1, 0.5, 1.0, 10.0]
     
     model = ['president', 'canada', 'australia']
-    method = ['ProbGEORCE_D', 'ProbGEORCE_DND']
+    model = ['face']
+    method = ['ProbGEORCE_D', 'ProbGEORCE_DND', 'noisediffusion', 'slerp', 'linear']
     lam = [1.0]
     
     for mod in model:
