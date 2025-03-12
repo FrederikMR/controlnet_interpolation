@@ -352,9 +352,9 @@ class ProbGEORCE(ABC):
         
         shape = z0.shape
         
-        #if self.clip:
-        #    z0 = torch.clip(z0, -self.boundary, self.boundary)
-        #    zN = torch.clip(zN, -self.boundary, self.boundary)
+        if self.clip:
+            z0 = torch.clip(z0, -self.boundary, self.boundary)
+            zN = torch.clip(zN, -self.boundary, self.boundary)
         
         self.line_search = Backtracking(obj_fun=self.reg_energy,
                                         update_fun=self.update_zi,
@@ -673,9 +673,9 @@ class ProbEuclideanGEORCE(ABC):
         
         shape = z0.shape
         
-        #if self.clip:
-        #    z0 = torch.clip(z0, -self.boundary, self.boundary)
-        #    zN = torch.clip(zN, -self.boundary, self.boundary)
+        if self.clip:
+            z0 = torch.clip(z0, -self.boundary, self.boundary)
+            zN = torch.clip(zN, -self.boundary, self.boundary)
         
         self.line_search = Backtracking(obj_fun=self.reg_energy,
                                         update_fun=self.update_zi,
@@ -776,6 +776,9 @@ class ProbGEORCE_ND(ABC):
                  )->Tensor:
         
         shape = z0.shape
+        
+        z0 = torch.clip(z0, -self.boundary, self.boundary)
+        zN = torch.clip(zN, -self.boundary, self.boundary)
         
         z0 = z0.reshape(-1)
         zN = zN.reshape(-1)
