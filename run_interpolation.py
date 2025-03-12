@@ -44,6 +44,8 @@ from sample_scripts.spider import run_spider
 from sample_scripts.tree import run_tree
 from sample_scripts.run_funny import run_funny
 from sample_scripts.run_president import run_president
+from sample_scripts.run_canada import run_canada
+from sample_scripts.run_australia import run_australia
 
 #%% Args Parser
 
@@ -128,10 +130,10 @@ def run_interpolation()->None:
         run_fun = run_funny
     elif args.model == "president":
         run_fun = run_president
-        
-    print(torch.cuda.is_available())
-    print(torch.cuda.device_count())
-    print(torch.cuda.current_device())
+    elif args.model == "canada":
+        run_fun = run_canada
+    elif args.model == "australia":
+        run_fun = run_australia
 
     run_fun(N = args.N, 
             lam = args.lam, 
