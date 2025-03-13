@@ -64,15 +64,10 @@ def loop_jobs(wait_time = 1.0):
     
     N = 10
     max_iter = 100
-    model = ['bedroom']
+    model = ['funny', 'president', 'canada', 'australia', 'bedroom', 'cat', 'face', 'aircraft']
     method = ['ProbGEORCE_DND', 'ProbGEORCE_D', 'linear', 'noisediffusion', 'slerp', 'noise']
     clip = [0]
     lam = [0.1, 0.5, 1.0, 10.0]
-    
-    #model = ['president', 'canada', 'australia']
-    model = ['president', 'funny']
-    method = ['ProbGEORCE_D', 'ProbGEORCE_DND', 'noisediffusion', 'slerp', 'linear']
-    lam = [1.0]
     
     for mod in model:
         for meth in method:
