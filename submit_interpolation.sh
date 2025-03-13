@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J face_linear
+    #BSUB -J funny_linear
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,7 +17,7 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --model face \
+        --model funny \
         --method linear \
         --lam 1.0 \
         --clip 0 \
