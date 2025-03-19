@@ -30,7 +30,7 @@ def generate_job(model, method, lam, clip, N, mu, nu, max_iter=100):
         rsh.write(f'''\
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J {model}_{method}
+    #BSUB -J {model}_{method}_{mu}
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
