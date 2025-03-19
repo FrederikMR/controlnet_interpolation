@@ -138,17 +138,17 @@ class ContextManager:
 
         #alpha=math.cos(math.radians(s*90))
         #beta=math.sin(math.radians(s*90))
+        
+        s = torch.linspace(0,1,self.N+1,
+                           device='cuda:0',
+                           )[1:-1].reshape(-1,1)
+        
+        alpha = torch.cos(0.5*torch.pi*s)
+        beta = torch.sin(0.5*torch.pi*s)
 
         if self.mu is None:
             
-            alpha = torch.cos(0.5*torch.pi*s)
-            beta = torch.sin(0.5*torch.pi*s)
-            
             l=alpha/beta
-            
-            s = torch.linspace(0,1,self.N+1,
-                               device='cuda:0',
-                               )[1:-1].reshape(-1,1)
             
             alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
             beta=((1-gamma*gamma)/(l*l+1))**0.5
