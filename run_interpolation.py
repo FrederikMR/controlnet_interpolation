@@ -54,7 +54,7 @@ def parse_args():
     # File-paths
     parser.add_argument('--model', default="bedroom",
                         type=str)
-    parser.add_argument('--method', default="PGEORCE_N",
+    parser.add_argument('--method', default="ProbGEORCE",
                         type=str)
     parser.add_argument('--lam', default=1.0,
                         type=float)
@@ -62,6 +62,10 @@ def parse_args():
                         type=int)
     parser.add_argument('--N', default=10,
                         type=int)
+    parser.add_argument('--mu', default=-1.,
+                        type=float)
+    parser.add_argument('--nu', default=-1.,
+                        type=float)
     parser.add_argument('--max_iter', default=100,
                         type=int)
     parser.add_argument('--ckpt_path', default="models/control_v11p_sd21_openpose.ckpt",
@@ -134,11 +138,23 @@ def run_interpolation()->None:
         run_fun = run_canada
     elif args.model == "australia":
         run_fun = run_australia
+        
+    if args.mu < 0:
+        mu = None
+    else:
+        mu = args.mu
+        
+    if args.nu < 0:
+        nu = None
+    else:
+        nu = args.nu
 
     run_fun(N = args.N, 
             lam = args.lam, 
             max_iter = args.max_iter, 
             inter_method = args.method,
+            mu = mu,
+            nu = nu,
             clip=args.clip,
             ckpt_path=args.ckpt_path,
             )

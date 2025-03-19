@@ -4,6 +4,7 @@ import os
 import cm
 
 def run_bedroom(N:int=10, lam:float=1.0, max_iter:int=100, inter_method:str="linear", clip:bool=False,
+                mu:float=None, nu:float=None,
                 ckpt_path:str="models/control_v11p_sd21_openpose.ckpt")->None:
     
     osp = os.path
@@ -11,6 +12,7 @@ def run_bedroom(N:int=10, lam:float=1.0, max_iter:int=100, inter_method:str="lin
     sys.path.append(osp.expandvars('$NFS/NoiseDiffusion/controlnet'))
 
     CM = cm.ContextManager(N=N, lam=lam, max_iter=max_iter, inter_method=inter_method, clip=clip,
+                           mu = mu, nu = nu,
                            ckpt_path=ckpt_path)
     img1 = Image.open('sample_imgs/bedroom1.png').resize((768, 768))
     img2 = Image.open('sample_imgs/bedroom2.png').resize((768, 768))

@@ -24,46 +24,35 @@ class ContextManager:
                  lam:float=1.0,
                  max_iter:int=100,
                  inter_method:str="linear",
-                 clip:bool=False,
+                 clip:bool=True,
+                 mu:float=None,
+                 nu:float=None,
                  ckpt_path:str = "models/control_v11p_sd21_openpose.ckpt",
                  ):
                  
         self.inter_method = inter_method
         self.lam = lam
         self.N = N
+        self.mu = mu
+        self.nu = nu
+        self.clip = clip
+        
         self.SInt = SphericalInterpolation(N=N, device="cuda:0")
         self.LInt = LinearInterpolation(N=N, device="cuda:0")
-        self.PGEORCE_N = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum(x**2),
-                                             init_fun=None,
-                                             lam = lam,
-                                             N=N,
-                                             tol=1e-4,
-                                             max_iter=max_iter,
-                                             line_search_params = {'rho': 0.5},
-                                             clip=True,
-                                             boundary=2.0,
-                                             device="cuda:0",
-                                             )
-        self.PGEORCE_D = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum((torch.sum(x**2,axis=-1)-x.shape[-1])**2),
-                                             init_fun=None,
-                                             lam = lam,
-                                             N=N,
-                                             tol=1e-4,
-                                             max_iter=max_iter,
-                                             line_search_params = {'rho': 0.5},
-                                             clip=True,
-                                             boundary=2.0,
-                                             device="cuda:0",
-                                             )
-        self.clip = clip
+        self.PGEORCE = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum((torch.sum(x**2,axis=-1)-x.shape[-1])**2),
+                                           init_fun=None,
+                                           lam = lam,
+                                           N=N,
+                                           tol=1e-4,
+                                           max_iter=max_iter,
+                                           line_search_params = {'rho': 0.5},
+                                           clip=clip,
+                                           boundary=2.0,
+                                           device="cuda:0",
+                                           )
         
         self.model = create_model('models/cldm_v21.yaml').cuda()
         self.ddim_sampler = DDIMSampler(self.model)
-        
-        
-        print(torch.cuda.is_available())
-        print(torch.cuda.device_count())
-        print(torch.cuda.current_device())
         
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
@@ -102,8 +91,12 @@ class ContextManager:
         alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
         beta=((1-gamma*gamma)/(l*l+1))**0.5
 
-        mu=1.2*alpha/(alpha+beta)
-        nu=1.2*beta/(alpha+beta)
+        if self.mu is None:
+            mu=1.2*alpha/(alpha+beta)
+            nu=1.2*beta/(alpha+beta)
+        else:
+            mu = self.mu*torch.ones_like(alpha, device='cuda:0',)
+            nu = self.nu*torch.ones_like(alpha, device='cuda:0',)
         
         l1=torch.clip(l1,-coef,coef)  
         l2=torch.clip(l2,-coef,coef)   
@@ -116,7 +109,7 @@ class ContextManager:
         
         return curve.reshape(-1, *shape)
     
-    def pgeorce_dnd(self,
+    def pgeorce_nd(self,
                    l1, 
                    l2,
                    left_image,
@@ -143,75 +136,30 @@ class ContextManager:
         noise_curve = self.PGEORCE_D(l1,l2)[1:-1]
         data_curve = self.PGEORCE_D(left_image, right_image)[1:-1]
 
-        s = torch.linspace(0,1,self.N+1,
-                           device='cuda:0',
-                           )[1:-1].reshape(-1,1)
-
         #alpha=math.cos(math.radians(s*90))
         #beta=math.sin(math.radians(s*90))
-        alpha = torch.cos(0.5*torch.pi*s)
-        beta = torch.sin(0.5*torch.pi*s)
-        
-        l=alpha/beta
-        
-        alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
-        beta=((1-gamma*gamma)/(l*l+1))**0.5
 
-        mu=1.2*alpha/(alpha+beta)
-        nu=1.2*beta/(alpha+beta)
-        t_cumprod = ldm.sqrt_alphas_cumprod[t].reshape(-1)
+        if self.mu is None:
+            
+            alpha = torch.cos(0.5*torch.pi*s)
+            beta = torch.sin(0.5*torch.pi*s)
+            
+            l=alpha/beta
+            
+            s = torch.linspace(0,1,self.N+1,
+                               device='cuda:0',
+                               )[1:-1].reshape(-1,1)
+            
+            alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
+            beta=((1-gamma*gamma)/(l*l+1))**0.5
+            
+            mu=1.2*alpha/(alpha+beta)
+            nu=1.2*beta/(alpha+beta)
+        else:
+            mu = self.mu*torch.ones_like(alpha, device='cuda:0',)
+            nu = self.nu*torch.ones_like(alpha, device='cuda:0',)
         
-        noise_latent = noise_curve - t_cumprod*data_curve + \
-            t_cumprod*(mu*left_image + nu * right_image)+gamma*noise*t_cumprod
-
-        curve=torch.clip(noise_latent,-coef,coef)
-        curve = torch.vstack((l1, curve, l2))
         
-        return curve.reshape(-1, *shape)
-    
-    def pgeorce_nnd(self,
-                   l1, 
-                   l2,
-                   left_image,
-                   right_image,
-                   noise,
-                   ldm,
-                   t,
-                   ):
-        
-        coef=2.0
-        gamma=0
-        
-        shape = l1.shape
-        
-        l1 = l1.reshape(-1)
-        l2 = l2.reshape(-1)
-        left_image = left_image.reshape(-1)
-        right_image = right_image.reshape(-1)
-        noise = noise.reshape(-1)
-        
-        l1=torch.clip(l1,-coef,coef)
-        l2=torch.clip(l2,-coef,coef)
-        
-        noise_curve = self.PGEORCE_N(l1,l2)[1:-1]
-        data_curve = self.PGEORCE_N(left_image, right_image)[1:-1]
-        
-        s = torch.linspace(0,1,self.N+1,
-                           device='cuda:0',
-                           )[1:-1].reshape(-1,1)
-
-        #alpha=math.cos(math.radians(s*90))
-        #beta=math.sin(math.radians(s*90))
-        alpha = torch.cos(0.5*torch.pi*s)
-        beta = torch.sin(0.5*torch.pi*s)
-        
-        l=alpha/beta
-        
-        alpha=((1-gamma*gamma)*l*l/(l*l+1))**0.5
-        beta=((1-gamma*gamma)/(l*l+1))**0.5
-
-        mu=1.2*alpha/(alpha+beta)
-        nu=1.2*beta/(alpha+beta)
         t_cumprod = ldm.sqrt_alphas_cumprod[t].reshape(-1)
         
         noise_latent = noise_curve - t_cumprod*data_curve + \
@@ -232,9 +180,18 @@ class ContextManager:
         clip_str = '_clip' if self.clip else ''
         if "ProbGEORCE" in self.inter_method:
             lam = str(self.lam).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'/{self.inter_method}_{lam}{clip_str}'))
+            out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}_{lam}'))
         else:            
             out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}'))
+            
+        if self.mu is not None:
+            mu_str = str(self.mu).replace('.', 'd')
+            out_dir = ''.join((out_dir, f'_{mu_str}'))
+            
+        if self.nu is not None:
+            nu_str = str(self.nu).replace('.', 'd')
+            out_dir = ''.join((out_dir, f'_{nu_str}'))
+            
         shutil.rmtree(out_dir, ignore_errors=True)
         os.makedirs(out_dir)
         
@@ -276,32 +233,21 @@ class ContextManager:
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
-        if self.clip:
-            l1 = torch.clip(l1, -2.0, 2.0)
-            l2 = torch.clip(l2, -2.0, 2.0)
-        
         noise = torch.randn_like(left_image)
-        if self.inter_method=="noise":
+        if self.inter_method=="Noise":
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             l2 = ldm.sqrt_alphas_cumprod[t] * right_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = self.SInt(l1, l2)
-        elif self.inter_method == "linear":
+        elif self.inter_method == "Linear":
             noisy_curve = self.LInt(l1,l2)
-        elif self.inter_method == "slerp":
+        elif self.inter_method == "Spherical":
             noisy_curve = self.SInt(l1,l2)
-        elif self.inter_method == "noisediffusion":
+        elif self.inter_method == "NoiseDiffusion":
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
-        elif self.inter_method == "ProbGEORCE_N":
-            noisy_curve = self.PGEORCE_N(l1, l2)
-        elif self.inter_method == "ProbGEORCE_D":
-            noisy_curve = self.PGEORCE_D(l1, l2)
-        elif self.inter_method == "ProbGEORCE_DND":
-            noisy_curve = self.pgeorce_dnd(l1, l2, left_image, right_image, noise, ldm, t)
-        elif self.inter_method == "ProbGEORCE_NND":
-            noisy_curve = self.pgeorce_nnd(l1, l2, left_image, right_image, noise, ldm, t)
-            
-        if self.clip:
-            noisy_curve = torch.clip(noisy_curve, -2.0, 2.0)
+        elif self.inter_method == "ProbGEORCE":
+            noisy_curve = self.PGEORCE(l1, l2)
+        elif self.inter_method == "ProbGEORCE_ND":
+            noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
             
         for i, noisy_latent in enumerate(noisy_curve, start=0):
             samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
@@ -312,10 +258,7 @@ class ContextManager:
 
             image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
             lam = str(self.lam).replace('.','d')
-            if self.clip:
-                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
-            else:
-                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
+            Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
 
         return
 

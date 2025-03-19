@@ -18,15 +18,15 @@ import time
 
 def submit_job():
     
-    os.system("bsub < submit_interpolation.sh")
+    os.system("bsub < submit_modification.sh")
     
     return
 
 #%% Generate jobs
 
-def generate_job(model, method, lam, clip, N, max_iter=100):
+def generate_job(model, method, lam, clip, N, mu, nu, max_iter=100):
 
-    with open ('submit_interpolation.sh', 'w') as rsh:
+    with open ('submit_modification.sh', 'w') as rsh:
         rsh.write(f'''\
     #! /bin/bash
     #BSUB -q gpuv100
@@ -51,8 +51,8 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
         --method {method} \\
         --lam {lam} \\
         --clip {clip} \\
-        --mu -1.0 \\
-        --nu -1.0 \\
+        --mu {mu} \\
+        --nu {nu} \\
         --N {N} \\
         --max_iter {max_iter} \\
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \\
@@ -67,17 +67,30 @@ def loop_jobs(wait_time = 1.0):
     N = 10
     max_iter = 100
     model = ['cat', 'bedroom', 'eagle']
-    method = ['ProbGEORCE', 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
-    clip = [0,1]
-    lam = [0.1, 0.5, 1.0, 10.0]
+    method = ['ProbGEORCE', 'NoiseDiffusion']
+    clip = [1]
+    lam = [1.0]
+    
+    modifier = [0.1, 0.5, 1.0, 2.0, 10.0]
     
     for mod in model:
         for meth in method:
             for cl in clip:
-                time.sleep(wait_time+np.abs(np.random.normal(0.0,1.,1)[0]))
-                if "ProbGEORCE" in meth:
-                    for l in lam:
-                        generate_job(model=mod, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter)
+                for mod in modifier:
+                    time.sleep(wait_time+np.abs(np.random.normal(0.0,1.,1)[0]))
+                    if "ProbGEORCE" in meth:
+                        for l in lam:
+                            generate_job(model=mod, method=meth, lam=l, clip=cl, N=N, mu=mod, nu=mod, max_iter=max_iter)
+                            try:
+                                submit_job()
+                            except:
+                                time.sleep(100.0+np.abs(np.random.normal(0.0,1.,1)))
+                                try:
+                                    submit_job()
+                                except:
+                                    print(f"Job script with {mod}, {meth} failed!")
+                    else:
+                        generate_job(model=mod, method=meth, lam=1.0, clip=cl, N=N, mu=mod, nu=mod, max_iter=max_iter)
                         try:
                             submit_job()
                         except:
@@ -86,16 +99,6 @@ def loop_jobs(wait_time = 1.0):
                                 submit_job()
                             except:
                                 print(f"Job script with {mod}, {meth} failed!")
-                else:
-                    generate_job(model=mod, method=meth, lam=1.0, clip=cl, N=N, max_iter=max_iter)
-                    try:
-                        submit_job()
-                    except:
-                        time.sleep(100.0+np.abs(np.random.normal(0.0,1.,1)))
-                        try:
-                            submit_job()
-                        except:
-                            print(f"Job script with {mod}, {meth} failed!")
 
 
 #%% main
