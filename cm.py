@@ -249,6 +249,8 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
             
+        print(out_dir)
+            
         for i, noisy_latent in enumerate(noisy_curve, start=0):
             samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
                 unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
