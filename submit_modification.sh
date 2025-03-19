@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J eagle_Noise
+    #BSUB -J eagle_NoiseDiffusion
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -18,11 +18,11 @@
     
     python3 run_interpolation.py \
         --model eagle \
-        --method Noise \
+        --method NoiseDiffusion \
         --lam 1.0 \
         --clip 1 \
-        --mu -1.0 \
-        --nu -1.0 \
+        --mu 10.0 \
+        --nu 10.0 \
         --N 10 \
         --max_iter 100 \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
