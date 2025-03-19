@@ -133,8 +133,8 @@ class ContextManager:
         l1=torch.clip(l1,-coef,coef)
         l2=torch.clip(l2,-coef,coef)
         
-        noise_curve = self.PGEORCE_D(l1,l2)[1:-1]
-        data_curve = self.PGEORCE_D(left_image, right_image)[1:-1]
+        noise_curve = self.PGEORCE(l1,l2)[1:-1]
+        data_curve = self.PGEORCE(left_image, right_image)[1:-1]
 
         #alpha=math.cos(math.radians(s*90))
         #beta=math.sin(math.radians(s*90))
