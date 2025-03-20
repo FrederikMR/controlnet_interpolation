@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J eagle_NoiseDiffusion_10.0
+    #BSUB -J president_NoiseDiffusion_1.0
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,12 +17,12 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --model eagle \
+        --model president \
         --method NoiseDiffusion \
         --lam 1.0 \
         --clip 1 \
-        --mu 10.0 \
-        --nu 10.0 \
+        --mu 1.0 \
+        --nu 1.0 \
         --N 10 \
         --max_iter 100 \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
