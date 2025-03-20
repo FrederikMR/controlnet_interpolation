@@ -46,6 +46,7 @@ from sample_scripts.run_funny import run_funny
 from sample_scripts.run_president import run_president
 from sample_scripts.run_canada import run_canada
 from sample_scripts.run_australia import run_australia
+from sample_scripts.football import run_football
 
 #%% Args Parser
 
@@ -138,6 +139,8 @@ def run_interpolation()->None:
         run_fun = run_canada
     elif args.model == "australia":
         run_fun = run_australia
+    elif args.model == "football":
+        run_fun = run_football
         
     if args.mu < 0:
         mu = None
