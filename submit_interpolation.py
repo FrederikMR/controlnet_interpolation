@@ -73,9 +73,9 @@ def loop_jobs(wait_time = 1.0):
     
     for mod in model:
         for meth in method:
-            for cl in clip:
-                time.sleep(wait_time+np.abs(np.random.normal(0.0,1.,1)[0]))
-                if "ProbGEORCE" in meth:
+            time.sleep(wait_time+np.abs(np.random.normal(0.0,1.,1)[0]))
+            if "ProbGEORCE" in meth:
+                for cl in clip:
                     for l in lam:
                         generate_job(model=mod, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter)
                         try:
@@ -86,16 +86,16 @@ def loop_jobs(wait_time = 1.0):
                                 submit_job()
                             except:
                                 print(f"Job script with {mod}, {meth} failed!")
-                else:
-                    generate_job(model=mod, method=meth, lam=1.0, clip=cl, N=N, max_iter=max_iter)
+            else:
+                generate_job(model=mod, method=meth, lam=1.0, clip=cl, N=N, max_iter=max_iter)
+                try:
+                    submit_job()
+                except:
+                    time.sleep(100.0+np.abs(np.random.normal(0.0,1.,1)))
                     try:
                         submit_job()
                     except:
-                        time.sleep(100.0+np.abs(np.random.normal(0.0,1.,1)))
-                        try:
-                            submit_job()
-                        except:
-                            print(f"Job script with {mod}, {meth} failed!")
+                        print(f"Job script with {mod}, {meth} failed!")
 
 
 #%% main
