@@ -226,7 +226,7 @@ class ContextManager:
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
         S = Chi2(len(l1.reshape(-1)))
-        self.PGEORCE = ProbEuclideanGEORCE(reg_fun = lambda x: S.log_prob(torch.sum(x**2, axis=-1)),
+        self.PGEORCE = ProbEuclideanGEORCE(reg_fun = lambda x: S.log_prob(torch.sum(x**2)),
                                            init_fun=None,
                                            lam = self.lam,
                                            N=self.N,
