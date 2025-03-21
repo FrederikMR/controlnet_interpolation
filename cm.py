@@ -15,6 +15,8 @@ import yaml
 from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 
+from torch.distributions.chi2 import Chi2
+
 from torch_geometry.interpolation import LinearInterpolation, SphericalInterpolation, NoiseDiffusion
 from torch_geometry.prob_geodesics import ProbEuclideanGEORCE
     
@@ -36,20 +38,10 @@ class ContextManager:
         self.mu = mu
         self.nu = nu
         self.clip = clip
+        self.max_iter = max_iter
         
         self.SInt = SphericalInterpolation(N=N, device="cuda:0")
         self.LInt = LinearInterpolation(N=N, device="cuda:0")
-        self.PGEORCE = ProbEuclideanGEORCE(reg_fun = lambda x: torch.sum((torch.sum(x**2,axis=-1)-x.shape[-1])**2),
-                                           init_fun=None,
-                                           lam = lam,
-                                           N=N,
-                                           tol=1e-4,
-                                           max_iter=max_iter,
-                                           line_search_params = {'rho': 0.5},
-                                           clip=clip,
-                                           boundary=2.0,
-                                           device="cuda:0",
-                                           )
         
         self.model = create_model('models/cldm_v21.yaml').cuda()
         self.ddim_sampler = DDIMSampler(self.model)
@@ -233,6 +225,19 @@ class ContextManager:
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
+        S = Chi2(len(l1.reshape(-1)))
+        self.PGEORCE = ProbEuclideanGEORCE(reg_fun = lambda x: S.log_prob(x),
+                                           init_fun=None,
+                                           lam = self.lam,
+                                           N=self.N,
+                                           tol=1e-4,
+                                           max_iter=self.max_iter,
+                                           line_search_params = {'rho': 0.5},
+                                           clip=self.clip,
+                                           boundary=2.0,
+                                           device="cuda:0",
+                                           )
+        
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
@@ -248,8 +253,6 @@ class ContextManager:
             noisy_curve = self.PGEORCE(l1, l2)
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
-            
-        print(out_dir)
             
         for i, noisy_latent in enumerate(noisy_curve, start=0):
             samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
