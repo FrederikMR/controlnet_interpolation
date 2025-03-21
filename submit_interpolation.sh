@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J football_Noise
+    #BSUB -J football_ProbGEORCE
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -18,8 +18,8 @@
     
     python3 run_interpolation.py \
         --model football \
-        --method Noise \
-        --lam 1.0 \
+        --method ProbGEORCE \
+        --lam 10.0 \
         --clip 1 \
         --mu -1.0 \
         --nu -1.0 \
