@@ -173,6 +173,9 @@ class ContextManager:
         if "ProbGEORCE" in self.inter_method:
             lam = str(self.lam).replace('.', 'd')
             out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}_{lam}'))
+        elif "test" in self.inter_method:
+            lam = str(self.lam).replace('.', 'd')
+            out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}_{lam}'))
         else:            
             out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}'))
             
