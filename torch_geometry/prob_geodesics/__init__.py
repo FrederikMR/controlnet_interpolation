@@ -8,6 +8,4 @@ Created on Tue Jan 28 03:24:00 2025
 
 #%% Modules
 
-from .prob_georce import ProbGEORCE, ProbEuclideanGEORCE, ProbGEORCE_ND
-from .pytorch_optimization import TorchOptimization, TorchEuclideanOptimization
-from .prob_test import ProbTestGEORCE
+from .prob_georce import ProbGEORCE, ProbGEORCE_Embedded, ProbGEORCE_Euclidean, ProbGEORCE_NoiseDiffusion, ProbGEORCE_Euclidean_Embedded
