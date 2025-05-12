@@ -75,7 +75,7 @@ def loop_jobs(wait_time = 1.0):
     for mod in model:
         for meth in method:
             time.sleep(wait_time+np.abs(np.random.normal(0.0,1.,1)[0]))
-            if "ProbGEORCE" in meth:
+            if "ProbGEORCE" in meth or "test" in meth:
                 for cl in clip:
                     for l in lam:
                         generate_job(model=mod, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter)
