@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J football_ProbGEORCE
+    #BSUB -J bedroom_test
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,8 +17,8 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --model football \
-        --method ProbGEORCE \
+        --model bedroom \
+        --method test \
         --lam 10.0 \
         --clip 1 \
         --mu -1.0 \
