@@ -173,9 +173,6 @@ class ContextManager:
         if "ProbGEORCE" in self.inter_method:
             lam = str(self.lam).replace('.', 'd')
             out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}_{lam}'))
-        elif "test" in self.inter_method:
-            lam = str(self.lam).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}_{lam}'))
         else:            
             out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}'))
             
@@ -239,24 +236,6 @@ class ContextManager:
                                            device="cuda:0",
                                            )
         
-        def proj_fun(x):
-            
-            d = np.sqrt(x.shape[-1])
-
-            return d*x / torch.linalg.norm(x, axis=-1).reshape(-1,1)
-        
-        self.test = ProbGEORCE_Euclidean_Embedded(proj_fun = proj_fun,
-                                                  reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))),
-                                                  init_fun=None,
-                                                  lam1 = self.lam,
-                                                  lam2 = 0.1,
-                                                  N=self.N,
-                                                  tol=1e-4,
-                                                  max_iter=self.max_iter,
-                                                  line_search_params = {'rho': 0.5},
-                                                  device="cuda:0",
-                                                  )
-        
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
@@ -270,8 +249,6 @@ class ContextManager:
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE":
             noisy_curve = self.PGEORCE(l1, l2)
-        elif self.inter_method == "test":
-            noisy_curve = self.test(l1, l2)
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
             
