@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J bedroom_test
+    #BSUB -J eagle_ProbGEORCE
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,13 +17,13 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --model bedroom \
-        --method test \
-        --lam 10.0 \
+        --model eagle \
+        --method ProbGEORCE \
+        --lam 1.0 \
         --clip 1 \
         --mu -1.0 \
         --nu -1.0 \
-        --N 10 \
+        --N 100 \
         --max_iter 100 \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
     
