@@ -64,7 +64,7 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
 
 def loop_jobs(wait_time = 1.0):
     
-    N = 100
+    N = 10
     max_iter = 100
     model = ['cat']#, 'president', 'football']
     method = ['ProbGEORCE', 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
