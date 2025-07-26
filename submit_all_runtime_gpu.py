@@ -75,17 +75,13 @@ def loop_jobs(wait_time = 1.0):
     methods = ["ADAM", "SGD", "GEORCE"]
     #sphere
     runs = {"Sphere": [[2,3,5,10,20,50,100, 250, 500, 1000],1e-4],
-            "Ellipsoid": [[2,3,5,10,20,50,100, 250, 500, 1000],1e-4],
-            "SPDN": [[2,3],1e-4],
-            "T2": [[2],1e-4],
-            "H2": [[2],1e-4],
-            "Gaussian": [[2],1e-4],
-            "Frechet": [[2],1e-4],
-            "Cauchy": [[2],1e-4],
-            "Pareto": [[2],1e-4],
-            "celeba": [[32],1e-3],
-            "svhn": [[32],1e-3],
-            "mnist": [[8],1e-3],
+            #"Ellipsoid": [[2,3,5,10,20,50,100, 250, 500, 1000],1e-4],
+            #"SPDN": [[2,3],1e-4],
+            #"T2": [[2],1e-4],
+            #"Gaussian": [[2],1e-4],
+            #"Frechet": [[2],1e-4],
+            #"Cauchy": [[2],1e-4],
+            #"Pareto": [[2],1e-4],
             }
     
     methods = ['SparseNewton', 'SparseRegNewton']
