@@ -64,7 +64,7 @@ class ContextManager:
             score: tensor of same shape as x
         """
         # Get noise prediction e_t
-        e_t = self.ddim_sampler.pred_eps(x, c)  # returns ε_θ(x_t, t)
+        e_t = self.ddim_sampler.pred_eps(x, c, t)  # returns ε_θ(x_t, t)
     
         # Determine ᾱ_t for this timestep
         alpha_cumprod = self.ddim_sampler.ddim_alphas[t]  # or sampler.model.alphas_cumprod[t] if using original steps
