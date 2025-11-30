@@ -20,7 +20,8 @@ from cldm.ddim_hacked import DDIMSampler
 from torch.distributions.chi2 import Chi2
 
 from torch_geometry.interpolation import LinearInterpolation, SphericalInterpolation, NoiseDiffusion
-from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean, ProbGEORCE_Euclidean_Embedded
+from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean
+from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean_Adaptive, ProbScoreGEORCE_Euclidean
     
 class ContextManager:
     def __init__(self, 
