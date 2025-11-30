@@ -269,7 +269,7 @@ class ContextManager:
         eps=1e-8
         tol = 1e-4
         
-        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cur_step),
+        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond,cur_step),
                                                              init_fun=None,
                                                              lam=self.lam,
                                                              N=self.N,
@@ -282,7 +282,7 @@ class ContextManager:
                                                              device="cuda:0",
                                                              )
         
-        self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,0),
+        self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0),
                                                             init_fun= None,
                                                             lam=self.lam,
                                                             N=self.N,
