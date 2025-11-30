@@ -63,15 +63,21 @@ class ContextManager:
         Returns:
             score: tensor of same shape as x
         """
-        # Get noise prediction e_t
-        t = torch.full((x.shape[0],), t, device=x.device, dtype=torch.long)
+        
+        device = x.device
 
-        # εθ(x_t, t)
+        # reshape from flattened vector → latent tensor
+        if x.ndim == 2:  # [B, 16384]
+            x = x.reshape(-1, 4, 64, 64)
+
+        # t must be a tensor
+        t = torch.full((x.shape[0],), t, device=device, dtype=torch.long)
+
+        # predict ε_θ(x_t, t)
         eps = self.ddim_sampler.pred_eps(x, c, t)
 
-        # Score = ∇ log p(x_t)
-        # = − εθ / sqrt(1 - ᾱ_t)
-        alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t][..., None, None, None]
+        # compute score = ∇ log p(x_t)
+        alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].view(-1,1,1,1)
         score = -eps / torch.sqrt(1 - alpha_bar_t)
 
         return score
