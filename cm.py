@@ -197,9 +197,9 @@ class ContextManager:
         clip_str = '_clip' if self.clip else ''
         if "ProbGEORCE" in self.inter_method:
             lam = str(self.lam).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}_{lam}'))
+            out_dir = ''.join((out_dir, f'../figures/{self.inter_method}{clip_str}_{lam}'))
         else:            
-            out_dir = ''.join((out_dir, f'/{self.inter_method}{clip_str}'))
+            out_dir = ''.join((out_dir, f'../figures/{self.inter_method}{clip_str}'))
             
         if self.mu is not None:
             mu_str = str(self.mu).replace('.', 'd')
