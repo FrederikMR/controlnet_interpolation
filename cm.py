@@ -65,7 +65,7 @@ class ContextManager:
         """
         
         device = x.device
-        
+        print("The shape of x is")
         print(x.shape)
 
         # reshape from flattened vector → latent tensor
