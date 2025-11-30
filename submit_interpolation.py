@@ -64,12 +64,19 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
 
 def loop_jobs(wait_time = 1.0):
     
+    #N = 100
+    #max_iter = 100
+    #model = ['cat', 'bedroom', 'eagle']#, 'president', 'football']
+    #method = ['ProbGEORCE']#, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
+    #clip = [1]#[0,1]
+    #lam = [1.0]#[0.1, 0.5, 1.0, 10.0]
+    
     N = 100
     max_iter = 100
-    model = ['cat', 'bedroom', 'eagle']#, 'president', 'football']
-    method = ['ProbGEORCE']#, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
-    clip = [1]#[0,1]
-    lam = [1.0]#[0.1, 0.5, 1.0, 10.0]
+    model = ['cat']#, 'president', 'football']
+    method = ['ProbGEORCE_Score_Data', "ProbGEORCE_Score_Noise"]#, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
+    clip = [0]#[0,1]
+    lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
     
     for mod in model:
         for meth in method:

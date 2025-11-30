@@ -21,11 +21,10 @@ from abc import ABC
 from torch_geometry.manifolds import RiemannianManifold
 from torch_geometry.line_search import Backtracking
 
-#%% Gradient Descent Estimation of Geodesics
 
 #%% Gradient Descent Estimation of Geodesics
 
-class ProbGEORCE(ABC):
+class ProbGEORCE_Adaptive(ABC):
     def __init__(self,
                  M:RiemannianManifold,
                  reg_fun:Callable,
@@ -34,7 +33,10 @@ class ProbGEORCE(ABC):
                  N:int=100,
                  tol:float=1e-4,
                  max_iter:int=1000,
-                 line_search_params:Dict = {'rho': 0.5},
+                 lr_rate:float=0.1,
+                 beta1:float=0.5,
+                 beta2:float=0.5,
+                 eps:float=1e-8,
                  device:str=None,
                  )->None:
         
@@ -45,7 +47,11 @@ class ProbGEORCE(ABC):
         self.N = N
         self.tol = tol
         self.max_iter = max_iter
-        self.line_search_params = line_search_params
+
+        self.lr_rate=lr_rate
+        self.beta1=beta1
+        self.beta2=beta2
+        self.eps=eps
         
         if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -128,8 +134,9 @@ class ProbGEORCE(ABC):
         gi, Gi = grad(self.inner_product, has_aux=True)(zi,ui[1:])
         Gi = torch.vstack((self.G0.reshape(-1,self.M.dim,self.M.dim),
                            Gi))
+        rg = torch.sum(gi**2)
         
-        return gi, Gi
+        return gi, Gi, rg
     
     @torch.no_grad()
     def update_scheme(self, 
@@ -155,16 +162,64 @@ class ProbGEORCE(ABC):
                   ui:torch.Tensor,
                   )->torch.Tensor:
         
-        return (self.z0+torch.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0),)
+        return self.z0+torch.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0)
+    
+    @torch.no_grad()
+    def update_step(self,
+                    zi:torch.Tensor,
+                    ui:torch.Tensor,
+                    gi_hat:torch.Tensor,
+                    Gi_inv:torch.Tensor,
+                    kappa:float,
+                    )->Tuple[torch.Tensor, torch.Tensor]:
+        
+        mui = self.update_scheme(gi_hat, Gi_inv)
+        ui_hat = -0.5*torch.einsum('tij,tj->ti', Gi_inv, mui)
+        zi_hat = self.z0+torch.cumsum(ui_hat[:-1], axis=0)
+
+        return zi+kappa*(zi_hat-zi), ui+kappa*(ui_hat-ui)
+    
+    @torch.no_grad()
+    def adaptive_update(self,
+                        Gi_k1:torch.Tensor,
+                        Gi_k2:torch.Tensor,
+                        gi_k1:torch.Tensor,
+                        gi_k2:torch.Tensor,
+                        rg_k1:torch.Tensor,
+                        rg_k2:torch.Tensor,
+                        beta1:torch.Tensor,
+                        beta2:torch.Tensor,
+                        idx:int,
+                        )->Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
+                                 torch.Tensor, torch.Tensor, torch.Tensor]:
+    
+        Gi_k2 = (1.-self.beta1)*Gi_k2+self.beta1*Gi_k1
+        gi_k2 = (1.-self.beta1)*gi_k2+self.beta1*gi_k1
+        rg_k2 = (1.-self.beta2)*rg_k2 +self.beta2*rg_k1
+        
+        beta1 = beta1*self.beta1
+        beta2 = beta2*self.beta2
+
+        Gi_hat = Gi_k2/(1.-beta1)
+        gi_hat = gi_k2/(1.-beta1)
+        vt = rg_k2/(1.-beta2)
+        
+        lr = self.lr_rate/(torch.sqrt(1+vt)+self.eps)
+        
+        if lr > 1.0:
+            kappa = 1.0
+        else:
+            kappa = lr
+        
+        return Gi_k2, Gi_hat, gi_k2, gi_hat, rg_k2, beta1, beta2, kappa, idx
     
     @torch.no_grad()
     def cond_fun(self, 
                  carry:Tuple,
                  )->torch.Tensor:
         
-        zi, ui, Gi, gi, Gi_inv, grad_val, idx = carry
-        
-        grad_norm = torch.linalg.norm(grad_val)
+        zi, ui, Gi_k1, Gi_hat, gi_k1, gi_hat, rg_k1, \
+            grad_norm, beta1, beta2, kappa, idx = carry
 
         return (grad_norm>self.tol) & (idx < self.max_iter)
     
@@ -172,21 +227,45 @@ class ProbGEORCE(ABC):
                     carry:Tuple,
                     )->torch.Tensor:
         
-        zi, ui, Gi, gi, Gi_inv, grad_val, idx = carry
+        zi, ui, Gi_k1, Gi_hat, gi_k1, gi_hat, rg_k1, \
+            grad_norm, beta1, beta2, kappa, idx = carry
         
-        mui = self.update_scheme(gi, Gi_inv)
+        Gi_inv = torch.vstack((self.Ginv0, torch.linalg.inv(Gi_hat[1:])))
+        zi, ui = self.update_step(zi,
+                                  ui,
+                                  gi_hat,
+                                  Gi_inv,
+                                  kappa,
+                                  )
         
-        ui_hat = -0.5*torch.einsum('tij,tj->ti', Gi_inv, mui)
-        tau = self.line_search((zi,), grad_val, ui_hat, ui)
+        gi_k2, Gi_k2, rg_k2 = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
 
-        ui = tau*ui_hat+(1.-tau)*ui
-        zi = self.z0+torch.cumsum(ui[:-1], axis=0)
+        Gi_k2, Gi_hat, gi_k2, gi_hat, rg_k2, beta1, beta2, kappa, idx = self.adaptive_update(Gi_k1, 
+                                                                                             Gi_k2, 
+                                                                                             gi_k1, 
+                                                                                             gi_k2, 
+                                                                                             rg_k1, 
+                                                                                             rg_k2, 
+                                                                                             beta1, 
+                                                                                             beta2, 
+                                                                                             idx,
+                                                                                             )
+
+        grad_norm = torch.linalg.norm(self.Dregenergy(zi, ui, Gi_hat, gi_hat))
         
-        gi, Gi = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
-        Gi_inv = torch.vstack((self.Ginv0, torch.linalg.inv(Gi[1:])))
-        grad_val = self.Dregenergy(zi, ui, Gi, gi)
-        
-        return (zi, ui, Gi, gi, Gi_inv, grad_val, idx+1)
+        return (zi, 
+                ui, 
+                Gi_k2, 
+                Gi_hat, 
+                gi_k2, 
+                gi_hat, 
+                rg_k2, 
+                grad_norm, 
+                beta1, 
+                beta2, 
+                kappa, 
+                idx+1,
+                )
     
     def __call__(self, 
                  z0:torch.Tensor,
@@ -194,11 +273,6 @@ class ProbGEORCE(ABC):
                  )->torch.Tensor:
         
         shape = z0.shape
-        
-        self.line_search = Backtracking(obj_fun=self.reg_energy,
-                                        update_fun=self.update_xi,
-                                        **self.line_search_params,
-                                        )
         
         self.z0 = z0.detach()
         self.zN = zN.detach()
@@ -213,35 +287,38 @@ class ProbGEORCE(ABC):
         energy_init = self.energy(zi)
         reg_val_init = self.reg_fun(zi)
         
-        if torch.abs(reg_val_init) < 1e-4:
+        if reg_val_init < 1e-4:
             self.lam_norm = self.lam
         else:
             self.lam_norm = self.lam*energy_init/reg_val_init
+
+        gi, Gi, rg = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
+        grad_norm = torch.linalg.norm(self.Dregenergy(zi, ui, Gi, gi).reshape(-1))
         
-        gi, Gi = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
-        Gi_inv = torch.vstack((self.Ginv0, torch.linalg.inv(Gi[1:])))
-        grad_val = self.Dregenergy(zi, ui, Gi, gi)
-        
-        carry=(zi, 
-               ui, 
-               Gi, 
-               gi, 
-               Gi_inv, 
-               grad_val, 
-               0,
-               )
-        
+        carry = (zi, 
+                 ui, 
+                 Gi,
+                 Gi,
+                 gi,
+                 gi,
+                 rg,
+                 grad_norm,
+                 self.beta1,
+                 self.beta2,
+                 self.lr_rate,
+                 0,
+                 )
         while self.cond_fun(carry):
             carry = self.georce_step(carry)
-        zi, ui, Gi, gi, gi_inv, grad_val, idx = carry
-            
+        zi, ui, Gi_k2, Gi_hat, gi_k2, gi_hat, rg_hat, grad_norm, beta1, beta2, kappa, idx = carry
+
         zi = torch.vstack((z0, zi, zN))
             
         return zi.reshape(-1,*shape)
     
 #%% Prob GEORCE Embedded
 
-class ProbGEORCE_Embedded(ABC):
+class ProbGEORCE_Embedded_Adaptive(ABC):
     def __init__(self,
                  proj_fun:Callable,
                  metric_matrix:Callable,
@@ -252,7 +329,10 @@ class ProbGEORCE_Embedded(ABC):
                  N:int=100,
                  tol:float=1e-4,
                  max_iter:int=1000,
-                 line_search_params:Dict = {'rho': 0.5},
+                 lr_rate:float=0.1,
+                 beta1:float=0.5,
+                 beta2:float=0.5,
+                 eps:float=1e-8,
                  device:str=None,
                  )->None:
         
@@ -266,7 +346,11 @@ class ProbGEORCE_Embedded(ABC):
         self.N = N
         self.tol = tol
         self.max_iter = max_iter
-        self.line_search_params = line_search_params
+        
+        self.lr_rate=lr_rate
+        self.beta1=beta1
+        self.beta2=beta2
+        self.eps=eps
         
         if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -323,7 +407,7 @@ class ProbGEORCE_Embedded(ABC):
         
         return energy + self.lam1_norm*reg_val + self.lam2_norm*proj_val
     
-    @torch.no_grad()    
+    @torch.no_grad()
     def Dregenergy(self,
                    zi:torch.Tensor,
                    ui:torch.Tensor,
@@ -353,8 +437,9 @@ class ProbGEORCE_Embedded(ABC):
         gi, Gi = grad(self.inner_product, has_aux=True)(zi,ui[1:])
         Gi = torch.vstack((self.G0.reshape(-1,self.dim,self.dim),
                            Gi))
+        rg = torch.sum(gi**2)
         
-        return gi, Gi
+        return gi, Gi, rg
     
     @torch.no_grad()
     def update_scheme(self, 
@@ -380,15 +465,63 @@ class ProbGEORCE_Embedded(ABC):
                   ui:torch.Tensor,
                   )->torch.Tensor:
         
-        return (self.z0+torch.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0),)
+        return self.z0+torch.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0)
     
+    @torch.no_grad()
+    def update_step(self,
+                    zi:torch.Tensor,
+                    ui:torch.Tensor,
+                    gi_hat:torch.Tensor,
+                    Gi_inv:torch.Tensor,
+                    kappa:float,
+                    )->Tuple[torch.Tensor, torch.Tensor]:
+        
+        mui = self.update_scheme(gi_hat, Gi_inv)
+        ui_hat = -0.5*torch.einsum('tij,tj->ti', Gi_inv, mui)
+        zi_hat = self.z0+torch.cumsum(ui_hat[:-1], axis=0)
+
+        return zi+kappa*(zi_hat-zi), ui+kappa*(ui_hat-ui)
+    
+    @torch.no_grad()
+    def adaptive_update(self,
+                        Gi_k1:torch.Tensor,
+                        Gi_k2:torch.Tensor,
+                        gi_k1:torch.Tensor,
+                        gi_k2:torch.Tensor,
+                        rg_k1:torch.Tensor,
+                        rg_k2:torch.Tensor,
+                        beta1:torch.Tensor,
+                        beta2:torch.Tensor,
+                        idx:int,
+                        )->Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
+                                 torch.Tensor, torch.Tensor, torch.Tensor]:
+    
+        Gi_k2 = (1.-self.beta1)*Gi_k2+self.beta1*Gi_k1
+        gi_k2 = (1.-self.beta1)*gi_k2+self.beta1*gi_k1
+        rg_k2 = (1.-self.beta2)*rg_k2 +self.beta2*rg_k1
+        
+        beta1 = beta1*self.beta1
+        beta2 = beta2*self.beta2
+
+        Gi_hat = Gi_k2/(1.-beta1)
+        gi_hat = gi_k2/(1.-beta1)
+        vt = rg_k2/(1.-beta2)
+        
+        lr = self.lr_rate/(torch.sqrt(1+vt)+self.eps)
+        if lr > 1.0:
+            kappa = 1.0
+        else:
+            kappa = lr
+
+        return Gi_k2, Gi_hat, gi_k2, gi_hat, rg_k2, beta1, beta2, kappa, idx
+    
+    @torch.no_grad()
     def cond_fun(self, 
                  carry:Tuple,
                  )->torch.Tensor:
         
-        zi, ui, Gi, gi, Gi_inv, grad_val, idx = carry
-        
-        grad_norm = torch.linalg.norm(grad_val)
+        zi, ui, Gi_k1, Gi_hat, gi_k1, gi_hat, rg_k1, \
+            grad_norm, beta1, beta2, kappa, idx = carry
 
         return (grad_norm>self.tol) & (idx < self.max_iter)
     
@@ -396,21 +529,45 @@ class ProbGEORCE_Embedded(ABC):
                     carry:Tuple,
                     )->torch.Tensor:
         
-        zi, ui, Gi, gi, Gi_inv, grad_val, idx = carry
+        zi, ui, Gi_k1, Gi_hat, gi_k1, gi_hat, rg_k1, \
+            grad_norm, beta1, beta2, kappa, idx = carry
         
-        mui = self.update_scheme(gi, Gi_inv)
+        Gi_inv = torch.vstack((self.Ginv0, torch.linalg.inv(Gi_hat[1:])))
+        zi, ui = self.update_step(zi,
+                                  ui,
+                                  gi_hat,
+                                  Gi_inv,
+                                  kappa,
+                                  )
         
-        ui_hat = -0.5*torch.einsum('tij,tj->ti', Gi_inv, mui)
-        tau = self.line_search((zi,), grad_val, ui_hat, ui)
+        gi_k2, Gi_k2, rg_k2 = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
 
-        ui = tau*ui_hat+(1.-tau)*ui
-        zi = self.z0+torch.cumsum(ui[:-1], axis=0)
+        Gi_k2, Gi_hat, gi_k2, gi_hat, rg_k2, beta1, beta2, kappa, idx = self.adaptive_update(Gi_k1, 
+                                                                                             Gi_k2, 
+                                                                                             gi_k1, 
+                                                                                             gi_k2, 
+                                                                                             rg_k1, 
+                                                                                             rg_k2, 
+                                                                                             beta1, 
+                                                                                             beta2, 
+                                                                                             idx,
+                                                                                             )
+
+        grad_norm = torch.linalg.norm(self.Dregenergy(zi, ui, Gi_hat, gi_hat))
         
-        gi, Gi = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
-        Gi_inv = torch.vstack((self.Ginv0, torch.linalg.inv(Gi[1:])))
-        grad_val = self.Dregenergy(zi, ui, Gi, gi)
-        
-        return (zi, ui, Gi, gi, Gi_inv, grad_val, idx+1)
+        return (zi, 
+                ui, 
+                Gi_k2, 
+                Gi_hat, 
+                gi_k2, 
+                gi_hat, 
+                rg_k2, 
+                grad_norm, 
+                beta1, 
+                beta2, 
+                kappa, 
+                idx+1,
+                )
 
     def __call__(self, 
                  z0:torch.Tensor,
@@ -418,11 +575,6 @@ class ProbGEORCE_Embedded(ABC):
                  )->torch.Tensor:
         
         shape = z0.shape
-        
-        self.line_search = Backtracking(obj_fun=self.reg_energy,
-                                        update_fun=self.update_xi,
-                                        **self.line_search_params,
-                                        )
         
         self.z0 = z0.detach()
         self.zN = zN.detach()
@@ -447,32 +599,36 @@ class ProbGEORCE_Embedded(ABC):
             self.lam2_norm = self.lam2*energy_init/proj_val_init
         else:
             self.lam2_norm = self.lam2
+            
+        gi, Gi, rg = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
+        grad_norm = torch.linalg.norm(self.Dregenergy(zi, ui, Gi, gi).reshape(-1))
         
-        gi, Gi = self.gi(zi,ui)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
-        Gi_inv = torch.vstack((self.Ginv0, torch.linalg.inv(Gi[1:])))
-        grad_val = self.Dregenergy(zi, ui, Gi, gi)
-        
-        carry = (zi,
-                 ui,
+        carry = (zi, 
+                 ui, 
+                 Gi,
                  Gi,
                  gi,
-                 Gi_inv,
-                 grad_val,
+                 gi,
+                 rg,
+                 grad_norm,
+                 self.beta1,
+                 self.beta2,
+                 self.lr_rate,
                  0,
                  )
+        
         while self.cond_fun(carry):
             carry = self.georce_step(carry)
+        zi, ui, Gi_k2, Gi_hat, gi_k2, gi_hat, rg_hat, grad_norm, beta1, beta2, kappa, idx = carry
         
-        zi, ui, Gi, gi, gi_inv, grad_val, idx = carry
-        zi = torch.vstack((z0, zi, zN))
-        
+        zi = torch.vstack((z0, zi, zN))        
         zi = self.proj_fun(zi)
         
         return zi.reshape(-1,*shape)
 
 #%% Probabilistic GEORCE for Euclidean Background Metric
 
-class ProbGEORCE_Euclidean(ABC):
+class ProbGEORCE_Euclidean_Adaptive(ABC):
     def __init__(self,
                  reg_fun:Callable,
                  init_fun:Callable[[torch.Tensor, torch.Tensor, int], torch.Tensor]=None,
@@ -480,7 +636,10 @@ class ProbGEORCE_Euclidean(ABC):
                  N:int=100,
                  tol:float=1e-4,
                  max_iter:int=1000,
-                 line_search_params:Dict = {'rho': 0.5},
+                 lr_rate:float=0.1,
+                 beta1:float=0.5,
+                 beta2:float=0.5,
+                 eps:float=1e-8,
                  device:str=None,
                  )->None:
 
@@ -490,7 +649,11 @@ class ProbGEORCE_Euclidean(ABC):
         self.N = N
         self.tol = tol
         self.max_iter = max_iter
-        self.line_search_params = line_search_params
+        
+        self.lr_rate=lr_rate
+        self.beta1=beta1
+        self.beta2=beta2
+        self.eps=eps
         
         if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -559,7 +722,9 @@ class ProbGEORCE_Euclidean(ABC):
            zi:torch.Tensor,
            )->torch.Tensor:
         
-        return grad(self.inner_product)(zi)
+        gi = grad(self.inner_product)(zi)
+        
+        return gi, torch.sum(gi**2)
     
     @torch.no_grad()
     def update_xi(self,
@@ -569,7 +734,7 @@ class ProbGEORCE_Euclidean(ABC):
                   ui:torch.Tensor,
                   )->torch.Tensor:
         
-        return (self.z0+torch.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0),)
+        return self.z0+torch.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0)
     
     @torch.no_grad()
     def update_ui(self,
@@ -582,13 +747,55 @@ class ProbGEORCE_Euclidean(ABC):
         return self.diff/self.N+0.5*(g_sum-g_cumsum)
     
     @torch.no_grad()
+    def update_step(self,
+                    zi:torch.Tensor,
+                    ui:torch.Tensor,
+                    gi_hat:torch.Tensor,
+                    kappa:float,
+                    )->Tuple[torch.Tensor, torch.Tensor]:
+        
+        ui_hat = self.update_ui(gi_hat)
+        zi_hat = self.z0+torch.cumsum(ui_hat[:-1], axis=0)
+
+        return zi+kappa*(zi_hat-zi), ui+kappa*(ui_hat-ui)
+    
+    @torch.no_grad()
+    def adaptive_update(self,
+                        gi_k1:torch.Tensor,
+                        gi_k2:torch.Tensor,
+                        rg_k1:torch.Tensor,
+                        rg_k2:torch.Tensor,
+                        beta1:torch.Tensor,
+                        beta2:torch.Tensor,
+                        idx:int,
+                        )->Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
+                                 torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        gi_k2 = (1.-self.beta1)*gi_k2+self.beta1*gi_k1
+        rg_k2 = (1.-self.beta2)*rg_k2 +self.beta2*rg_k1
+        
+        beta1 = beta1*self.beta1
+        beta2 = beta2*self.beta2
+
+        gi_hat = gi_k2/(1.-beta1)
+        vt = rg_k2/(1.-beta2)
+        
+        lr = self.lr_rate/(torch.sqrt(1+vt)+self.eps)
+        
+        if lr > 1.0:
+            kappa = lr
+        else:
+            kappa = lr
+
+        return gi_k2, gi_hat, rg_k2, beta1, beta2, kappa, idx
+    
+    @torch.no_grad()
     def cond_fun(self, 
                  carry:Tuple,
                  )->torch.Tensor:
         
-        zi, ui, gi, grad_val, idx = carry
-        
-        grad_norm = torch.linalg.norm(grad_val)
+        zi, ui, gi_k1, gi_hat, rg_k1, \
+            grad_norm, beta1, beta2, kappa, idx = carry
 
         return (grad_norm>self.tol) & (idx < self.max_iter)
     
@@ -596,18 +803,39 @@ class ProbGEORCE_Euclidean(ABC):
                     carry:Tuple,
                     )->torch.Tensor:
         
-        zi, ui, gi, grad_val, idx = carry
+        zi, ui, gi_k1, gi_hat, rg_k1, \
+            grad_norm, beta1, beta2, kappa, idx = carry
 
-        ui_hat = self.update_ui(gi)
-        tau = self.line_search((zi,), grad_val, ui_hat, ui)
+        zi, ui = self.update_step(zi,
+                                  ui,
+                                  gi_hat,
+                                  kappa,
+                                  )
+        
+        gi_k2, rg_k2 = self.gi(zi)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
 
-        ui = tau*ui_hat+(1.-tau)*ui
-        zi = self.z0+torch.cumsum(ui[:-1], axis=0)
+        gi_k2, gi_hat, rg_k2, beta1, beta2, kappa, idx = self.adaptive_update(gi_k1, 
+                                                                              gi_k2, 
+                                                                              rg_k1, 
+                                                                              rg_k2, 
+                                                                              beta1, 
+                                                                              beta2, 
+                                                                              idx,
+                                                                              )
+
+        grad_norm = torch.linalg.norm(self.Dregenergy(ui, gi_hat).reshape(-1))
         
-        gi = self.gi(zi)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
-        grad_val = self.Dregenergy(ui, gi)
-        
-        return (zi, ui, gi, grad_val, idx+1)
+        return (zi, 
+                ui, 
+                gi_k2, 
+                gi_hat, 
+                rg_k2, 
+                grad_norm, 
+                beta1, 
+                beta2, 
+                kappa, 
+                idx+1,
+                )
     
     def __call__(self, 
                  z0:torch.Tensor,
@@ -615,11 +843,6 @@ class ProbGEORCE_Euclidean(ABC):
                  )->torch.Tensor:
         
         shape = z0.shape
-        
-        self.line_search = Backtracking(obj_fun=self.reg_energy,
-                                        update_fun=self.update_xi,
-                                        **self.line_search_params,
-                                        )
         
         self.z0 = z0.reshape(-1).detach()
         self.zN = zN.reshape(-1).detach()
@@ -636,117 +859,23 @@ class ProbGEORCE_Euclidean(ABC):
         else:
             self.lam_norm = self.lam
         
-        gi = self.gi(zi)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
-        grad_val = self.Dregenergy(ui, gi)
+        gi, rg = self.gi(zi)#torch.einsum('tj,tjid,ti->td', un[1:], self.M.DG(xn[1:-1]), un[1:])
+        grad_norm = torch.linalg.norm(self.Dregenergy(ui, gi).reshape(-1))
         
-        carry = zi, ui, gi, grad_val, 0
+        carry = (zi, 
+                 ui, 
+                 gi,
+                 gi,
+                 rg,
+                 grad_norm,
+                 self.beta1,
+                 self.beta2,
+                 self.lr_rate,
+                 0,
+                 )
         while self.cond_fun(carry):
             carry = self.georce_step(carry)
-        zi, ui, gi, grad_val, idx = carry
+        zi, ui, gi_k2, gi_hat, rg_hat, grad_norm, beta1, beta2, kappa, idx = carry
+        zi = torch.vstack((z0, zi, zN))        
         
-        zi = torch.vstack((z0, zi, zN))
-            
         return zi.reshape(-1,*shape)
-    
-#%% ProbGEORCE NoiseDiffusion
-
-class ProbGEORCE_NoiseDiffusion(ABC):
-    """Probabilistic GEORCE with NoiseDiffusion
-
-    Estimates geodesics for the Euclidean metric under the constaint that
-    these are within the probability distribituon using the score function.
-
-    Attributes:
-        reg_fun: regularizing function that is vectorized and returns a scalar
-        init_fun: initilization function for the initial curve
-        lam: lambda that determines the deviation between the geodesic and probaility flow
-        N: number of grid points, in total the outputet curve will have (N+1) grid points
-        tol: the tolerance for convergence
-        max_iter: the maximum number of iterations
-        line_search_params: the parameters for the line search (max_iter and rho), where rho is backtracking parameter
-    """
-    def __init__(self,
-                 interpolater:Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-                 alpha:Callable=lambda s: torch.cos(0.5*torch.pi*s),
-                 beta:Callable=lambda s: torch.sin(0.5*torch.pi*s),
-                 mu:Callable|None= lambda s: None,
-                 nu:Callable|None= lambda s: None,
-                 gamma:float=0.0,
-                 sigma:float=1.0,
-                 boundary:float=2.0,
-                 device:str=None,
-                 )->None:
-        """Initializes the instance of ProbGEORCE with Euclidean background metric.
-
-        Args:
-          reg_fun: regularizing function that is vectorized
-          init_fun: initilization function for the initial curve
-          lam: lambda that determines the deviation between the geodesic and probaility flow
-          N: number of grid points, in total the outputet curve will have (N+1) grid points
-          tol: the tolerance for convergence
-          max_iter: the maximum number of iterations
-          line_search_params: the parameters for the line search (max_iter and rho), where rho is backtracking parameter
-        """
-        
-        self.interpolater = interpolater
-        
-        self.alpha = alpha
-        self.beta = beta
-
-        self.mu = mu if mu is None else lambda s: 1.2*self.alpha(s)/(self.alpha(s)+self.beta(s))
-        self.nu = nu if nu is None else lambda s: 1.2*self.beta(s)/(self.alpha(s)+self.beta(s))
-        
-        self.gamma = gamma
-        self.sigma = sigma
-        self.boundary = boundary
-        if device is None:
-            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = device
-        
-    def __str__(self)->str:
-        
-        return "NoiseDiffusion with different ProbGEORCE interpolation"
-
-    def __call__(self,
-                 z0:Tensor,
-                 zN:Tensor,
-                 x0:Tensor,
-                 xN:Tensor,
-                 )->Tensor:
-        
-        shape = z0.shape
-        
-        z0 = z0.reshape(-1)
-        zN = zN.reshape(-1)
-        x0 = x0.reshape(-1)
-        xN = xN.reshape(-1)
-        
-        s = torch.linspace(0,1,self.interpolater.N+1,
-                           device=self.device,
-                           )[1:-1].reshape(-1,1)
-
-        #alpha=math.cos(math.radians(s*90))
-        #beta=math.sin(math.radians(s*90))
-        alpha = torch.cos(0.5*torch.pi*s)
-        beta = torch.sin(0.5*torch.pi*s)
-        
-        mu = vmap(self.mu)(s)
-        nu = vmap(self.nu)(s)
-        eps = self.sigma*torch.randn_like(z0)
-        
-        l=alpha/beta
-        
-        alpha=((1-self.gamma*self.gamma)*l*l/(l*l+1))**0.5
-        beta=((1-self.gamma*self.gamma)/(l*l+1))**0.5
-        
-        noise_curve = self.interpolater(z0,zN)[1:-1]
-        data_curve = self.interpolater(x0, xN)[1:-1]
-        
-        noise_latent = noise_curve - data_curve + \
-            (mu*x0 + nu * xN)+self.gamma*eps
-
-        curve=torch.clip(noise_latent,-self.boundary,self.boundary)
-        curve = torch.vstack((z0, curve, zN))
-        
-        return curve.reshape(-1, *shape)

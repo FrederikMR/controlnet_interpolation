@@ -35,15 +35,18 @@ class nParaboloid(RiemannianManifold):
         
         return f"Paraboloid of dimension {self.dim} equipped with the pull back metric"
     
-    def f_standard(self,
-                   z:Tensor,
-                   )->Tensor:
-        
-        return torch.hstack((z, torch.sum(z**2)))
+    def f_standard(self, z: torch.Tensor) -> torch.Tensor:
+        """
+        z: (..., d)
+        returns (..., d+1)
+        """
+        s2 = torch.sum(z**2, dim=-1, keepdim=True)   # (..., 1)
+        return torch.cat([z, s2], dim=-1)            # (..., d+1)
 
-    def invf_standard(self,
-                      x:Tensor,
-                      )->Tensor:
-        
-        return x[:-1]
+    def invf_standard(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: (..., d+1)
+        returns (..., d)
+        """
+        return x[..., :-1]
         

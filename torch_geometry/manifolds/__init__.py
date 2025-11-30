@@ -8,7 +8,8 @@ Created on Tue Jan 28 02:22:06 2025
 
 #%% Modules
 
-from .manifold import RiemannianManifold
+from .manifold import RiemannianManifold, LambdaManifold
+from .fisher_rao import FisherRao
 from .nSphere import nSphere
 from .nEllipsoid import nEllipsoid
 from .nEuclidean import nEuclidean

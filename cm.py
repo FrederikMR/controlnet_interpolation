@@ -19,7 +19,8 @@ from torch.distributions.chi2 import Chi2
 
 from torch_geometry.interpolation import LinearInterpolation, SphericalInterpolation, NoiseDiffusion
 from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean, ProbGEORCE_Euclidean_Embedded
-    
+from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean_Adaptive, ProbScoreGEORCE_Euclidean
+
 class ContextManager:
     def __init__(self, 
                  N:int=10,
@@ -48,6 +49,30 @@ class ContextManager:
         
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
+        
+    def score_fun(self, x: torch.Tensor, c: torch.Tensor, t: int):
+        """
+        Compute the diffusion score ∇_x log p(x_t) at a given latent x and timestep t.
+    
+        Args:
+            sampler: DDIMSampler object
+            x: latent tensor of shape (B, C, H, W)
+            c: conditioning tensor or dict (ControlNet conditioning)
+            t: timestep (integer index)
+    
+        Returns:
+            score: tensor of same shape as x
+        """
+        # Get noise prediction e_t
+        e_t = self.ddim_sampler.pred_eps(x, c)  # returns ε_θ(x_t, t)
+    
+        # Determine ᾱ_t for this timestep
+        alpha_cumprod = self.ddim_sampler.ddim_alphas[t]  # or sampler.model.alphas_cumprod[t] if using original steps
+    
+        # Compute score: ∇_x log p(x_t) = - ε / sqrt(1 - ᾱ_t)
+        score = - e_t / torch.sqrt(1 - alpha_cumprod)
+    
+        return score
         
     def noise_diffusion(self,
                         l1, 
@@ -225,6 +250,8 @@ class ContextManager:
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
+        score = lambda x: -self.score_fun(x, cond, cur_step)
+        
         S = Chi2(len(l1.reshape(-1)))
         self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))),
                                            init_fun=None,
@@ -235,6 +262,38 @@ class ContextManager:
                                            line_search_params = {'rho': 0.5},
                                            device="cuda:0",
                                            )
+
+        lr_rate=0.001
+        beta1=0.5
+        beta2=0.5
+        eps=1e-8
+        tol = 1e-4
+        
+        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cur_step),
+                                                             init_fun=None,
+                                                             lam=self.lam,
+                                                             N=self.N,
+                                                             tol=tol,
+                                                             max_iter=self.max_iter,
+                                                             lr_rate=lr_rate,
+                                                             beta1=beta1,
+                                                             beta2=beta2,
+                                                             eps=eps,
+                                                             device="cuda:0",
+                                                             )
+        
+        self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,0),
+                                                            init_fun= None,
+                                                            lam=self.lam,
+                                                            N=self.N,
+                                                            tol=tol,
+                                                            max_iter=self.max_iter,
+                                                            lr_rate=lr_rate,
+                                                            beta1=beta1,
+                                                            beta2=beta2,
+                                                            eps=eps,
+                                                            device="cuda:0",
+                                                            )
         
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
@@ -251,20 +310,33 @@ class ContextManager:
             noisy_curve = self.PGEORCE(l1, l2)
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
+        elif self.inter_method == "ProbGEORCE_Score_Data":
+            data_curve = self.PGEORCE_Score_Data(l1, l2)
+            noisy_curve = None
+        elif self.inter_method == "ProbGEORCE_Score_Noise":
+            noisy_curve = self.PGEORCE_Score_Noise(l1, l2)
             
-        if self.clip:
-            noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
-            
-        for i, noisy_latent in enumerate(noisy_curve, start=0):
-            samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
-                unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                use_original_steps=False)  
-            
-            image = ldm.decode_first_stage(samples)
-
-            image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-            lam = str(self.lam).replace('.','d')
-            Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
+        if noisy_curve is not None:
+            if self.clip:
+                noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
+        
+            for i, noisy_latent in enumerate(noisy_curve, start=0):
+                samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
+                    unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
+                    use_original_steps=False)  
+                
+                image = ldm.decode_first_stage(samples)
+    
+                image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+                lam = str(self.lam).replace('.','d')
+                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
+        else:
+            for samples in data_curve:
+                image = ldm.decode_first_stage(samples)
+    
+                image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+                lam = str(self.lam).replace('.','d')
+                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
 
         return
 

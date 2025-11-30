@@ -102,8 +102,8 @@ class Backtracking(ABC):
           boolean indicating if backtracking should be terminated
         """
 
-        x_new = self.update_fun(self.x, alpha, *args)
-        obj = self.obj_fun(x_new, *args).item()
+        x_new = self.update_fun(*self.x, alpha, *args)
+        obj = self.obj_fun(*x_new, *args).item()
         bool_val = self.armijo_condition(x_new, obj, alpha, *args)
         
         return (bool_val) & (idx < self.max_iter)
@@ -140,7 +140,7 @@ class Backtracking(ABC):
         """
         
         self.x = x
-        self.obj0 = self.obj_fun(x,*args).item()
+        self.obj0 = self.obj_fun(*x,*args).item()
         self.pk = -grad_val
         self.grad0 = grad_val
         

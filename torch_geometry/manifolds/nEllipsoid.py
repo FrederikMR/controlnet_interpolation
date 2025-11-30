@@ -52,22 +52,30 @@ class nEllipsoid(RiemannianManifold):
         
         return f"Sphere of dimension {self.dim} in {self.coordinates} coordinates equipped with the pull back metric"
     
-    def f_stereographic(self, 
-                        z:Tensor,
-                        )->Tensor:
-        
-        s2 = torch.sum(z**2, axis=-1)
-        
-        return self.params*torch.hstack(((1-s2), 2*z))/(1+s2)
+    def f_stereographic(self, z: torch.Tensor) -> torch.Tensor:
+        """
+        z: (..., d)
+        return: (..., d+1)
+        """
+        s2 = torch.sum(z**2, dim=-1)                     # (...,)
+        num_first = (1 - s2)[..., None]                 # (..., 1)
+        num_rest = 2 * z                                # (..., d)
+        num = torch.cat([num_first, num_rest], dim=-1)  # (..., d+1)
+        denom = (1 + s2)[..., None]                     # (..., 1)
+    
+        return self.params * num / denom                # broadcast: (..., d+1)
 
-    def invf_stereographic(self, 
-                           x:Tensor,
-                           )->Tensor:
-        
-        x /= self.params
-        
-        x0 = x[0]
-        return x[1:]/(1+x0)
+    def invf_stereographic(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: (..., d+1)
+        return: (..., d)
+        """
+        x = x / self.params                # broadcast-safe
+    
+        x0 = x[..., 0]                     # (...,)
+        rest = x[..., 1:]                  # (..., d)
+    
+        return rest / (1 + x0)[..., None]  # (..., d)
         
     def f_spherical(self, 
                     z:Tensor,

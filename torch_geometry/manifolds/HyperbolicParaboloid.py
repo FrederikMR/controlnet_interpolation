@@ -34,15 +34,20 @@ class HyperbolicParaboloid(RiemannianManifold):
         
         return "Hyperbolic Paraboloid equipped with the pull back metric"
     
-    def f_standard(self,
-                   z:Tensor,
-                   )->Tensor:
-        
-        return torch.hstack((z.T, z[0]**2-z[1]**2))
+    def f_standard(self, z: torch.Tensor) -> torch.Tensor:
+        """
+        z: (..., 2)
+        returns (..., 3)
+        """
+        z0 = z[..., 0]
+        z1 = z[..., 1]
+        extra = z0**2 - z1**2                        # (...,)
+        return torch.cat([z, extra[..., None]], dim=-1)
 
-    def invf_standard(self,
-                      x:Tensor,
-                      )->Tensor:
-        
-        return x[:-1]
+    def invf_standard(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: (..., 3)
+        returns (..., 2)
+        """
+        return x[..., :-1]
         
