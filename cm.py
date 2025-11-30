@@ -65,6 +65,8 @@ class ContextManager:
         """
         
         device = x.device
+        
+        print(x.shape)
 
         # reshape from flattened vector → latent tensor
         if x.ndim == 2:  # [B, 16384]
