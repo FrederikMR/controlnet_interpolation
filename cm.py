@@ -305,6 +305,9 @@ class ContextManager:
                                                             device="cuda:0",
                                                             )
         
+        print("The shape of l1 is")
+        print(l1.shape)
+        
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
