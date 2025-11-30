@@ -65,12 +65,10 @@ class ContextManager:
         """
         
         device = x.device
-        print("The shape of x is")
-        print(x.shape)
 
         # reshape from flattened vector → latent tensor
         if x.ndim == 2:  # [B, 16384]
-            x = x.reshape(-1, 4, 64, 64)
+            x = x.reshape(-1, 4, 96, 96)
 
         # t must be a tensor
         t = torch.full((x.shape[0],), t, device=device, dtype=torch.long)
@@ -82,7 +80,7 @@ class ContextManager:
         alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].view(-1,1,1,1)
         score = -eps / torch.sqrt(1 - alpha_bar_t)
 
-        return score
+        return score.reshape(len(x),-1)
         
     def noise_diffusion(self,
                         l1, 
@@ -304,9 +302,6 @@ class ContextManager:
                                                             eps=eps,
                                                             device="cuda:0",
                                                             )
-        
-        print("The shape of l1 is")
-        print(l1.shape)
         
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
