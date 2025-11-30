@@ -64,14 +64,16 @@ class ContextManager:
             score: tensor of same shape as x
         """
         # Get noise prediction e_t
-        e_t = self.ddim_sampler.pred_eps(x, c, t)  # returns ε_θ(x_t, t)
-    
-        # Determine ᾱ_t for this timestep
-        alpha_cumprod = self.ddim_sampler.ddim_alphas[t]  # or sampler.model.alphas_cumprod[t] if using original steps
-    
-        # Compute score: ∇_x log p(x_t) = - ε / sqrt(1 - ᾱ_t)
-        score = - e_t / torch.sqrt(1 - alpha_cumprod)
-    
+        t = torch.full((x.shape[0],), t, device=x.device, dtype=torch.long)
+
+        # εθ(x_t, t)
+        eps = self.ddim_sampler.pred_eps(x, c, t)
+
+        # Score = ∇ log p(x_t)
+        # = − εθ / sqrt(1 - ᾱ_t)
+        alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t][..., None, None, None]
+        score = -eps / torch.sqrt(1 - alpha_bar_t)
+
         return score
         
     def noise_diffusion(self,
