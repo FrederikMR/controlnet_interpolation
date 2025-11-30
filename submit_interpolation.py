@@ -39,8 +39,8 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     #BSUB -u fmry@dtu.dk
     #BSUB -B
     #BSUB -N
-    #BSUB -o sendmeemail/error_%J.out 
-    #BSUB -e sendmeemail/output_%J.err 
+    #BSUB -o ../error_folder/error_%J.out 
+    #BSUB -e ../output_folder/output_%J.err 
     
     module swap python3/3.10.12
     module swap cuda/12.0

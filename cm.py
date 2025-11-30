@@ -50,7 +50,7 @@ class ContextManager:
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
         
-    def score_fun(self, x: torch.Tensor, c: torch.Tensor, t: int):
+    def score_fun(self, x: torch.Tensor, c: torch.Tensor, t: int, batch_size=4):
         """
         Compute the diffusion score ∇_x log p(x_t) at a given latent x and timestep t.
     
@@ -66,21 +66,37 @@ class ContextManager:
         
         device = x.device
 
-        # reshape from flattened vector → latent tensor
-        if x.ndim == 2:  # [B, 16384]
+        # reshape flattened → latent
+        if x.ndim == 2:
             x = x.reshape(-1, 4, 96, 96)
 
-        # t must be a tensor
-        t = torch.full((x.shape[0],), t, device=device, dtype=torch.long)
+        N = x.shape[0]
+        scores = []
 
-        # predict ε_θ(x_t, t)
-        eps = self.ddim_sampler.pred_eps(x, c, t)
+        for i in range(0, N, batch_size):
+            xb = x[i:i+batch_size]
+            cb = {}
 
-        # compute score = ∇ log p(x_t)
-        alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].view(-1,1,1,1)
-        score = -eps / torch.sqrt(1 - alpha_bar_t)
+            # copy conditioning dictionary in batch slices
+            for k, v in c.items():
+                if isinstance(v, list):
+                    cb[k] = [vi[i:i+batch_size] for vi in v]
+                else:
+                    cb[k] = v[i:i+batch_size]
 
-        return score.reshape(len(x),-1)
+            tb = torch.full((xb.shape[0],), t, device=device, dtype=torch.long)
+
+            # compute eps in safe batch
+            eps = self.ddim_sampler.pred_eps(xb, cb, tb)
+
+            alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].view(1,1,1,1)
+            score_b = -eps / torch.sqrt(1 - alpha_bar_t)
+
+            scores.append(score_b.reshape(xb.shape[0], -1).cpu())
+
+            torch.cuda.empty_cache()
+
+        return torch.cat(scores, dim=0).reshape(len(x), -1)
         
     def noise_diffusion(self,
                         l1, 
