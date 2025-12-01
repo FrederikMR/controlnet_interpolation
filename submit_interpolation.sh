@@ -3,7 +3,7 @@
     #BSUB -J cat_ProbGEORCE_Score_Noise
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
-    #BSUB -W 0:30
+    #BSUB -W 24:00
     #BSUB -R "span[hosts=1]"
     #BSUB -R "rusage[mem=16GB]"
     #BSUB -u fmry@dtu.dk
@@ -23,7 +23,7 @@
         --clip 0 \
         --mu -1.0 \
         --nu -1.0 \
-        --N 100 \
+        --N 10 \
         --max_iter 100 \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
     
