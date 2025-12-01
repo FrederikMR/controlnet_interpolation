@@ -71,7 +71,7 @@ def loop_jobs(wait_time = 1.0):
     #clip = [1]#[0,1]
     #lam = [1.0]#[0.1, 0.5, 1.0, 10.0]
     
-    N = 100
+    N = 10
     max_iter = 100
     model = ['cat']#, 'president', 'football']
     method = ['ProbGEORCE_Score_Data', "ProbGEORCE_Score_Noise"]#, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
