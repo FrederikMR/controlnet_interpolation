@@ -64,6 +64,10 @@ class ContextManager:
             score: tensor of same shape as x
         """
         
+        print("C test here")
+        print(type(c))
+        print(c.shape)
+        
         device = x.device
 
         # reshape flattened → latent
