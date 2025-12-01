@@ -33,7 +33,7 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     #BSUB -J {model}_{method}
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
-    #BSUB -W 24:00
+    #BSUB -W 4:00
     #BSUB -R "span[hosts=1]"
     #BSUB -R "rusage[mem=16GB]"
     #BSUB -u fmry@dtu.dk
