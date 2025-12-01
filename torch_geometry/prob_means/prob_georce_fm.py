@@ -242,6 +242,7 @@ class ProbGEORCEFM(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
+        shape = z_obs.shape[1:]
         self.line_search = Backtracking(obj_fun=self.reg_energy,
                                         update_fun=self.update_zi,
                                         **self.line_search_params,
@@ -292,7 +293,7 @@ class ProbGEORCEFM(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)
     
 #%% Gradient Descent Estimation of Geodesics
 
@@ -523,6 +524,7 @@ class ProbGEORCEFM_Embedded(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
+        shape = z_obs.shape[1:]
         self.line_search = Backtracking(obj_fun=self.reg_energy,
                                         update_fun=self.update_zi,
                                         **self.line_search_params,
@@ -580,7 +582,7 @@ class ProbGEORCEFM_Embedded(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)
     
 #%% Gradient Descent Estimation of Geodesics
 
@@ -773,6 +775,7 @@ class ProbGEORCEFM_Euclidean(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
+        shape = z_obs.shape[1:]
         self.line_search = Backtracking(obj_fun=self.reg_energy,
                                         update_fun=self.update_zi,
                                         **self.line_search_params,
@@ -817,4 +820,4 @@ class ProbGEORCEFM_Euclidean(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)

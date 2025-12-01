@@ -307,6 +307,7 @@ class ProbGEORCEFM_Adaptive(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
+        shape = z_obs.shape[1:]
         self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
@@ -363,7 +364,7 @@ class ProbGEORCEFM_Adaptive(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)
     
 #%% Gradient Descent Estimation of Geodesics
 
@@ -659,7 +660,8 @@ class ProbGEORCEFM_Embedded_Adaptive(ABC):
                  wi:torch.Tensor=None,
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
-
+        
+        shape = z_obs.shape[1:]
         self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
@@ -721,7 +723,7 @@ class ProbGEORCEFM_Embedded_Adaptive(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)
     
 #%% Gradient Descent Estimation of Geodesics
 
@@ -969,6 +971,7 @@ class ProbGEORCEFM_Euclidean_Adaptive(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
+        shape = z_obs.shape[1:]
         self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
@@ -1019,4 +1022,4 @@ class ProbGEORCEFM_Euclidean_Adaptive(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)

@@ -295,6 +295,7 @@ class ProbScoreGEORCEFM(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
+        shape = z_obs.shape[1:]
         self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
@@ -351,7 +352,7 @@ class ProbScoreGEORCEFM(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)
     
 #%% Gradient Descent Estimation of Geodesics
 
@@ -635,6 +636,7 @@ class ProbScoreGEORCEFM_Embedded(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
 
+        shape = z_obs.shape[1:]
         self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
@@ -696,7 +698,7 @@ class ProbScoreGEORCEFM_Embedded(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)
     
 #%% Gradient Descent Estimation of Geodesics
 
@@ -924,6 +926,7 @@ class ProbScoreGEORCEFM_Euclidean(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
+        shape = z_obs.shape[1:]
         self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
@@ -974,4 +977,4 @@ class ProbScoreGEORCEFM_Euclidean(ABC):
         # concatenate along the middle dimension
         zi = torch.cat([start, zi, end], dim=1)
             
-        return z_mu, zi
+        return z_mu.reshape(-1,*shape), zi.reshape(-1,self.N_grid+1,*shape)
