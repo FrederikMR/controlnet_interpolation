@@ -307,7 +307,7 @@ class ProbGEORCEFM_Adaptive(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
-        self.z_obs = z_obs
+        self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
         self.G0 = self.M.G(self.z_obs).detach()
@@ -660,7 +660,7 @@ class ProbGEORCEFM_Embedded_Adaptive(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
 
-        self.z_obs = z_obs
+        self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
         self.G0 = self.metric_matrix(self.z_obs).detach()
@@ -969,7 +969,7 @@ class ProbGEORCEFM_Euclidean_Adaptive(ABC):
                  z_mu_init:torch.Tensor=None,
                  )->torch.Tensor:
         
-        self.z_obs = z_obs
+        self.z_obs = z_obs.reshape(len(z_obs), -1).detach()
         self.N_data, self.dim = self.z_obs.shape
         
         if wi is None:

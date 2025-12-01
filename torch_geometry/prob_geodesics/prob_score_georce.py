@@ -267,7 +267,7 @@ class ProbScoreGEORCE(ABC):
         self.z0 = z0.detach()
         self.zN = zN.detach()
         self.diff = self.zN-self.z0
-        self.dim = len(z0)
+        self.dim = len(self.z0)
         
         self.G0 = self.M.G(z0).detach()
         self.Ginv0 = torch.linalg.inv(self.G0).reshape(1,self.dim,self.dim).detach()
@@ -557,7 +557,7 @@ class ProbScoreGEORCE_Embedded(ABC):
         self.z0 = z0.detach()
         self.zN = zN.detach()
         self.diff = self.zN-self.z0
-        self.dim = len(z0)
+        self.dim = len(self.z0)
         
         self.G0 = self.metric_matrix(z0).detach()
         self.Ginv0 = torch.linalg.inv(self.G0).reshape(1,self.dim,self.dim).detach()
@@ -808,7 +808,7 @@ class ProbScoreGEORCE_Euclidean(ABC):
         self.z0 = z0.reshape(-1).detach()
         self.zN = zN.reshape(-1).detach()
         self.diff = self.zN-self.z0
-        self.dim = len(z0)
+        self.dim = len(self.z0)
         
         zi, ui = self.initialize()
         
