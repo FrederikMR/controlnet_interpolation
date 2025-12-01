@@ -65,8 +65,6 @@ class ContextManager:
         Returns:
             (N, C*H*W) tensor of score estimates
         """
-        print("X shape")
-        print(x.shape)
         
         # reshape flattened latents
         if x.ndim == 2:
@@ -102,9 +100,6 @@ class ContextManager:
             score = score.reshape(x_chunk.shape[0], -1)
     
             scores.append(score)
-            
-        print("Score shape: ")
-        print(torch.cat(scores, dim=0).reshape(N, -1).shape)
     
         return torch.cat(scores, dim=0).reshape(N, -1)
 
@@ -301,7 +296,7 @@ class ContextManager:
         eps=1e-8
         tol = 1e-4
         
-        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond,cur_step),
+        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x, cond, self.ddim_sampler.ddpm_num_timesteps-1),
                                                              init_fun=None,
                                                              lam=self.lam,
                                                              N=self.N,
