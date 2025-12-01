@@ -278,10 +278,6 @@ class ContextManager:
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
-        score = lambda x: -self.score_fun(x, cond, cur_step)
-        print("Testing")
-        print(score(torch.ones((1,4,96,96))).shape)
-        
         S = Chi2(len(l1.reshape(-1)))
         self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))),
                                            init_fun=None,
