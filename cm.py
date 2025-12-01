@@ -50,57 +50,60 @@ class ContextManager:
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
         
-    def score_fun(self, x: torch.Tensor, c: torch.Tensor, t: int, batch_size=4):
+    def score_fun(self, x: torch.Tensor, c, t: int, batch_size=4):
         """
-        Compute the diffusion score ∇_x log p(x_t) at a given latent x and timestep t.
-    
+        Compute ∇_x log p(x_t) with minibatching only over x.
+        
         Args:
-            sampler: DDIMSampler object
-            x: latent tensor of shape (B, C, H, W)
-            c: conditioning tensor or dict (ControlNet conditioning)
-            t: timestep (integer index)
-    
+            x: latents, shape (N, C*H*W) or (N, C, H, W)
+            c: conditioning dictionary (ControlNet conditioning)
+            t: timestep index
+            batch_size: minibatch size for evaluation
+            
         Returns:
-            score: tensor of same shape as x
+            score: tensor (N, C*H*W)
         """
-        
-        print("C test here")
-        print(type(c))
-        print(c.shape)
-        
-        device = x.device
-
-        # reshape flattened → latent
+    
+        # reshape if flattened
         if x.ndim == 2:
-            x = x.reshape(-1, 4, 96, 96)
-
+            # infer spatial size from model
+            N = x.shape[0]
+            C = self.model.first_stage_key_channels  # usually 4
+            H = self.model.image_size // 8          # e.g. 768 → 96
+            W = H
+            x = x.reshape(N, C, H, W)
+    
+        device = x.device
         N = x.shape[0]
+    
         scores = []
-
+    
         for i in range(0, N, batch_size):
-            xb = x[i:i+batch_size]
-            cb = {}
+            x_chunk = x[i:i+batch_size]
+    
+            # t must be batched
+            t_chunk = torch.full(
+                (x_chunk.shape[0],),
+                t,
+                device=device,
+                dtype=torch.long
+            )
+    
+            # 🔥 conditioning c is reused directly — no slicing!
+            eps = self.ddim_sampler.pred_eps(x_chunk, c, t_chunk)
+    
+            # compute score = -ε / sqrt(1 - ᾱ_t)
+            alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].to(device)
+            alpha_bar_t = alpha_bar_t.view(1, 1, 1, 1)
+    
+            score_chunk = -eps / torch.sqrt(1 - alpha_bar_t)
+    
+            # flatten per sample
+            scores.append(score_chunk.reshape(x_chunk.size(0), -1))
+    
+        # concatenate all minibatches
+        return torch.cat(scores, dim=0).reshape(len(x),-1)
 
-            # copy conditioning dictionary in batch slices
-            for k, v in c.items():
-                if isinstance(v, list):
-                    cb[k] = [vi[i:i+batch_size] for vi in v]
-                else:
-                    cb[k] = v[i:i+batch_size]
-
-            tb = torch.full((xb.shape[0],), t, device=device, dtype=torch.long)
-
-            # compute eps in safe batch
-            eps = self.ddim_sampler.pred_eps(xb, cb, tb)
-
-            alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].view(1,1,1,1)
-            score_b = -eps / torch.sqrt(1 - alpha_bar_t)
-
-            scores.append(score_b.reshape(xb.shape[0], -1).cpu())
-
-            torch.cuda.empty_cache()
-
-        return torch.cat(scores, dim=0).reshape(len(x), -1)
         
     def noise_diffusion(self,
                         l1, 
