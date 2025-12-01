@@ -92,7 +92,7 @@ class ContextManager:
             )
     
             # εθ(x_t, t)
-            eps = self.ddim_sampler.pred_eps(x_chunk, t_chunk, c)
+            eps = self.ddim_sampler.pred_eps(x_chunk, c, t_chunk)
     
             # score = -eps / sqrt(1 - alpha_bar_t)
             score = -eps / denom
@@ -279,6 +279,8 @@ class ContextManager:
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
         score = lambda x: -self.score_fun(x, cond, cur_step)
+        print("Testing")
+        print(score(torch.ones((1,4,96,96))).shape)
         
         S = Chi2(len(l1.reshape(-1)))
         self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))),
