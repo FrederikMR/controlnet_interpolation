@@ -100,8 +100,10 @@ class ContextManager:
             score = score.reshape(x_chunk.shape[0], -1)
     
             scores.append(score)
+            
+        print(torch.cat(scores, dim=0).reshape(N, -1).shape)
     
-        return torch.cat(scores, dim=0)
+        return torch.cat(scores, dim=0).reshape(N, -1)
 
     def noise_diffusion(self,
                         l1, 
