@@ -65,6 +65,8 @@ class ContextManager:
         Returns:
             (N, C*H*W) tensor of score estimates
         """
+        print("X shape")
+        print(x.shape)
         
         # reshape flattened latents
         if x.ndim == 2:
@@ -101,6 +103,7 @@ class ContextManager:
     
             scores.append(score)
             
+        print("Score shape: ")
         print(torch.cat(scores, dim=0).reshape(N, -1).shape)
     
         return torch.cat(scores, dim=0).reshape(N, -1)
