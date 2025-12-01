@@ -33,7 +33,7 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     #BSUB -J {model}_{method}
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
-    #BSUB -W 0:30
+    #BSUB -W 24:00
     #BSUB -R "span[hosts=1]"
     #BSUB -R "rusage[mem=16GB]"
     #BSUB -u fmry@dtu.dk
@@ -75,7 +75,6 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 100
     model = ['cat']#, 'president', 'football']
     method = ['ProbGEORCE_Score_Data', "ProbGEORCE_Score_Noise"]#, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
-    method = ["ProbGEORCE_Score_Noise"]
     clip = [0]#[0,1]
     lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
     
