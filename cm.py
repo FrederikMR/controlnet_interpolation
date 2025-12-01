@@ -66,12 +66,7 @@ class ContextManager:
     
         # reshape if flattened
         if x.ndim == 2:
-            # infer spatial size from model
-            N = x.shape[0]
-            C = self.model.first_stage_key_channels  # usually 4
-            H = self.model.image_size // 8          # e.g. 768 → 96
-            W = H
-            x = x.reshape(N, C, H, W)
+            x = x.reshape(-1, 4, 96, 96)
     
         device = x.device
         N = x.shape[0]
