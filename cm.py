@@ -83,9 +83,25 @@ class ContextManager:
                 device=device,
                 dtype=torch.long
             )
+            
+            #if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
+            #    model_output = self.model.apply_model(x, t, c)
+            #else:
+            #    model_t = self.model.apply_model(x, t, c)
+            #    model_uncond = self.model.apply_model(x, t, unconditional_conditioning)
+            #    model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
+
+            #if self.model.parameterization == "v":
+            #    e_t = self.model.predict_eps_from_z_and_v(x, t, model_output)
+            #else:
+            #    e_t = model_output
+
+            #if score_corrector is not None:
+            #    assert self.model.parameterization == "eps", 'not implemented'
+            #    e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
     
             # 🔥 conditioning c is reused directly — no slicing!
-            eps = self.ddim_sampler.pred_eps(x_chunk, c, t_chunk)
+            eps = self.ddim_sampler.pred_eps(x_chunk, t_chunk, c)
     
             # compute score = -ε / sqrt(1 - ᾱ_t)
             alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].to(device)
