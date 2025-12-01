@@ -360,7 +360,7 @@ class DDIMSampler(object):
         return x_dec
     
     @torch.no_grad()
-    def iterative_geodesics(self, curve, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
+    def iterative_geodesics(self, curve, cond, t_start, lam=1.0, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
                             use_original_steps=False, callback=None):
 
         timesteps = np.arange(self.ddpm_num_timesteps) if use_original_steps else self.ddim_timesteps
@@ -378,6 +378,28 @@ class DDIMSampler(object):
             curve, _ = self.p_sample_ddim(curve, cond, ts, index=index, use_original_steps=use_original_steps,
                                           unconditional_guidance_scale=unconditional_guidance_scale,
                                           unconditional_conditioning=unconditional_conditioning)
+            
+            lr_rate=0.01
+            beta1=0.5
+            beta2=0.5
+            eps=1e-8
+            tol = 1e-4
+            from torch_geometry.prob_geodesics import ProbScoreGEORCE_Euclidean
+            PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, step),
+                                                           init_fun= lambda x,y,T: curve[1:-1],
+                                                           lam=lam,
+                                                           N=10,
+                                                           tol=tol,
+                                                           max_iter=5,
+                                                           lr_rate=lr_rate,
+                                                           beta1=beta1,
+                                                           beta2=beta2,
+                                                           eps=eps,
+                                                           device="cuda:0",
+                                                           )
+            curve = PGEORCE_Score_Data(curve[0], curve[-1])
+            
+            
             if callback: callback(i)
         return curve
 

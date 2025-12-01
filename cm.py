@@ -338,17 +338,23 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Score_Data":
-            x1 = samples= self.ddim_sampler.decode(l1, cond, cur_step, # cur_step-1 / new_step-1
-                                                               unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                                                               use_original_steps=False)  
-            x2 = samples= self.ddim_sampler.decode(l2, cond, cur_step, # cur_step-1 / new_step-1
-                                                               unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                                                               use_original_steps=False)  
+            x1 = self.ddim_sampler.decode(l1, cond, cur_step, # cur_step-1 / new_step-1
+                                          unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
+                                          use_original_steps=False)  
+            x2 = self.ddim_sampler.decode(l2, cond, cur_step, # cur_step-1 / new_step-1
+                                          unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
+                                          use_original_steps=False)  
             data_curve = self.PGEORCE_Score_Data(x1, x2)
             noisy_curve = None
         elif self.inter_method == "ProbGEORCE_Score_Noise":
             noisy_curve = self.PGEORCE_Score_Noise(l1, l2)
             cur_step -= 1
+        elif self.inter_method == "ProbGEORCE_Score_Iterative":
+            noisy_curve = self.PGEORCE(l1, l2)
+            data_curve = self.ddim_sampler.iterative_geodesics(noisy_curve, cond, cur_step, lam=self.lam,
+                                                               unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
+                                                               use_original_steps=False)
+            noisy_curve = None
         if noisy_curve is not None:
             if self.clip:
                 noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
