@@ -264,8 +264,8 @@ class ProbScoreGEORCE(ABC):
         
         shape = z0.shape
         
-        self.z0 = z0.detach()
-        self.zN = zN.detach()
+        self.z0 = z0.reshape(-1).detach()
+        self.zN = zN.reshape(-1).detach()
         self.diff = self.zN-self.z0
         self.dim = len(self.z0)
         
@@ -302,7 +302,7 @@ class ProbScoreGEORCE(ABC):
             carry = self.georce_step(carry)
         zi, ui, Gi_k2, Gi_hat, gi_k2, gi_hat, rg_hat, grad_norm, beta1, beta2, kappa, idx = carry
 
-        zi = torch.vstack((z0, zi, zN))
+        zi = torch.vstack((self.z0, zi, self.zN))
             
         return zi.reshape(-1,*shape)
     
@@ -554,8 +554,8 @@ class ProbScoreGEORCE_Embedded(ABC):
         
         shape = z0.shape
         
-        self.z0 = z0.detach()
-        self.zN = zN.detach()
+        self.z0 = z0.reshape(-1).detach()
+        self.zN = zN.reshape(-1).detach()
         self.diff = self.zN-self.z0
         self.dim = len(self.z0)
         
@@ -599,7 +599,7 @@ class ProbScoreGEORCE_Embedded(ABC):
             carry = self.georce_step(carry)
         zi, ui, Gi_k2, Gi_hat, gi_k2, gi_hat, rg_hat, grad_norm, beta1, beta2, kappa, idx = carry
         
-        zi = torch.vstack((z0, zi, zN))        
+        zi = torch.vstack((self.z0, zi, self.zN))        
         zi = self.proj_fun(zi)
         
         return zi.reshape(-1,*shape)
@@ -837,6 +837,6 @@ class ProbScoreGEORCE_Euclidean(ABC):
         while self.cond_fun(carry):
             carry = self.georce_step(carry)
         zi, ui, gi_k2, gi_hat, rg_hat, grad_norm, beta1, beta2, kappa, idx = carry
-        zi = torch.vstack((z0, zi, zN))        
+        zi = torch.vstack((self.z0, zi, self.zN))        
         
         return zi.reshape(-1,*shape)

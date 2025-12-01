@@ -235,7 +235,7 @@ class ProbGEORCE(ABC):
             carry = self.georce_step(carry)
         zi, ui, Gi, gi, gi_inv, grad_val, idx = carry
             
-        zi = torch.vstack((z0, zi, zN))
+        zi = torch.vstack((self.z0, zi, self.zN))
             
         return zi.reshape(-1,*shape)
     
@@ -424,8 +424,8 @@ class ProbGEORCE_Embedded(ABC):
                                         **self.line_search_params,
                                         )
         
-        self.z0 = z0.detach()
-        self.zN = zN.detach()
+        self.z0 = z0.reshape(-1).detach()
+        self.zN = zN.reshape(-1).detach()
         self.diff = self.zN-self.z0
         self.dim = len(self.z0)
         
@@ -464,7 +464,7 @@ class ProbGEORCE_Embedded(ABC):
             carry = self.georce_step(carry)
         
         zi, ui, Gi, gi, gi_inv, grad_val, idx = carry
-        zi = torch.vstack((z0, zi, zN))
+        zi = torch.vstack((self.z0, zi, self.zN))
         
         zi = self.proj_fun(zi)
         
@@ -644,7 +644,7 @@ class ProbGEORCE_Euclidean(ABC):
             carry = self.georce_step(carry)
         zi, ui, gi, grad_val, idx = carry
         
-        zi = torch.vstack((z0, zi, zN))
+        zi = torch.vstack((self.z0, zi, self.zN))
             
         return zi.reshape(-1,*shape)
     
