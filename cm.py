@@ -52,19 +52,20 @@ class ContextManager:
         
     def score_fun(self, x: torch.Tensor, c, t: int, batch_size=4):
         """
-        Compute ∇_x log p(x_t) with minibatching only over x.
-        
-        Args:
-            x: latents, shape (N, C*H*W) or (N, C, H, W)
-            c: conditioning dictionary (ControlNet conditioning)
-            t: timestep index
-            batch_size: minibatch size for evaluation
-            
-        Returns:
-            score: tensor (N, C*H*W)
-        """
+        Compute ∇_x log p(x_t) using the DDPM formula:
+            score = -eps / sqrt(1 - alpha_bar_t)
     
-        # reshape if flattened
+        Args:
+            x  : (N, C,H,W) or (N, C*H*W)
+            c  : conditioning dict
+            t  : *actual DDPM timestep*  (int)
+            batch_size: minibatch size
+    
+        Returns:
+            (N, C*H*W) tensor of score estimates
+        """
+        
+        # reshape flattened latents
         if x.ndim == 2:
             x = x.reshape(-1, 4, 96, 96)
     
@@ -73,49 +74,34 @@ class ContextManager:
     
         scores = []
     
+        # proper DDPM cumulative alpha
+        alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].to(device)
+        alpha_bar_t = alpha_bar_t.view(1,1,1,1)
+    
+        denom = torch.sqrt(1 - alpha_bar_t)
+    
         for i in range(0, N, batch_size):
             x_chunk = x[i:i+batch_size]
     
-            # t must be batched
+            # batched timesteps for the model
             t_chunk = torch.full(
                 (x_chunk.shape[0],),
                 t,
                 device=device,
                 dtype=torch.long
             )
-            
-            #if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
-            #    model_output = self.model.apply_model(x, t, c)
-            #else:
-            #    model_t = self.model.apply_model(x, t, c)
-            #    model_uncond = self.model.apply_model(x, t, unconditional_conditioning)
-            #    model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
-
-            #if self.model.parameterization == "v":
-            #    e_t = self.model.predict_eps_from_z_and_v(x, t, model_output)
-            #else:
-            #    e_t = model_output
-
-            #if score_corrector is not None:
-            #    assert self.model.parameterization == "eps", 'not implemented'
-            #    e_t = score_corrector.modify_score(self.model, e_t, x, t, c, **corrector_kwargs)
     
-            # 🔥 conditioning c is reused directly — no slicing!
+            # εθ(x_t, t)
             eps = self.ddim_sampler.pred_eps(x_chunk, t_chunk, c)
     
-            # compute score = -ε / sqrt(1 - ᾱ_t)
-            alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].to(device)
-            alpha_bar_t = alpha_bar_t.view(1, 1, 1, 1)
+            # score = -eps / sqrt(1 - alpha_bar_t)
+            score = -eps / denom
+            score = score.reshape(x_chunk.shape[0], -1)
     
-            score_chunk = -eps / torch.sqrt(1 - alpha_bar_t)
+            scores.append(score)
     
-            # flatten per sample
-            scores.append(score_chunk.reshape(x_chunk.size(0), -1))
-    
-        # concatenate all minibatches
-        return torch.cat(scores, dim=0).reshape(len(x),-1)
+        return torch.cat(scores, dim=0)
 
-        
     def noise_diffusion(self,
                         l1, 
                         l2,
