@@ -50,6 +50,7 @@ class ContextManager:
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
         
+    @torch.no_grad()
     def score_fun(self, x: torch.Tensor, c, t: int, batch_size=1):
         """
         Compute ∇_x log p(x_t) using the DDPM formula:
