@@ -344,6 +344,29 @@ class ContextManager:
             x2 = self.ddim_sampler.decode(l2, cond, cur_step, # cur_step-1 / new_step-1
                                           unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
                                           use_original_steps=False)  
+            
+            noisy_curve = self.PGEORCE(l1, l2)
+            data_curve = []
+            for i, noisy_latent in enumerate(noisy_curve, start=0):
+                samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
+                    unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
+                    use_original_steps=False)  
+                data_curve.append(samples)
+                
+            data_curve = torch.concatenate(data_curve, axis=0)
+            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0),
+                                                                init_fun= lambda x,y,t: data_curve[1:-1],
+                                                                lam=self.lam,
+                                                                N=self.N,
+                                                                tol=tol,
+                                                                max_iter=self.max_iter,
+                                                                lr_rate=lr_rate,
+                                                                beta1=beta1,
+                                                                beta2=beta2,
+                                                                eps=eps,
+                                                                device="cuda:0",
+                                                                )
+            
             data_curve = self.PGEORCE_Score_Data(x1, x2)
             noisy_curve = None
         elif self.inter_method == "ProbGEORCE_Score_Noise":
