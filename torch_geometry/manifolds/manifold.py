@@ -361,6 +361,11 @@ class LambdaManifold(ABC):
             
             return self.geodesic_equation(z, v)
         
+        shape = z.shape
+        z = z.reshape(-1)
+        v = v.reshape(-1)
+        dim = len(z)
+        
         dim = len(z)
         
         t_grid = torch.linspace(0., 1., T) 
@@ -372,7 +377,7 @@ class LambdaManifold(ABC):
         
         zs = zs[:,:dim]
         
-        return zs
+        return zs.reshape(-1, *shape)
     
     def Exp_ode(self,
                 z:torch.Tensor,
@@ -387,6 +392,9 @@ class LambdaManifold(ABC):
             
             return self.geodesic_equation(z, v)
         
+        shape = z.shape
+        z = z.reshape(-1)
+        v = v.reshape(-1)
         dim = len(z)
         
         t_grid = torch.linspace(0., 1., T) 
@@ -398,7 +406,7 @@ class LambdaManifold(ABC):
         
         zs = zs[:,:dim]
         
-        return zs
+        return zs.reshape(-1, *shape)
 
     def energy(self, 
                gamma:torch.Tensor,
