@@ -101,7 +101,7 @@ class ContextManager:
     
             scores.append(score)
     
-        return -torch.cat(scores, dim=0).reshape(N, -1)
+        return torch.cat(scores, dim=0).reshape(N, -1)
 
     def noise_diffusion(self,
                         l1, 
@@ -290,7 +290,7 @@ class ContextManager:
                                            device="cuda:0",
                                            )
 
-        lr_rate=0.01
+        lr_rate=0.001
         beta1=0.5
         beta2=0.5
         eps=1e-8
