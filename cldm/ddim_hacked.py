@@ -454,6 +454,7 @@ class DDIMSampler(object):
     
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
+            curve = curve.reshape(-1,4,96,96)
     
             # --- DDIM step (reduced memory)
             with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.float16):
