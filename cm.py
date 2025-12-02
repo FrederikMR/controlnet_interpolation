@@ -51,7 +51,9 @@ class ContextManager:
                                                    location='cuda'))
         
     @torch.no_grad()
-    def score_fun(self, x: torch.Tensor, c, t: int, batch_size=1):
+    def score_fun(self, x: torch.Tensor, c, t: int,
+                  score_corrector=None, corrector_kwargs=None,
+                  unconditional_guidance_scale=1., unconditional_conditioning=None):
         """
         Compute ∇_x log p(x_t) using the DDPM formula:
             score = -eps / sqrt(1 - alpha_bar_t)
@@ -65,6 +67,7 @@ class ContextManager:
         Returns:
             (N, C*H*W) tensor of score estimates
         """
+        batch_size = 1
         
         # reshape flattened latents
         if x.ndim == 2:
@@ -296,7 +299,10 @@ class ContextManager:
         eps=1e-8
         tol = 1e-4
         
-        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x, cond, self.ddim_sampler.ddpm_num_timesteps-1),
+        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x, cond, self.ddim_sampler.ddpm_num_timesteps-1,
+                                                                                                   unconditional_guidance_scale=guide_scale, 
+                                                                                                   unconditional_conditioning=un_cond,
+                                                                                                   use_original_steps=False),
                                                              init_fun=None,
                                                              lam=self.lam,
                                                              N=self.N,
@@ -309,7 +315,10 @@ class ContextManager:
                                                              device="cuda:0",
                                                              )
         
-        self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0),
+        self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0,
+                                                                                                  unconditional_guidance_scale=guide_scale, 
+                                                                                                  unconditional_conditioning=un_cond,
+                                                                                                  use_original_steps=False),
                                                             init_fun= None,
                                                             lam=self.lam,
                                                             N=self.N,

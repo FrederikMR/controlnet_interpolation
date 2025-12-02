@@ -358,29 +358,9 @@ class DDIMSampler(object):
                                           unconditional_conditioning=unconditional_conditioning)
             if callback: callback(i)
         return x_dec
-
-    def test(self, curve, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
-                   use_original_steps=False, callback=None):
-
-        timesteps = np.arange(self.ddpm_num_timesteps) if use_original_steps else self.ddim_timesteps
-        timesteps = timesteps[:t_start]
-
-        time_range = np.flip(timesteps)
-        total_steps = timesteps.shape[0]
-        print(f"Running DDIM Sampling with {total_steps} timesteps")
-
-        iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
-        x_dec = curve
-        for i, step in enumerate(iterator):
-            
-            index = total_steps - i - 1
-            ts = torch.full((curve.shape[0],), step, device=curve.device, dtype=torch.long)
-            x_dec, _ = self.p_sample_ddim(x_dec, cond, ts, index=index, use_original_steps=use_original_steps,
-                                          unconditional_guidance_scale=unconditional_guidance_scale,
-                                          unconditional_conditioning=unconditional_conditioning)
-            if callback: callback(i)
-        return self.model.decode_first_stage(x_dec)
     
+    def metric(self,x_dec):
+        
         def f(z):
             return self.model.decode_first_stage(z)
         
@@ -404,10 +384,11 @@ class DDIMSampler(object):
             # Jᵀ(J v)
             grad = torch.autograd.grad(Jv, z, grad_outputs=Jv, retain_graph=True)[0]
             JTJ[:, i] = grad.view(-1)
-
             
         return JTJ
     
+    def ip_grad(self,x_dec):
+        
         def f(z):
             return self.model.decode_first_stage(z)
         
@@ -427,6 +408,28 @@ class DDIMSampler(object):
         grad_vJTJv = z.grad
         
         return grad_vJTJv
+
+    def test(self, curve, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
+                   use_original_steps=False, callback=None):
+
+        timesteps = np.arange(self.ddpm_num_timesteps) if use_original_steps else self.ddim_timesteps
+        timesteps = timesteps[:t_start]
+
+        time_range = np.flip(timesteps)
+        total_steps = timesteps.shape[0]
+        print(f"Running DDIM Sampling with {total_steps} timesteps")
+
+        iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
+        x_dec = curve
+        for i, step in enumerate(iterator):
+            
+            index = total_steps - i - 1
+            ts = torch.full((curve.shape[0],), step, device=curve.device, dtype=torch.long)
+            x_dec, _ = self.p_sample_ddim(x_dec, cond, ts, index=index, use_original_steps=use_original_steps,
+                                          unconditional_guidance_scale=unconditional_guidance_scale,
+                                          unconditional_conditioning=unconditional_conditioning)
+            if callback: callback(i)
+        return self.model.decode_first_stage(x_dec)
     
     @torch.no_grad()
     def iterative_geodesics(self, curve, cond, t_start, lam=1.0, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
@@ -456,7 +459,10 @@ class DDIMSampler(object):
             eps=1e-8
             tol = 1e-4
             from torch_geometry.prob_geodesics import ProbScoreGEORCE_Euclidean
-            PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, step),
+            PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, step,
+                                                                                                 unconditional_guidance_scale=unconditional_guidance_scale, 
+                                                                                                 unconditional_conditioning=unconditional_conditioning,
+                                                                                                 use_original_steps=use_original_steps),
                                                            init_fun= lambda x,y,T: curve[1:-1].reshape(len(curve[1:-1]),-1),
                                                            lam=lam,
                                                            N=10,
@@ -472,4 +478,114 @@ class DDIMSampler(object):
             
             
             if callback: callback(i)
+            
+            
+import torch
+from torch.autograd.functional import jvp
+
+
+class JacobianOps:
+    """
+    Efficient JVP, VJP, JTJv, v^T JTJ v, and full JTJ construction
+    for a decoder f(z) such as model.decode_first_stage.
+    """
+
+    def __init__(self, decoder):
+        """
+        decoder: a function f(z) returning the decoded image.
+        """
+        self.f = decoder
+
+    # ---------- Basic Operators ----------
+
+    @torch.no_grad()
+    def Jv(self, z, v):
+        """Compute J(z) * v (JVP) without building graph."""
+        return jvp(self.f, (z,), (v,))[1]
+
+    def Jv_graph(self, z, v):
+        """JVP but keeps autograd graph for higher-order derivatives."""
+        return jvp(self.f, (z,), (v,), create_graph=True)[1]
+
+    def JTv(self, z, v_out):
+        """Compute J(z)^T * v_out (VJP)."""
+        return torch.autograd.grad(
+            self.f(z),
+            z,
+            grad_outputs=v_out,
+            create_graph=True
+        )[0]
+
+    # ---------- Main Operators ----------
+
+    def JTJv(self, z, v):
+        """
+        Compute (J^T J) v using JVP + VJP.
+        Keeps graph for differentiability.
+        """
+        Jv = self.Jv_graph(z, v)    # J v
+        JTJv = torch.autograd.grad(
+            Jv, z,
+            grad_outputs=Jv,
+            create_graph=True
+        )[0]
+        return JTJv
+
+    def vJTJv(self, z, v):
+        """
+        Compute scalar v^T J^T J v.
+        Fully differentiable w.r.t. z.
+        """
+        JTJv_val = self.JTJv(z, v)
+        return (JTJv_val * v).sum()
+
+    # ---------- FULL MATRIX (NO GRAPH) ----------
+    
+    @torch.no_grad()
+    def compute_JTJ(self, z):
+        """
+        Explicitly compute the matrix J^T J at z.
+        No gradient graph is created.
+        Suitable only for small latent spaces.
+
+        Returns: tensor of shape (N, N) where N = z.numel().
+        """
+        z_flat = z.reshape(-1)
+        N = z_flat.numel()
+        JTJ = torch.zeros(N, N, device=z.device, dtype=z.dtype)
+
+        for i in range(N):
+            # basis vector e_i
+            v = torch.zeros_like(z_flat)
+            v[i] = 1.0
+            v = v.view_as(z)
+
+            # compute (J^T J) e_i
+            JTJv_i = self.JTJv(z, v)  # J^T J v
+            JTJ[:, i] = JTJv_i.reshape(-1)
+
+        return 
+    
+    def vJTJv_batch(self, z, v):
+        """
+        Vectorized batch computation of sum_i v_i^T J_i^T J_i v_i.
+    
+        Returns one scalar suitable for backward().
+        """
+        # Step 1: J v for each batch element
+        Jv = jvp(self.f, (z,), (v,), create_graph=True)[1]   # same shape as f(z)
+    
+        # Step 2: J^T (J v)
+        JTJv = torch.autograd.grad(
+            self.f(z),
+            z,
+            grad_outputs=Jv,
+            create_graph=True
+        )[0]
+    
+        # Step 3: sum_i v_i^T JTJv_i
+        return (JTJv * v).sum()
+
+
+
 
