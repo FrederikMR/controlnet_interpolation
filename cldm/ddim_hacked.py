@@ -358,6 +358,75 @@ class DDIMSampler(object):
                                           unconditional_conditioning=unconditional_conditioning)
             if callback: callback(i)
         return x_dec
+
+    def test(self, curve, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
+                   use_original_steps=False, callback=None):
+
+        timesteps = np.arange(self.ddpm_num_timesteps) if use_original_steps else self.ddim_timesteps
+        timesteps = timesteps[:t_start]
+
+        time_range = np.flip(timesteps)
+        total_steps = timesteps.shape[0]
+        print(f"Running DDIM Sampling with {total_steps} timesteps")
+
+        iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
+        x_dec = curve
+        for i, step in enumerate(iterator):
+            
+            index = total_steps - i - 1
+            ts = torch.full((curve.shape[0],), step, device=curve.device, dtype=torch.long)
+            x_dec, _ = self.p_sample_ddim(x_dec, cond, ts, index=index, use_original_steps=use_original_steps,
+                                          unconditional_guidance_scale=unconditional_guidance_scale,
+                                          unconditional_conditioning=unconditional_conditioning)
+            if callback: callback(i)
+        return self.model.decode_first_stage(x_dec)
+    
+        def f(z):
+            return self.model.decode_first_stage(z)
+        
+        z = x_dec.clone().requires_grad_(True)
+        
+        # Flatten z so the identity basis vectors make sense
+        z_flat = z.view(-1)
+        N = z_flat.numel()
+        
+        JTJ = torch.zeros(N, N, device=z.device)
+        
+        for i in range(N):
+            # basis vector
+            v = torch.zeros_like(z_flat)
+            v[i] = 1.0
+            v = v.view_as(z)
+        
+            # J v
+            Jv = torch.autograd.functional.jvp(f, (z,), (v,))[1]
+        
+            # Jᵀ(J v)
+            grad = torch.autograd.grad(Jv, z, grad_outputs=Jv, retain_graph=True)[0]
+            JTJ[:, i] = grad.view(-1)
+
+            
+        return JTJ
+    
+        def f(z):
+            return self.model.decode_first_stage(z)
+        
+        z = x_dec.clone().requires_grad_(True)
+        v = torch.randn_like(z)   # your chosen vector
+        
+        # Step 1: J v
+        Jv = torch.autograd.functional.jvp(f, (z,), (v,))[1]
+        
+        # Step 2: Jᵀ (J v)
+        u = torch.autograd.grad(Jv, z, grad_outputs=Jv, create_graph=True)[0]
+        
+        # Step 3: vᵀ u
+        vJTJv = (u * v).sum()
+        
+        vJTJv.backward()   # gradient stored in z.grad
+        grad_vJTJv = z.grad
+        
+        return grad_vJTJv
     
     @torch.no_grad()
     def iterative_geodesics(self, curve, cond, t_start, lam=1.0, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
@@ -371,6 +440,7 @@ class DDIMSampler(object):
         print(f"Running DDIM Sampling with {total_steps} timesteps")
 
         iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
+        curve = curve.squeeze()
         for i, step in enumerate(iterator):
             
             index = total_steps - i - 1
@@ -378,6 +448,7 @@ class DDIMSampler(object):
             curve, _ = self.p_sample_ddim(curve, cond, ts, index=index, use_original_steps=use_original_steps,
                                           unconditional_guidance_scale=unconditional_guidance_scale,
                                           unconditional_conditioning=unconditional_conditioning)
+            curve = curve.squeeze()
             
             lr_rate=0.01
             beta1=0.5
@@ -401,5 +472,4 @@ class DDIMSampler(object):
             
             
             if callback: callback(i)
-        return curve
 

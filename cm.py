@@ -345,7 +345,7 @@ class ContextManager:
                                           unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
                                           use_original_steps=False)  
             
-            noisy_curve = self.PGEORCE(l1, l2)
+            noisy_curve = self.SInt(l1, l2)
             data_curve = []
             for i, noisy_latent in enumerate(noisy_curve, start=0):
                 samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
@@ -373,7 +373,7 @@ class ContextManager:
             noisy_curve = self.PGEORCE_Score_Noise(l1, l2)
             cur_step -= 1
         elif self.inter_method == "ProbGEORCE_Score_Iterative":
-            noisy_curve = self.PGEORCE(l1, l2)
+            noisy_curve = self.SInt(l1, l2)
             data_curve = self.ddim_sampler.iterative_geodesics(noisy_curve, cond, cur_step, lam=self.lam,
                                                                unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
                                                                use_original_steps=False)
