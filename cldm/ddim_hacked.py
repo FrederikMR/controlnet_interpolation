@@ -459,10 +459,13 @@ class DDIMSampler(object):
     
             # --- DDIM step (reduced memory)
             with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.float16):
-                curve, _ = self.p_sample_ddim(curve, cond, ts, index=index, use_original_steps=use_original_steps,
-                                              unconditional_guidance_scale=unconditional_guidance_scale,
-                                              unconditional_conditioning=unconditional_conditioning)
-            curve = curve.squeeze()
+                new_curve = []
+                for val in curve:
+                    update, _ = self.p_sample_ddim(val, cond, ts, index=index, use_original_steps=use_original_steps,
+                                                   unconditional_guidance_scale=unconditional_guidance_scale,
+                                                   unconditional_conditioning=unconditional_conditioning)
+                    new_curve.append(val)
+            curve = torch.concatenate(new_curve, axis=0).squeeze()
     
             # Prepare interior without capturing curve
             interior = curve[1:-1].detach().reshape(len(curve[1:-1]), -1)
