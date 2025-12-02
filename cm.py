@@ -344,6 +344,23 @@ class ContextManager:
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE":
             noisy_curve = self.PGEORCE(l1, l2)
+        elif self.inter_method == "ProbGEORCE_Orthogornal":
+            dimension = len(l1.reshape(-1))
+            reg_fun1 = lambda x: torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
+            def reg_fun2(x):
+                # x: (N, d)
+                G = x @ x.t()          # Gram matrix (N, N)
+                return (G ** 2).sum()  # sum of squared inner product
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: reg_fun1(x)+reg_fun2(x),
+                                               init_fun=None,
+                                               lam = self.lam,
+                                               N=self.N,
+                                               tol=1e-4,
+                                               max_iter=self.max_iter,
+                                               line_search_params = {'rho': 0.5},
+                                               device="cuda:0",
+                                               )
+            noisy_curve = self.PGEORCE(l1, l2)
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Score_Data":

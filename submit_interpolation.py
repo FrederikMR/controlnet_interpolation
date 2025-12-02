@@ -75,7 +75,7 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 100
     model = ['cat']#, 'president', 'football']
     method = ['ProbGEORCE_Score_Data', "ProbGEORCE_Score_Noise", "ProbGEORCE_Score_Iterative"]#, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise']
-    method = ["ProbGEORCE_Score_Iterative"]
+    method = ["ProbGEORCE_Score_Iterative", "ProbGEORCE_Orthogornal"]
     clip = [0]#[0,1]
     lam = [1.0, 10.0]#[0.1, 0.5, 1.0, 10.0]
     
