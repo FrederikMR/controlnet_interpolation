@@ -453,10 +453,15 @@ class DDIMSampler(object):
         curve = curve.squeeze()
     
         for i, step in enumerate(iterator):
+            
+            index = total_steps - i - 1
+            ts = torch.full((curve.shape[0],), step, device=curve.device, dtype=torch.long)
     
             # --- DDIM step (reduced memory)
             with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.float16):
-                curve, _ = self.p_sample_ddim(...)
+                curve, _ = self.p_sample_ddim(curve, cond, ts, index=index, use_original_steps=use_original_steps,
+                                              unconditional_guidance_scale=unconditional_guidance_scale,
+                                              unconditional_conditioning=unconditional_conditioning)
             curve = curve.squeeze()
     
             # Prepare interior without capturing curve
@@ -470,7 +475,7 @@ class DDIMSampler(object):
                     unconditional_conditioning=unconditional_conditioning,
                     use_original_steps=use_original_steps
                 ),
-                init_fun = lambda x,y,t: interior,
+                init_fun = lambda x,y,t, pts=interior: pts,
                 lam=lam,
                 N=10,
                 tol=tol,
@@ -493,6 +498,60 @@ class DDIMSampler(object):
             if callback:
                 callback(i)
     
+        return curve
+
+    
+    @torch.no_grad()
+    def iterative_geodesics_old(self, curve, cond, t_start, lam=1.0, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
+                            use_original_steps=False, callback=None):
+
+        timesteps = np.arange(self.ddpm_num_timesteps) if use_original_steps else self.ddim_timesteps
+        timesteps = timesteps[:t_start]
+
+        time_range = np.flip(timesteps)
+        total_steps = timesteps.shape[0]
+        print(f"Running DDIM Sampling with {total_steps} timesteps")
+
+        iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
+        curve = curve.squeeze()
+        for i, step in enumerate(iterator):
+            
+            index = total_steps - i - 1
+            ts = torch.full((curve.shape[0],), step, device=curve.device, dtype=torch.long)
+            curve, _ = self.p_sample_ddim(curve, cond, ts, index=index, use_original_steps=use_original_steps,
+                                          unconditional_guidance_scale=unconditional_guidance_scale,
+                                          unconditional_conditioning=unconditional_conditioning)
+            curve = curve.squeeze()
+            
+            lr_rate=0.01
+            beta1=0.5
+            beta2=0.5
+            eps=1e-8
+            tol = 1e-4
+            from torch_geometry.prob_geodesics import ProbScoreGEORCE_Euclidean
+            PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, step,
+                                                                                                 unconditional_guidance_scale=unconditional_guidance_scale, 
+                                                                                                 unconditional_conditioning=unconditional_conditioning,
+                                                                                                 use_original_steps=use_original_steps),
+                                                           init_fun= lambda x,y,T: curve[1:-1].reshape(len(curve[1:-1]),-1),
+                                                           lam=lam,
+                                                           N=10,
+                                                           tol=tol,
+                                                           max_iter=5,
+                                                           lr_rate=lr_rate,
+                                                           beta1=beta1,
+                                                           beta2=beta2,
+                                                           eps=eps,
+                                                           device="cuda:0",
+                                                           )
+            curve = PGEORCE_Score_Data(curve[0], curve[-1])
+            
+            del PGEORCE_Score_Data, interior
+            torch.cuda.empty_cache()
+
+            
+            if callback: callback(i)
+            
         return curve
             
             
