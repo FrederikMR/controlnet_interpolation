@@ -386,7 +386,7 @@ class DDIMSampler(object):
             tol = 1e-4
             from torch_geometry.prob_geodesics import ProbScoreGEORCE_Euclidean
             PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, step),
-                                                           init_fun= lambda x,y,T: curve[1:-1],
+                                                           init_fun= lambda x,y,T: curve[1:-1].reshape(len(curve[1:-1]),-1),
                                                            lam=lam,
                                                            N=10,
                                                            tol=tol,

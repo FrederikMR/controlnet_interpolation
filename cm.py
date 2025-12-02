@@ -355,7 +355,7 @@ class ContextManager:
                 
             data_curve = torch.concatenate(data_curve, axis=0)
             self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0),
-                                                                init_fun= lambda x,y,t: data_curve[1:-1],
+                                                                init_fun= lambda x,y,t: data_curve[1:-1].reshape(len(data_curve[1:-1]),-1),
                                                                 lam=self.lam,
                                                                 N=self.N,
                                                                 tol=tol,
