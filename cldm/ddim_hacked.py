@@ -461,6 +461,8 @@ class DDIMSampler(object):
                 new_curve = []
                 for val in curve:
                     ts = torch.full((val.shape[0],), step, device=val.device, dtype=torch.long)
+                    print(ts.shape)
+                    print(val.shape)
                     update, _ = self.p_sample_ddim(val, cond, ts, index=index, use_original_steps=use_original_steps,
                                                    unconditional_guidance_scale=unconditional_guidance_scale,
                                                    unconditional_conditioning=unconditional_conditioning)
