@@ -301,8 +301,7 @@ class ContextManager:
         
         self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x, cond, self.ddim_sampler.ddpm_num_timesteps-1,
                                                                                                    unconditional_guidance_scale=guide_scale, 
-                                                                                                   unconditional_conditioning=un_cond,
-                                                                                                   use_original_steps=False),
+                                                                                                   unconditional_conditioning=un_cond),
                                                              init_fun=None,
                                                              lam=self.lam,
                                                              N=self.N,
@@ -317,8 +316,7 @@ class ContextManager:
         
         self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0,
                                                                                                   unconditional_guidance_scale=guide_scale, 
-                                                                                                  unconditional_conditioning=un_cond,
-                                                                                                  use_original_steps=False),
+                                                                                                  unconditional_conditioning=un_cond),
                                                             init_fun= None,
                                                             lam=self.lam,
                                                             N=self.N,
@@ -373,7 +371,7 @@ class ContextManager:
                 error = (dist2_pairs - 2 * d).pow(2).sum()
             
                 return error
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun1(x)+reg_fun2(x)+reg_fun3),
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun1(x)+reg_fun2(x)+reg_fun3(x)),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
