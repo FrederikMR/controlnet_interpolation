@@ -350,7 +350,7 @@ class ContextManager:
             def reg_fun2(x):
                 G = x @ x.t()               # (N, N)
                 G2 = G ** 2
-                return (G2 - torch.diag(torch.diag(G2))).sum()
+                return ((G2 - torch.diag(torch.diag(G2))/dimension)).sum()
             
             def reg_fun3(X):
                 """
@@ -373,7 +373,7 @@ class ContextManager:
                 error = (dist2_pairs - 2 * d).pow(2).sum()
             
                 return error
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)+reg_fun1(x)+reg_fun3(x)), #reg_fun2
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)+reg_fun1(x)+reg_fun2(x) + reg_fun3(x)),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
@@ -435,6 +435,7 @@ class ContextManager:
                     unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
                     use_original_steps=False)  
                 
+                print(samples.shape)
                 image = ldm.decode_first_stage(samples)
     
                 image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
