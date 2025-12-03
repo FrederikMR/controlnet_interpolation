@@ -353,9 +353,6 @@ class DDIMSampler(object):
             
             index = total_steps - i - 1
             ts = torch.full((x_latent.shape[0],), step, device=x_latent.device, dtype=torch.long)
-            print("Here are the shapes:")
-            print(x_dec.shape)
-            print(ts.shape)
             x_dec, _ = self.p_sample_ddim(x_dec, cond, ts, index=index, use_original_steps=use_original_steps,
                                           unconditional_guidance_scale=unconditional_guidance_scale,
                                           unconditional_conditioning=unconditional_conditioning)
@@ -521,9 +518,6 @@ class DDIMSampler(object):
                 for val in curve:
                     val = val.reshape(1,4,96,96)
                     ts = torch.full((val.shape[0],), step, device=val.device, dtype=torch.long)
-                    print("Here are the shapes:")
-                    print(val.shape)
-                    print(ts.shape)
                     update, _ = self.p_sample_ddim(val, cond, ts, index=index, use_original_steps=use_original_steps,
                                                    unconditional_guidance_scale=unconditional_guidance_scale,
                                                    unconditional_conditioning=unconditional_conditioning)
@@ -536,11 +530,7 @@ class DDIMSampler(object):
             # Create geodesic object
             PGEORCE = ProbScoreGEORCE_Euclidean(
                 score_fun=lambda x: -self.score_fun(
-                    x, cond, step,
-                    unconditional_guidance_scale=unconditional_guidance_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                    use_original_steps=use_original_steps
-                ),
+                    x, cond, step),
                 init_fun = lambda x,y,t, pts=interior: pts,
                 lam=lam,
                 N=10,
