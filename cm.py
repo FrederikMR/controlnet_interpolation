@@ -351,7 +351,29 @@ class ContextManager:
                 # x: (N, d)
                 G = x @ x.t()          # Gram matrix (N, N)
                 return (G ** 2).sum()  # sum of squared inner product
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: reg_fun1(x)+reg_fun2(x),
+            
+            def reg_fun3(X):
+                """
+                X: tensor of shape (N, d)
+                Returns: scalar — sum over i<j of (||Xi - Xj||^2 - 2d)^2
+                """
+                N, d = X.shape
+            
+                # Compute squared pairwise distances (N×N)
+                # ||Xi – Xj||² = Xi·Xi + Xj·Xj – 2 Xi·Xj
+                XX = X @ X.t()
+                diag = torch.diag(XX)
+                dist2 = diag[:, None] + diag[None, :] - 2 * XX
+            
+                # Extract upper triangle (i < j), exclude diagonal
+                i, j = torch.triu_indices(N, N, offset=1)
+                dist2_pairs = dist2[i, j]
+            
+                # Compute error (||Xi - Xj||² - 2d)² and sum
+                error = (dist2_pairs - 2 * d).pow(2).sum()
+            
+                return error
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun1(x)+reg_fun2(x)+reg_fun3),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
@@ -409,6 +431,7 @@ class ContextManager:
                 noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
         
             for i, noisy_latent in enumerate(noisy_curve, start=0):
+                print(noisy_latent.shape)
                 samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
                     unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
                     use_original_steps=False)  
