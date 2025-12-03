@@ -429,7 +429,6 @@ class ContextManager:
                 noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
         
             for i, noisy_latent in enumerate(noisy_curve, start=0):
-                print(noisy_latent.shape)
                 samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
                     unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
                     use_original_steps=False)  
