@@ -435,6 +435,62 @@ class DDIMSampler(object):
         return self.model.decode_first_stage(x_dec)
     
     @torch.no_grad()
+    def score_fun(self, x: torch.Tensor, c, t: int,
+                  score_corrector=None, corrector_kwargs=None,
+                  unconditional_guidance_scale=1., unconditional_conditioning=None):
+        """
+        Compute ∇_x log p(x_t) using the DDPM formula:
+            score = -eps / sqrt(1 - alpha_bar_t)
+    
+        Args:
+            x  : (N, C,H,W) or (N, C*H*W)
+            c  : conditioning dict
+            t  : *actual DDPM timestep*  (int)
+            batch_size: minibatch size
+    
+        Returns:
+            (N, C*H*W) tensor of score estimates
+        """
+        batch_size = 1
+        
+        # reshape flattened latents
+        if x.ndim == 2:
+            x = x.reshape(-1, 4, 96, 96)
+    
+        device = x.device
+        N = x.shape[0]
+    
+        scores = []
+    
+        # proper DDPM cumulative alpha
+        alpha_bar_t = self.model.alphas_cumprod[t].to(device)
+        alpha_bar_t = alpha_bar_t.view(1,1,1,1)
+    
+        denom = torch.sqrt(1 - alpha_bar_t)
+    
+        for i in range(0, N, batch_size):
+            x_chunk = x[i:i+batch_size]
+    
+            # batched timesteps for the model
+            t_chunk = torch.full(
+                (x_chunk.shape[0],),
+                t,
+                device=device,
+                dtype=torch.long
+            )
+    
+            # εθ(x_t, t)
+            eps = self.pred_eps(x_chunk, c, t_chunk)
+    
+            # score = -eps / sqrt(1 - alpha_bar_t)
+            score = -eps / denom
+            score = score.reshape(x_chunk.shape[0], -1)
+    
+            scores.append(score)
+    
+        return torch.cat(scores, dim=0).reshape(N, -1)
+    
+    @torch.no_grad()
     def iterative_geodesics(self, curve, cond, t_start, lam=1.0, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
                             use_original_steps=False, callback=None):
         
