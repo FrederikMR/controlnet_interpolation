@@ -348,9 +348,9 @@ class ContextManager:
             reg_fun0 = lambda x: torch.sum(S.log_prob(torch.sum(x**2, axis=-1)))
             reg_fun1 = lambda x: torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
             def reg_fun2(x):
-                # x: (N, d)
-                G = x @ x.t()          # Gram matrix (N, N)
-                return (G ** 2).sum()  # sum of squared inner product
+                G = x @ x.t()               # (N, N)
+                G2 = G ** 2
+                return (G2 - torch.diag(torch.diag(G2))).sum()
             
             def reg_fun3(X):
                 """
@@ -373,7 +373,7 @@ class ContextManager:
                 error = (dist2_pairs - 2 * d).pow(2).sum()
             
                 return error
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)),#+reg_fun1(x)+reg_fun2(x)+reg_fun3(x)),
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)+reg_fun1(x)),#+reg_fun2(x)+reg_fun3(x)),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
