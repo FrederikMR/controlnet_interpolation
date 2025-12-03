@@ -441,6 +441,7 @@ class ContextManager:
                 lam = str(self.lam).replace('.','d')
                 Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
         else:
+            print(data_curve.shape)
             for i, samples in enumerate(data_curve, start=0):
                 image = ldm.decode_first_stage(samples)
     
