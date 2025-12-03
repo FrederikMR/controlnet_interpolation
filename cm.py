@@ -344,6 +344,8 @@ class ContextManager:
             noisy_curve = self.PGEORCE(l1, l2)
         elif self.inter_method == "ProbGEORCE_Orthogornal":
             dimension = len(l1.reshape(-1))
+            S = Chi2(len(l1.reshape(-1)))
+            reg_fun0 = lambda x: torch.sum(S.log_prob(torch.sum(x**2, axis=-1)))
             reg_fun1 = lambda x: torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
             def reg_fun2(x):
                 # x: (N, d)
@@ -371,7 +373,7 @@ class ContextManager:
                 error = (dist2_pairs - 2 * d).pow(2).sum()
             
                 return error
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun1(x)+reg_fun2(x)+reg_fun3(x)),
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)),#+reg_fun1(x)+reg_fun2(x)+reg_fun3(x)),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
