@@ -15,7 +15,7 @@ import yaml
 from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 
-from torch.distributions.chi2 import Chi2
+from torch.distributions.chi2 import Chi2, Normal
 
 from torch_geometry.interpolation import LinearInterpolation, SphericalInterpolation, NoiseDiffusion
 from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean
@@ -345,12 +345,33 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_Orthogornal":
             dimension = len(l1.reshape(-1))
             S = Chi2(len(l1.reshape(-1)))
+            standard_normal = Normal(loc=0.0, scale=dimension**0.5)
             reg_fun0 = lambda x: torch.sum(S.log_prob(torch.sum(x**2, axis=-1)))
             reg_fun1 = lambda x: torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
             def reg_fun2(x):
-                G = x @ x.t()               # (N, N)
-                G2 = G ** 2
-                return ((G2 - torch.diag(torch.diag(G2))/dimension)).sum()
+                """
+                Compute log-probabilities of pairwise inner products
+                under N(0, d) approximation, where d = x.shape[1].
+                
+                Args:
+                    x: Tensor of shape (N, d)
+                    return_matrix: If True, return full log-prob matrix with diag masked.
+                                   Otherwise return the sum of all log-probs.
+                """
+                N, d = x.shape
+            
+                # Pairwise inner products
+                G = x @ x.t()                              # (N, N)
+            
+                # Remove diagonal (self-inner products)
+                mask = ~torch.eye(N, dtype=torch.bool, device=x.device)
+                ip = G[mask]                                # (N*(N-1),)
+            
+                # Log probability of each inner product
+                logp = standard_normal.log_prob(ip)
+            
+                # Otherwise return total log probability
+                return logp.sum()
             
             def reg_fun3(X):
                 """
@@ -429,7 +450,7 @@ class ContextManager:
         if noisy_curve is not None:
             if self.clip:
                 noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
-        
+            
             for i, noisy_latent in enumerate(noisy_curve, start=0):
                 samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
                     unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
@@ -442,8 +463,9 @@ class ContextManager:
                 lam = str(self.lam).replace('.','d')
                 Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
         else:
-            print(data_curve.shape)
             for i, samples in enumerate(data_curve, start=0):
+                samples = samples.reshape(-1,4,96,96)
+                print(samples.shape)
                 image = ldm.decode_first_stage(samples)
     
                 image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
