@@ -373,6 +373,39 @@ class ContextManager:
             
                 # Otherwise return total log probability
                 return logp.sum()
+
+            def reg_fun3_logprob(X):
+                """
+                Compute the log-probabilities of all pairwise squared distances
+                ||X_i - X_j||^2 under 2 * chi^2_d distribution.
+                
+                Args:
+                    X: tensor of shape (N, d)
+                Returns:
+                    scalar: sum of log-probabilities over i < j
+                """
+                N, d = X.shape
+            
+                # Compute squared pairwise distances: ||Xi - Xj||^2
+                XX = X @ X.t()                        # Xi·Xj
+                diag = torch.diag(XX)
+                dist2 = diag[:, None] + diag[None, :] - 2 * XX  # shape (N,N)
+            
+                # Extract upper triangle (i < j), exclude diagonal
+                i, j = torch.triu_indices(N, N, offset=1)
+                dist2_pairs = dist2[i, j]
+            
+                # Log PDF of 2 * chi^2_d
+                nu = d / 2
+                log_pdf = -nu * torch.log(torch.tensor(2.0, device=X.device)) \
+                          - torch.lgamma(torch.tensor(nu, device=X.device)) \
+                          + (nu - 1) * torch.log(dist2_pairs + 1e-20) \
+                          - dist2_pairs / 2
+            
+                # Sum over all pairs
+                return log_pdf.sum()
+
+
             
             def reg_fun3(X):
                 """
@@ -395,7 +428,7 @@ class ContextManager:
                 error = (dist2_pairs - 2 * d).pow(2).sum()
             
                 return error
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)+reg_fun1(x)+reg_fun2(x) + reg_fun3(x)),
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)+reg_fun1(x)+reg_fun2(x) + reg_fun3_logprob(x)),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
