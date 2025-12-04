@@ -431,7 +431,7 @@ class ContextManager:
                 error = (dist2_pairs - 2 * d).pow(2).sum()
             
                 return error
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)+reg_fun1(x)+reg_fun2(x) + reg_fun3_logprob(x)),
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -(reg_fun0(x)+reg_fun1(x)+reg_fun2(x) + reg_fun3(x)),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
