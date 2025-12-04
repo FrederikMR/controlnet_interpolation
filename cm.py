@@ -15,7 +15,8 @@ import yaml
 from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 
-from torch.distributions.chi2 import Chi2, Normal
+from torch.distributions.chi2 import Chi2
+from torch.distributions.normal import Normal
 
 from torch_geometry.interpolation import LinearInterpolation, SphericalInterpolation, NoiseDiffusion
 from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean
