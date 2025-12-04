@@ -376,34 +376,37 @@ class ContextManager:
 
             def reg_fun3_logprob(X):
                 """
-                Compute the log-probabilities of all pairwise squared distances
-                ||X_i - X_j||^2 under 2 * chi^2_d distribution.
-                
+                Compute sum of log-probabilities of all pairwise squared distances
+                ||X_i - X_j||^2 under 2 * chi^2_d, optimized for large N and high d.
+            
                 Args:
                     X: tensor of shape (N, d)
                 Returns:
-                    scalar: sum of log-probabilities over i < j
+                    scalar: sum of log-probabilities over all i < j
                 """
                 N, d = X.shape
+                device = X.device
             
-                # Compute squared pairwise distances: ||Xi - Xj||^2
-                XX = X @ X.t()                        # Xi·Xj
-                diag = torch.diag(XX)
-                dist2 = diag[:, None] + diag[None, :] - 2 * XX  # shape (N,N)
+                # Compute squared pairwise distances efficiently
+                # ||Xi - Xj||^2 = ||Xi||^2 + ||Xj||^2 - 2 Xi·Xj
+                XX = X @ X.t()                   # (N, N)
+                diag = torch.sum(X**2, dim=1)    # (N,)
+                dist2 = diag[:, None] + diag[None, :] - 2 * XX  # (N, N)
             
-                # Extract upper triangle (i < j), exclude diagonal
-                i, j = torch.triu_indices(N, N, offset=1)
-                dist2_pairs = dist2[i, j]
+                # Mask upper triangle (i < j)
+                mask = torch.triu(torch.ones(N, N, device=device, dtype=torch.bool), diagonal=1)
+                dist2_pairs = dist2[mask]  # shape (N*(N-1)/2,)
             
                 # Log PDF of 2 * chi^2_d
                 nu = d / 2
-                log_pdf = -nu * torch.log(torch.tensor(2.0, device=X.device)) \
-                          - torch.lgamma(torch.tensor(nu, device=X.device)) \
+                log_pdf = -nu * torch.log(torch.tensor(2.0, device=device)) \
+                          - torch.lgamma(torch.tensor(nu, device=device)) \
                           + (nu - 1) * torch.log(dist2_pairs + 1e-20) \
                           - dist2_pairs / 2
             
                 # Sum over all pairs
                 return log_pdf.sum()
+
 
 
             

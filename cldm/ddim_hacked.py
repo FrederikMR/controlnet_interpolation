@@ -511,19 +511,7 @@ class DDIMSampler(object):
         for i, step in enumerate(iterator):
             index = total_steps - i - 1
             curve = curve.reshape(-1,4,96,96)
-    
-            # --- DDIM step (reduced memory)
-            with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.float16):
-                new_curve = []
-                for val in curve:
-                    val = val.reshape(1,4,96,96)
-                    ts = torch.full((val.shape[0],), step, device=val.device, dtype=torch.long)
-                    update, _ = self.p_sample_ddim(val, cond, ts, index=index, use_original_steps=use_original_steps,
-                                                   unconditional_guidance_scale=unconditional_guidance_scale,
-                                                   unconditional_conditioning=unconditional_conditioning)
-                    new_curve.append(val)
-            curve = torch.concatenate(new_curve, axis=0).squeeze()
-    
+            
             # Prepare interior without capturing curve
             interior = curve[1:-1].detach().reshape(len(curve[1:-1]), -1)
     
@@ -546,6 +534,18 @@ class DDIMSampler(object):
             # Geodesic (also reduced memory)
             with torch.inference_mode():
                 curve = PGEORCE(curve[0], curve[-1])
+    
+            # --- DDIM step (reduced memory)
+            with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.float16):
+                new_curve = []
+                for val in curve:
+                    val = val.reshape(1,4,96,96)
+                    ts = torch.full((val.shape[0],), step, device=val.device, dtype=torch.long)
+                    update, _ = self.p_sample_ddim(val, cond, ts, index=index, use_original_steps=use_original_steps,
+                                                   unconditional_guidance_scale=unconditional_guidance_scale,
+                                                   unconditional_conditioning=unconditional_conditioning)
+                    new_curve.append(val)
+            curve = torch.concatenate(new_curve, axis=0).squeeze()
     
             # Clean up
             del PGEORCE, interior
