@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J cat_ProbGEORCE_Score_Noise
+    #BSUB -J cat_ProbGEORCE_Score_Data
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -18,7 +18,7 @@
     
     python3 run_interpolation.py \
         --model cat \
-        --method ProbGEORCE_Score_Noise \
+        --method ProbGEORCE_Score_Data \
         --lam 10.0 \
         --clip 0 \
         --mu -1.0 \
