@@ -357,7 +357,7 @@ class ContextManager:
                 X_stochastic.append(X_stochastic[-1] + step)
             
             # Convert to tensor
-            noisy_curve = torch.stack(X_stochastic, dim=0)  # shape: [T+1, d1, d2, d3]
+            noisy_curve = noise #torch.stack(X_stochastic, dim=0)  # shape: [T+1, d1, d2, d3]
         elif self.inter_method == "ProbGEORCE_Orthogornal":
             dimension = len(l1.reshape(-1))
             S = Chi2(len(l1.reshape(-1)))
