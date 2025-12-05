@@ -459,23 +459,11 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Score_Data":
-            x1 = self.ddim_sampler.decode(l1, cond, cur_step, # cur_step-1 / new_step-1
-                                          unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                                          use_original_steps=False)  
-            x2 = self.ddim_sampler.decode(l2, cond, cur_step, # cur_step-1 / new_step-1
-                                          unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                                          use_original_steps=False)  
-            
-            noisy_curve = self.SInt(l1, l2)
-            data_curve = []
-            for i, noisy_latent in enumerate(noisy_curve, start=0):
-                samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
-                    unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                    use_original_steps=False)  
-                data_curve.append(samples)
-                
-            data_curve = torch.concatenate(data_curve, axis=0)
-            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0),
+            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.model.score_fun(x,cond, 0,
+                                                                                                            score_corrector=None, 
+                                                                                                            corrector_kwargs=None,
+                                                                                                            unconditional_guidance_scale=guide_scale, 
+                                                                                                            unconditional_conditioning=un_cond),
                                                                 init_fun= lambda x,y,t: data_curve[1:-1].reshape(len(data_curve[1:-1]),-1),
                                                                 lam=self.lam,
                                                                 N=self.N,
@@ -488,8 +476,11 @@ class ContextManager:
                                                                 device="cuda:0",
                                                                 )
             
-            data_curve = self.PGEORCE_Score_Data(x1, x2)
-            noisy_curve = None
+            data_curve = self.PGEORCE_Score_Data(left_image, right_image)
+            
+            
+            noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+            #noisy_curve = None
         elif self.inter_method == "ProbGEORCE_Score_Noise":
             noisy_curve = self.PGEORCE_Score_Noise(l1, l2)
             cur_step -= 1
