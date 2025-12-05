@@ -403,6 +403,12 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Score_Data":
+            lr_rate=0.001
+            beta1=0.5
+            beta2=0.5
+            eps=1e-8
+            tol = 1e-4
+            max_iter = 1000
             self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
                                                                                                                    score_corrector=None, 
                                                                                                                    corrector_kwargs=None,
@@ -412,7 +418,7 @@ class ContextManager:
                                                                 lam=self.lam,
                                                                 N=self.N,
                                                                 tol=tol,
-                                                                max_iter=self.max_iter,
+                                                                max_iter=max_iter,
                                                                 lr_rate=lr_rate,
                                                                 beta1=beta1,
                                                                 beta2=beta2,
