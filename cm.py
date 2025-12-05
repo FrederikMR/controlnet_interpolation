@@ -428,6 +428,7 @@ class ContextManager:
                                                     use_original_steps=False, return_intermediates=None,
                                                     unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
             noisy_curve = torch.concatenate(noisy_curve, axis=0)
+            print(noisy_curve.shape)
             
             
             #noisy_curve = None
