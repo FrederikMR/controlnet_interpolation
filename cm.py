@@ -423,7 +423,13 @@ class ContextManager:
             data_curve = self.PGEORCE_Score_Data(left_image, right_image)
             
             
-            noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+            #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+            noisy_curve = [self.ddim_sampler.encode(noisy_img, cond, cur_step, 
+                                                    use_original_steps=False, return_intermediates=None,
+                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for noisy_img in noisy_curve]
+            noisy_curve = torch.concatenate(noisy_curve, axis=0)
+            
+            
             #noisy_curve = None
         elif self.inter_method == "ProbGEORCE_Score_Noise":
             noisy_curve = self.PGEORCE_Score_Noise(l1, l2)
