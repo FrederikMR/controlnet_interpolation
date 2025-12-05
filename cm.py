@@ -50,62 +50,6 @@ class ContextManager:
         
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
-        
-    @torch.no_grad()
-    def score_fun(self, x: torch.Tensor, c, t: int,
-                  score_corrector=None, corrector_kwargs=None,
-                  unconditional_guidance_scale=1., unconditional_conditioning=None):
-        """
-        Compute ∇_x log p(x_t) using the DDPM formula:
-            score = -eps / sqrt(1 - alpha_bar_t)
-    
-        Args:
-            x  : (N, C,H,W) or (N, C*H*W)
-            c  : conditioning dict
-            t  : *actual DDPM timestep*  (int)
-            batch_size: minibatch size
-    
-        Returns:
-            (N, C*H*W) tensor of score estimates
-        """
-        batch_size = 1
-        
-        # reshape flattened latents
-        if x.ndim == 2:
-            x = x.reshape(-1, 4, 96, 96)
-    
-        device = x.device
-        N = x.shape[0]
-    
-        scores = []
-    
-        # proper DDPM cumulative alpha
-        alpha_bar_t = self.ddim_sampler.model.alphas_cumprod[t].to(device)
-        alpha_bar_t = alpha_bar_t.view(1,1,1,1)
-    
-        denom = torch.sqrt(1 - alpha_bar_t)
-    
-        for i in range(0, N, batch_size):
-            x_chunk = x[i:i+batch_size]
-    
-            # batched timesteps for the model
-            t_chunk = torch.full(
-                (x_chunk.shape[0],),
-                t,
-                device=device,
-                dtype=torch.long
-            )
-    
-            # εθ(x_t, t)
-            eps = self.ddim_sampler.pred_eps(x_chunk, c, t_chunk)
-    
-            # score = -eps / sqrt(1 - alpha_bar_t)
-            score = -eps / denom
-            score = score.reshape(x_chunk.shape[0], -1)
-    
-            scores.append(score)
-    
-        return torch.cat(scores, dim=0).reshape(N, -1)
 
     def noise_diffusion(self,
                         l1, 
@@ -459,11 +403,11 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Score_Data":
-            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.model.score_fun(x,cond, 0,
-                                                                                                            score_corrector=None, 
-                                                                                                            corrector_kwargs=None,
-                                                                                                            unconditional_guidance_scale=guide_scale, 
-                                                                                                            unconditional_conditioning=un_cond),
+            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
+                                                                                                                   score_corrector=None, 
+                                                                                                                   corrector_kwargs=None,
+                                                                                                                   unconditional_guidance_scale=guide_scale, 
+                                                                                                                   unconditional_conditioning=un_cond),
                                                                 init_fun= None,
                                                                 lam=self.lam,
                                                                 N=self.N,
