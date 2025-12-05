@@ -464,7 +464,7 @@ class ContextManager:
                                                                                                             corrector_kwargs=None,
                                                                                                             unconditional_guidance_scale=guide_scale, 
                                                                                                             unconditional_conditioning=un_cond),
-                                                                init_fun= lambda x,y,t: data_curve[1:-1].reshape(len(data_curve[1:-1]),-1),
+                                                                init_fun= None,
                                                                 lam=self.lam,
                                                                 N=self.N,
                                                                 tol=tol,
