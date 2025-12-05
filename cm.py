@@ -269,7 +269,6 @@ class ContextManager:
         left_image= ldm.get_first_stage_encoding(ldm.encode_first_stage(img1.float() / 127.5 - 1.0))
         right_image= ldm.get_first_stage_encoding(ldm.encode_first_stage(img2.float() / 127.5 - 1.0))
 
-        
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
@@ -343,6 +342,22 @@ class ContextManager:
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE":
             noisy_curve = self.PGEORCE(l1, l2)
+        elif self.inter_method == "ProbGEORCE_test":
+            noisy_curve = self.PGEORCE(l1, l2)
+            ut = noisy_curve[1:]-noisy_curve[:-1]
+            noise = torch.randn_like(ut)
+            
+            # Scale noise if desired
+            sigma = 1.0  # adjust for variance control
+            noisy_ut = ut + sigma * noise
+            
+            # Reconstruct stochastic curve
+            X_stochastic = [noisy_curve[0]]  # starting point
+            for step in noisy_ut:
+                X_stochastic.append(X_stochastic[-1] + step)
+            
+            # Convert to tensor
+            noisy_curve = torch.stack(X_stochastic, dim=0)  # shape: [T+1, d1, d2, d3]
         elif self.inter_method == "ProbGEORCE_Orthogornal":
             dimension = len(l1.reshape(-1))
             S = Chi2(len(l1.reshape(-1)))

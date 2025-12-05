@@ -477,8 +477,13 @@ class DDIMSampler(object):
             )
     
             # εθ(x_t, t)
-            eps = self.pred_eps(x_chunk, c, t_chunk)
-    
+            eps = self.pred_eps(x_chunk, c, t_chunk,
+                                score_corrector=score_corrector, 
+                                corrector_kwargs=corrector_kwargs,
+                                unconditional_guidance_scale=unconditional_guidance_scale, 
+                                unconditional_conditioning=unconditional_conditioning,
+                                )
+
             # score = -eps / sqrt(1 - alpha_bar_t)
             score = -eps / denom
             score = score.reshape(x_chunk.shape[0], -1)
