@@ -39,9 +39,9 @@ class nEuclidean(RiemannianManifold):
                )->Tensor:
         
         if z.ndim == 1:
-            return torch.eye(self.dim)
+            return torch.eye(self.dim, device=z.device)
         else:            
-            diag = torch.eye(self.dim)
+            diag = torch.eye(self.dim, device=z.device)
         
             diag_multi = z.unsqueeze(2).expand(*z.size(), z.size(1))
             diag3d = diag_multi*diag
