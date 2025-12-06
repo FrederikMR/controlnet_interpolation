@@ -243,9 +243,11 @@ class ContextManager:
         eps=1e-8
         tol = 1e-4
         
-        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x, cond, self.ddim_sampler.ddpm_num_timesteps-1,
-                                                                                                   unconditional_guidance_scale=guide_scale, 
-                                                                                                   unconditional_conditioning=un_cond),
+        self.PGEORCE_Score_Noise = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x, cond, self.ddim_sampler.ddpm_num_timesteps-1,
+                                                                                                                score_corrector=None, 
+                                                                                                                corrector_kwargs=None,
+                                                                                                                unconditional_guidance_scale=guide_scale, 
+                                                                                                                unconditional_conditioning=un_cond),
                                                              init_fun=None,
                                                              lam=self.lam,
                                                              N=self.N,
@@ -258,9 +260,11 @@ class ContextManager:
                                                              device="cuda:0",
                                                              )
         
-        self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.score_fun(x,cond, 0,
-                                                                                                  unconditional_guidance_scale=guide_scale, 
-                                                                                                  unconditional_conditioning=un_cond),
+        self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
+                                                                                                               score_corrector=None, 
+                                                                                                               corrector_kwargs=None,
+                                                                                                               unconditional_guidance_scale=guide_scale, 
+                                                                                                               unconditional_conditioning=un_cond),
                                                             init_fun= None,
                                                             lam=self.lam,
                                                             N=self.N,
