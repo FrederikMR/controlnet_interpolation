@@ -383,7 +383,7 @@ class LambdaManifold(ABC):
         
         dim = len(z)
         
-        t_grid = torch.linspace(0., 1., T) 
+        t_grid = torch.linspace(0., 1., T, device=z.device)
         zs = odeint(dif_fun, 
                     torch.hstack((z, v)), 
                     t_grid, 
@@ -412,7 +412,7 @@ class LambdaManifold(ABC):
         v = v.reshape(-1)
         dim = len(z)
         
-        t_grid = torch.linspace(0., 1., T) 
+        t_grid = torch.linspace(0., 1., T, device=z.device)
         zs = odeint(dif_fun, 
                     torch.hstack((z, v)), 
                     t_grid, 
@@ -441,7 +441,7 @@ class LambdaManifold(ABC):
         v = v.reshape(-1)
         dim = len(z)
         
-        t_grid = torch.linspace(0., 1., T) 
+        t_grid = torch.linspace(0., 1., T, device=z.device) 
         zs = odeint(dif_fun, 
                     torch.hstack((z, v)), 
                     t_grid, 
