@@ -332,7 +332,6 @@ class LambdaManifold(ABC):
     
         return g(z)
         
-    @torch.no_grad()
     def geodesic_equation(self,
                           z:torch.Tensor,
                           v:torch.Tensor
@@ -349,7 +348,6 @@ class LambdaManifold(ABC):
         
         return torch.hstack((dx1t,dx2t))
     
-    @torch.no_grad()
     def geodesic_equation_euclidean(self,
                                     z:torch.Tensor,
                                     v:torch.Tensor
@@ -364,7 +362,6 @@ class LambdaManifold(ABC):
         
         return torch.hstack((dx1t,dx2t))
     
-    @torch.no_grad()
     def Exp(self,
             z:torch.Tensor,
             v:torch.Tensor,
@@ -396,7 +393,6 @@ class LambdaManifold(ABC):
         
         return zs.reshape(-1, *shape)
     
-    @torch.no_grad()
     def Exp_ode(self,
                 z:torch.Tensor,
                 v:torch.Tensor,
@@ -426,7 +422,6 @@ class LambdaManifold(ABC):
         
         return zs.reshape(-1, *shape)
     
-    @torch.no_grad()
     def Exp_ode_Euclidean(self,
                           z:torch.Tensor,
                           v:torch.Tensor,

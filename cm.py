@@ -406,12 +406,16 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_Data":
             dimension = len(l1.reshape(-1))
             M = nEuclidean(dim=dimension)
-            score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
-                                                               score_corrector=None, 
-                                                               corrector_kwargs=None,
-                                                               unconditional_guidance_scale=guide_scale, 
-                                                               unconditional_conditioning=un_cond,
-                                                               )
+            
+            @torch.no_grad()
+            def score_fun(x):
+                
+                return  -self.ddim_sampler.score_fun(x,cond, 0,
+                                                     score_corrector=None, 
+                                                     corrector_kwargs=None,
+                                                     unconditional_guidance_scale=guide_scale, 
+                                                     unconditional_conditioning=un_cond,
+                                                     )
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
             v0 = -score_fun(left_image)
             data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,4,96,96)
