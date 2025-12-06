@@ -438,7 +438,6 @@ class ContextManager:
             #noisy_curve = None
         elif self.inter_method == "ProbGEORCE_Score_Noise":
             noisy_curve = self.PGEORCE_Score_Noise(l1, l2)
-            cur_step -= 1
         elif self.inter_method == "ProbGEORCE_Score_Iterative":
             noisy_curve = self.SInt(l1, l2)
             data_curve = self.ddim_sampler.iterative_geodesics(noisy_curve, cond, cur_step, lam=self.lam,
