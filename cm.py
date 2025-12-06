@@ -398,7 +398,7 @@ class ContextManager:
             S = Chi2(len(l1.reshape(-1)))
             reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) -  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
             M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), grad_S=None, lam=self.lam)
+            Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), gradS=None, lam=self.lam)
             v0 = -torch.randn_like(l1)
             noisy_curve = Mlambda.Exp_ode_Euclidean(l1, v0, T=self.N).reshape(-1,4,96,96)
         elif self.inter_method == "ProbGEORCE_ND":
@@ -428,7 +428,7 @@ class ContextManager:
             noisy_curve = None
             
             
-        if noisy_curve is None:
+        if noisy_curve is not None:
             if self.clip:
                 noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
             
