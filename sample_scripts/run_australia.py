@@ -17,7 +17,7 @@ def run_australia(N:int=10, lam:float=1.0, max_iter:int=100, inter_method:str="l
     img2 = Image.open('sample_imgs/australia2.png').resize((768, 768))
     
     prompt = 'a photo of prime minister'
-    n_prompt='text, president, government, politcal, leader, european, suit'
+    n_prompt='text, signature, logo, distorted, ugly, weird eyes, lowres, messy, weird face, lopsided, disfigured, bad art, poorly drawn, low quality, drawing, blurry, faded'
     CM.bvp(img1, img2,  prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir='sample_results/australia')
     
     return
