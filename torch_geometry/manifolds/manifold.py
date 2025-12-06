@@ -354,11 +354,10 @@ class LambdaManifold(ABC):
                                     )->torch.Tensor:
 
         grad_s = self.gradS(z)
-        Ginv = self.M.Ginv(z)
 
         dx1t = v
         dx2t = (
-            - 0.5*self.lam*torch.einsum('...ij,...j->...i', Ginv, grad_s)
+            - 0.5*grad_s
             )
         
         return torch.hstack((dx1t,dx2t))
