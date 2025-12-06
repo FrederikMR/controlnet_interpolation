@@ -20,6 +20,6 @@ def run_sushi(N:int=10, lam:float=1.0, max_iter:int=100, inter_method:str="linea
     prompt='a photo of sushi'
     n_prompt='text, signature, logo, distorted, ugly, weird eyes, lowres, messy, weird face, lopsided, disfigured, bad art, poorly drawn, low quality, drawing, blurry, faded'
     
-    CM.interpolate_new(img1, img2, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10, out_dir='sample_results/sushi')
+    CM.bvp(img1, img2, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10, out_dir='sample_results/sushi')
     
     return

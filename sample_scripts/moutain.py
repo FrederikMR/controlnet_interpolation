@@ -18,4 +18,4 @@ def run_moutain(N:int=10, lam:float=1.0, max_iter:int=100, inter_method:str="lin
     
     prompt='a photo of moutain and lake'
     n_prompt='text, signature, logo, distorted, ugly, weird eyes, lowres, messy, weird face, lopsided, disfigured, bad art, poorly drawn, low quality, drawing, blurry, faded'
-    CM.interpolate_new(img1, img2,  prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10, out_dir='sample_results/moutain')
+    CM.bvp(img1, img2,  prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10, out_dir='sample_results/moutain')

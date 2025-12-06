@@ -18,6 +18,6 @@ def run_football(N:int=10, lam:float=1.0, max_iter:int=100, inter_method:str="li
     
     prompt = 'a photo of a soccer player'
     n_prompt='text, soccer sports player'
-    CM.interpolate_new(img1, img2,  prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir='sample_results/football')
+    CM.bvp(img1, img2,  prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir='sample_results/football')
     
     return
