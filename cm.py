@@ -400,7 +400,7 @@ class ContextManager:
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), grad_S=None, lam=self.lam)
             v0 = -torch.randn_like(l1)
-            noisy_curve = Mlambda.Exp_ode(l1, v0, T=self.N).reshape(-1,4,96,96)
+            noisy_curve = Mlambda.Exp_ode_Euclidean(l1, v0, T=self.N).reshape(-1,4,96,96)
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Data":
@@ -414,7 +414,7 @@ class ContextManager:
                                                                )
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
             v0 = -score_fun(left_image)
-            data_curve = Mlambda.Exp_ode(left_image, v0, T=self.N).reshape(-1,4,96,96)
+            data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,4,96,96)
 
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             #noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
