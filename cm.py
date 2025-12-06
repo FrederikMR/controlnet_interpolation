@@ -399,7 +399,16 @@ class ContextManager:
             reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) -  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), gradS=None, lam=self.lam)
-            v0 = -torch.randn_like(l1)
+            # Compute gradient using autograd
+            loss = reg_fun(l1)
+            v0 = torch.autograd.grad(
+                outputs=loss,
+                inputs=l1,
+                grad_outputs=torch.ones_like(loss),
+                create_graph=False,
+                retain_graph=False
+            )[0]
+            
             noisy_curve = Mlambda.Exp_ode_Euclidean(l1, v0, T=self.N).reshape(-1,4,96,96)
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
@@ -420,36 +429,24 @@ class ContextManager:
             v0 = -score_fun(left_image)
             data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,4,96,96)
 
-            #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            #noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-            #                                        use_original_steps=False, return_intermediates=None,
-            #                                        unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
-            #noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
-            noisy_curve = None
-            
-            
-        if noisy_curve is not None:
-            if self.clip:
-                noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
-            
-            for i, noisy_latent in enumerate(noisy_curve, start=0):
-                samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
-                    unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                    use_original_steps=False)
-    
-                image = ldm.decode_first_stage(samples)
-    
-                image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-                lam = str(self.lam).replace('.','d')
-                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
-        else:
-            for i, samples in enumerate(data_curve, start=0):
-    
-                image = ldm.decode_first_stage(samples.reshape(1,4,96,96))
-    
-                image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-                lam = str(self.lam).replace('.','d')
-                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
+            noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+            noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                    use_original_steps=False, return_intermediates=None,
+                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
+        if self.clip:
+            noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
+        
+        for i, noisy_latent in enumerate(noisy_curve, start=0):
+            samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
+                unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
+                use_original_steps=False)
+
+            image = ldm.decode_first_stage(samples)
+
+            image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+            lam = str(self.lam).replace('.','d')
+            Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
 
         return
 
