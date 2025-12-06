@@ -429,7 +429,7 @@ class ContextManager:
             v0 = -score_fun(left_image)
             data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,4,96,96)
 
-            noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+            #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                     use_original_steps=False, return_intermediates=None,
                                                     unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
