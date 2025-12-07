@@ -404,7 +404,7 @@ class ContextManager:
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
             
-            noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,4,96,96)
+            noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,1,4,96,96)
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Data":
