@@ -444,6 +444,7 @@ class ContextManager:
             v0 = torch.randn_like(left_image)
             data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,1,4,96,96)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+            noisy_curve = []
             for i, data_img in enumerate(data_curve):
                 alpha = prompt_strength(i, len(data_curve))
             
