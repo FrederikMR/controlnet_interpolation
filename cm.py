@@ -391,7 +391,7 @@ class ContextManager:
         l2 = None # Dummy
         right_image = None #Dummy
         # Precompute conditioning
-        cond_target  = ldm.get_learned_conditioning(["A cat with a hat"])
+        cond_target  = ldm.get_learned_conditioning(["A cat that is evil and fat"])
         cond_neutral = ldm.get_learned_conditioning([prompt])
         uncond_base  = ldm.get_learned_conditioning([n_prompt])
         
@@ -400,7 +400,7 @@ class ContextManager:
         
         def prompt_strength(t, T):
             x = t / (T - 1)
-            return x * x   # smooth ease-in
+            return x   # smooth ease-in
             # You can try x, x**3, or sigmoid for different transitions.
 
         if self.inter_method=="Noise":
