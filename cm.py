@@ -391,7 +391,7 @@ class ContextManager:
         l2 = None # Dummy
         right_image = None #Dummy
         # Precompute conditioning
-        cond_target  = ldm.get_learned_conditioning(["A cat that is evil and fat"])
+        cond_target  = ldm.get_learned_conditioning(["A photo of a lion"])
         cond_neutral = ldm.get_learned_conditioning([prompt])
         uncond_base  = ldm.get_learned_conditioning([n_prompt])
         
@@ -436,7 +436,7 @@ class ContextManager:
                 return  -self.ddim_sampler.score_fun(x,cond, 0,
                                                      score_corrector=None, 
                                                      corrector_kwargs=None,
-                                                     unconditional_guidance_scale=guide_scale, 
+                                                     unconditional_guidance_scale=1., 
                                                      unconditional_conditioning=un_cond,
                                                      )
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
@@ -455,7 +455,7 @@ class ContextManager:
                 
                 noisy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                             use_original_steps=False, return_intermediates=None,
-                                                            unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
+                                                            unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0])
                 
             noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
         if self.clip:
