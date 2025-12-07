@@ -392,7 +392,7 @@ class ContextManager:
         right_image = None #Dummy
         # Precompute conditioning
         cond_target  = ldm.get_learned_conditioning(["A cat with a hat"])
-        cond_neutral = ldm.get_learned_conditioning([""])
+        cond_neutral = ldm.get_learned_conditioning([prompt])
         uncond_base  = ldm.get_learned_conditioning([n_prompt])
         
         cond = {"c_crossattn": [cond_target], 'c_concat': None}
