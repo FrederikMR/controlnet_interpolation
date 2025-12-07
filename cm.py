@@ -257,7 +257,7 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
             S = Chi2(len(l1.reshape(-1)))
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) -  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2),
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
@@ -397,7 +397,7 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
             S = Chi2(len(l1.reshape(-1)))
-            reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) -  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
+            reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), gradS=None, lam=self.lam)
             # Compute gradient using autograd
