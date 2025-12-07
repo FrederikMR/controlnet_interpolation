@@ -384,6 +384,10 @@ class ContextManager:
         
         l2 = None # Dummy
         right_image = None #Dummy
+        cond1 = ldm.get_learned_conditioning(["A cat with a hat"])
+        uncond_base = ldm.get_learned_conditioning([n_prompt])
+        cond = {"c_crossattn": [cond1], 'c_concat': None}
+        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
         if self.inter_method=="Noise":
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             l2 = ldm.sqrt_alphas_cumprod[t] * right_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
