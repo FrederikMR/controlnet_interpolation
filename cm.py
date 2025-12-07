@@ -9,6 +9,7 @@ from PIL import Image
 from torchvision import transforms
 import math
 F = torch.nn.functional
+from torch.func import grad
 
 import time
 import yaml
@@ -400,7 +401,7 @@ class ContextManager:
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), gradS=None, lam=self.lam)
             # Compute gradient using autograd
-            loss = reg_fun(l1)
+            loss = grad(reg_fun)(l1.reshape(1,-1))
             v0 = torch.autograd.grad(
                 outputs=loss,
                 inputs=l1,
@@ -427,8 +428,8 @@ class ContextManager:
                                                      )
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
             v0 = -score_fun(left_image)
-            data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,4,96,96)
-
+            data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,1,4,96,96)
+            print(data_curve.shape)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                     use_original_steps=False, return_intermediates=None,
