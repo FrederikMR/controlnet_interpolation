@@ -420,7 +420,7 @@ class ContextManager:
                                                      unconditional_conditioning=un_cond,
                                                      )
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
-            v0 = -score_fun(left_image)
+            v0 = score_fun(left_image)
             data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,1,4,96,96)
             print(data_curve.shape)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
