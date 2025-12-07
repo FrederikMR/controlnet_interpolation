@@ -105,6 +105,12 @@ class ContextManager:
         
         return curve.reshape(-1, *shape)
     
+    def create_out_dir(self,
+                       out_dir:str,
+                       )->str:
+        
+        return
+    
     def pgeorce_nd(self,
                    l1, 
                    l2,
@@ -384,10 +390,19 @@ class ContextManager:
         
         l2 = None # Dummy
         right_image = None #Dummy
-        cond1 = ldm.get_learned_conditioning(["A cat with a hat"])
-        uncond_base = ldm.get_learned_conditioning([n_prompt])
-        cond = {"c_crossattn": [cond1], 'c_concat': None}
+        # Precompute conditioning
+        cond_target  = ldm.get_learned_conditioning(["A cat with a hat"])
+        cond_neutral = ldm.get_learned_conditioning([""])
+        uncond_base  = ldm.get_learned_conditioning([n_prompt])
+        
+        cond = {"c_crossattn": [cond_target], 'c_concat': None}
         un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        
+        def prompt_strength(t, T):
+            x = t / (T - 1)
+            return x * x   # smooth ease-in
+            # You can try x, x**3, or sigmoid for different transitions.
+
         if self.inter_method=="Noise":
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             l2 = ldm.sqrt_alphas_cumprod[t] * right_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
@@ -429,23 +444,45 @@ class ContextManager:
             v0 = torch.randn_like(left_image)
             data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,1,4,96,96)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                    use_original_steps=False, return_intermediates=None,
-                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+            for i, data_img in enumerate(data_curve):
+                alpha = prompt_strength(i, len(noisy_curve))
+            
+                cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
+                
+                cond = {"c_crossattn": [cond_blend], 'c_concat': None}
+                un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+                
+                noisy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                            use_original_steps=False, return_intermediates=None,
+                                                            unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
+                
             noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
         if self.clip:
             noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
         
         for i, noisy_latent in enumerate(noisy_curve, start=0):
-            samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
-                unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                use_original_steps=False)
-
+        
+            # ---- NEW: smooth prompt transition ----
+            alpha = prompt_strength(i, len(noisy_curve))
+        
+            cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
+            
+            cond = {"c_crossattn": [cond_blend], 'c_concat': None}
+            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        
+            # ---- Your original decode ----
+            samples = self.ddim_sampler.decode(
+                noisy_latent,
+                cond,
+                cur_step,
+                unconditional_guidance_scale=guide_scale,
+                unconditional_conditioning=un_cond,
+                use_original_steps=False
+            )
+        
             image = ldm.decode_first_stage(samples)
-
             image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-            lam = str(self.lam).replace('.','d')
             Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
-
+            
         return
 
