@@ -40,7 +40,7 @@ class ImageFolderDataset(Dataset):
 # -----------------------------
 # 3. ZIP-based loader (for FFHQ or any zipped images)
 # -----------------------------
-class ZipImageDataset(ImageFolderDataset):
+class ZipImageDataset(Dataset):
     def __init__(self, zip_path, n_images=None, transform=None):
         extract_dir = os.path.splitext(zip_path)[0]
         if not os.path.exists(extract_dir):
@@ -48,7 +48,29 @@ class ZipImageDataset(ImageFolderDataset):
             with zipfile.ZipFile(zip_path, 'r') as z:
                 z.extractall(extract_dir)
             print("Extraction complete.")
-        super().__init__(extract_dir, n_images=n_images, transform=transform)
+        
+        self.transform = transform or get_transform()
+        
+        # Recursively find all image files
+        self.img_paths = []
+        for root, _, files in os.walk(extract_dir):
+            for f in files:
+                if f.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    self.img_paths.append(os.path.join(root, f))
+        
+        if n_images is not None and n_images < len(self.img_paths):
+            self.img_paths = random.sample(self.img_paths, n_images)
+        
+        if len(self.img_paths) == 0:
+            print(f"Warning: No images found in {extract_dir}")
+    
+    def __len__(self):
+        return len(self.img_paths)
+    
+    def __getitem__(self, idx):
+        img = Image.open(self.img_paths[idx]).convert('RGB')
+        return self.transform(img)
+
 
 # -----------------------------
 # 4. AFHQ loader
