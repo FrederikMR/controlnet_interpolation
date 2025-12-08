@@ -73,11 +73,11 @@ def loop_jobs(wait_time = 1.0):
     
     N = 100
     max_iter = 100
-    model = ['cat']#, 'president', 'football']
+    model = ['house']#, 'president', 'football']
     method = ['ProbGEORCE_Noise', 'ProbGEORCE_Data'] #, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise'7
     method = ['ProbGEORCE_Noise', 'ProbGEORCE_Data']
     clip = [0]#[0,1]
-    lam = [20.0]#[0.1, 0.5, 1.0, 10.0]
+    lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
     
     for mod in model:
         for meth in method:
