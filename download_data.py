@@ -10,6 +10,35 @@ import os
 import urllib.request
 import zipfile
 
+import gdown
+
+def download_celeba_hq(dest="/work3/fmry/Data/celeba_hq/"):
+    os.makedirs(dest, exist_ok=True)
+    
+    # Google Drive file ID for CelebA-HQ 1024x1024
+    file_id = "188K19ucknC6wg1R6jbuPEhTq9zoufOx4"
+    url = f"https://drive.google.com/uc?id={file_id}"
+    
+    zip_path = os.path.join(dest, "celeba-hq.zip")
+    
+    print("Downloading CelebA-HQ...")
+    gdown.download(url, zip_path, quiet=False)
+    
+    # If the file is a zip, extract it
+    if zipfile.is_zipfile(zip_path):
+        print("Extracting CelebA-HQ...")
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            z.extractall(dest)
+        print("Extraction complete!")
+    else:
+        print("Download complete! (not a zip file)")
+    
+    print("CelebA-HQ is ready at:", dest)
+
+if __name__ == "__main__":
+    download_celeba_hq()
+
+
 def download_and_extract(url, dest_folder):
     os.makedirs(dest_folder, exist_ok=True)
     zip_path = os.path.join(dest_folder, os.path.basename(url))
@@ -44,4 +73,5 @@ def download_coco2017(dest="/work3/fmry/Data/coco/"):
     print("COCO 2017 ready at:", dest)
 
 if __name__ == "__main__":
+    download_celeba_hq()
     download_coco2017()
