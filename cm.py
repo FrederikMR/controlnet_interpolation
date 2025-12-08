@@ -34,6 +34,8 @@ class ContextManager:
                  mu:float=None,
                  nu:float=None,
                  ckpt_path:str = "models/control_v11p_sd21_openpose.ckpt",
+                 num_images:int=None,
+                 seed:int=2712,
                  ):
                  
         self.inter_method = inter_method
@@ -52,6 +54,93 @@ class ContextManager:
         
         self.model.load_state_dict(load_state_dict(ckpt_path, 
                                                    location='cuda'))
+        
+        if num_images is None:
+            self.step_save = 1
+        else:
+            self.step_save = max(int(N / num_images), 1)
+        self.seed = seed
+        
+    def create_out_dir(self,
+                       out_dir:str,
+                       method_name:str,
+                       )->str:
+        
+        base_dir = out_dir
+        clip_str = '_clip' if self.clip else ''
+        if "ProbGEORCE" in self.inter_method:
+            lam = str(self.lam).replace('.', 'd')
+            out_dir = ''.join((out_dir, f'../figures/{self.method_name}/{self.inter_method}{clip_str}_{lam}'))
+        else:            
+            out_dir = ''.join((out_dir, f'../figures/{self.method_name}/{self.inter_method}{clip_str}'))
+            
+        if self.mu is not None:
+            mu_str = str(self.mu).replace('.', 'd')
+            out_dir = ''.join((out_dir, f'_{mu_str}'))
+            
+        if self.nu is not None:
+            nu_str = str(self.nu).replace('.', 'd')
+            out_dir = ''.join((out_dir, f'_{nu_str}'))
+            
+        shutil.rmtree(out_dir, ignore_errors=True)
+        os.makedirs(out_dir)
+        
+        return base_dir, out_dir
+    
+    def sample_images(self,
+                      ldm,
+                      noisy_curve,
+                      cond_neutral,
+                      uncond_base,
+                      cur_step,
+                      guide_scale,
+                      out_dir,
+                      cond_target=None,
+                      ):
+        
+        if self.clip:
+            noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
+        
+        for i, noisy_latent in enumerate(noisy_curve, start=0):
+            if (i % self.step_save == 0) or (i == 0) or (i==len(noisy_latent)-1):
+                if cond_target is not None:
+                    # ---- NEW: smooth prompt transition ----
+                    alpha = self.prompt_strength(i, noisy_curve)
+                
+                    cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
+                else:
+                    cond_blend = cond_neutral
+                
+                cond = {"c_crossattn": [cond_blend], 'c_concat': None}
+                un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+            
+                # ---- Your original decode ----
+                samples = self.ddim_sampler.decode(
+                    noisy_latent,
+                    cond,
+                    cur_step,
+                    unconditional_guidance_scale=guide_scale,
+                    unconditional_conditioning=un_cond,
+                    use_original_steps=False
+                )
+            
+                image = ldm.decode_first_stage(samples)
+                image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
+        
+        return
+    
+    def prompt_strength(self,
+                        t, 
+                        noisy_curve,
+                        ):
+        
+        if t+1 >= len(noisy_curve):
+            return 1.0
+        else:
+            u = noisy_curve[t+1]-noisy_curve[t]
+            total_error = torch.sum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(-1,4*96*96), axis=1), axis=0)
+            return torch.linalg.norm(u)/total_error
 
     def noise_diffusion(self,
                         l1, 
@@ -104,12 +193,6 @@ class ContextManager:
         curve = torch.vstack((l1, curve, l2))
         
         return curve.reshape(-1, *shape)
-    
-    def create_out_dir(self,
-                       out_dir:str,
-                       )->str:
-        
-        return
     
     def pgeorce_nd(self,
                    l1, 
@@ -188,29 +271,12 @@ class ContextManager:
             ddim_eta=0, 
             out_dir='blend',
             ):
-        torch.manual_seed(49)
+        torch.manual_seed(self.seed)
         if min_steps < 1:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
-        base_dir = out_dir
-        clip_str = '_clip' if self.clip else ''
-        if "ProbGEORCE" in self.inter_method:
-            lam = str(self.lam).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'../figures/{self.inter_method}{clip_str}_{lam}'))
-        else:            
-            out_dir = ''.join((out_dir, f'../figures/{self.inter_method}{clip_str}'))
-            
-        if self.mu is not None:
-            mu_str = str(self.mu).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'_{mu_str}'))
-            
-        if self.nu is not None:
-            nu_str = str(self.nu).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'_{nu_str}'))
-            
-        shutil.rmtree(out_dir, ignore_errors=True)
-        os.makedirs(out_dir)
+        base_dir, out_dir = self.create_out_dir(out_dir, "bvp")
         
         if isinstance(img1, Image.Image):
             img1.save(f'{base_dir}/{0:03d}.png')
@@ -231,7 +297,6 @@ class ContextManager:
         un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
         
         self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
-        timesteps = self.ddim_sampler.ddim_timesteps
 
         left_image= ldm.get_first_stage_encoding(ldm.encode_first_stage(img1.float() / 127.5 - 1.0))
         right_image= ldm.get_first_stage_encoding(ldm.encode_first_stage(img2.float() / 127.5 - 1.0))
@@ -240,7 +305,7 @@ class ContextManager:
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
         cur_step=140
-        t = timesteps[cur_step]
+        
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
@@ -251,6 +316,8 @@ class ContextManager:
         
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
+            timesteps = self.ddim_sampler.ddim_timesteps
+            t = timesteps[cur_step]
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             l2 = ldm.sqrt_alphas_cumprod[t] * right_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = self.SInt(l1, l2)
@@ -301,27 +368,21 @@ class ContextManager:
                                                     unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
             noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
             
-        if self.clip:
-            noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
-        
-        for i, noisy_latent in enumerate(noisy_curve, start=0):
-            samples= self.ddim_sampler.decode(noisy_latent, cond, cur_step, # cur_step-1 / new_step-1
-                unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond,
-                use_original_steps=False)
             
-            print(samples.shape)
-            image = ldm.decode_first_stage(samples)
-
-            image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-            lam = str(self.lam).replace('.','d')
-            Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
-
-        return
+        self.sample_images(ldm, 
+                           noisy_curve, 
+                           cond1, 
+                           uncond_base, 
+                           cur_step, 
+                           guide_scale, 
+                           out_dir,
+                           )
     
     def ivp(self, 
             img1, 
             scale_control=1.5,
-            prompt=None, 
+            prompt_neutral=None, 
+            prompt_target=None, 
             n_prompt=None, 
             min_steps=.3,
             max_steps=.55, 
@@ -333,29 +394,12 @@ class ContextManager:
             ddim_eta=0, 
             out_dir='blend',
             ):
-        torch.manual_seed(49)
+        torch.manual_seed(self.seed)
         if min_steps < 1:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
-        base_dir = out_dir
-        clip_str = '_clip' if self.clip else ''
-        if "ProbGEORCE" in self.inter_method:
-            lam = str(self.lam).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'../figures/{self.inter_method}{clip_str}_{lam}'))
-        else:            
-            out_dir = ''.join((out_dir, f'../figures/{self.inter_method}{clip_str}'))
-            
-        if self.mu is not None:
-            mu_str = str(self.mu).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'_{mu_str}'))
-            
-        if self.nu is not None:
-            nu_str = str(self.nu).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'_{nu_str}'))
-            
-        shutil.rmtree(out_dir, ignore_errors=True)
-        os.makedirs(out_dir)
+        base_dir, out_dir = self.create_out_dir(out_dir, "ivp")
         
         if isinstance(img1, Image.Image):
             img1.save(f'{base_dir}/{0:03d}.png')
@@ -366,54 +410,32 @@ class ContextManager:
         ldm = self.model
         ldm.control_scales = [1] * 13
 
-        cond1 = ldm.get_learned_conditioning([prompt])
+        cond1 = ldm.get_learned_conditioning([prompt_neutral])
         uncond_base = ldm.get_learned_conditioning([n_prompt])
         cond = {"c_crossattn": [cond1], 'c_concat': None}
         un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
         
         self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
-        timesteps = self.ddim_sampler.ddim_timesteps
 
         left_image= ldm.get_first_stage_encoding(ldm.encode_first_stage(img1.float() / 127.5 - 1.0))
 
-        kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
+        kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt_neutral=prompt_neutral, 
+                      prompt_target=prompt_target,
+                      n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
         cur_step=140
-        t = timesteps[cur_step]
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
-        noise = torch.randn_like(left_image)
-        
-        l2 = None # Dummy
-        right_image = None #Dummy
         # Precompute conditioning
-        cond_target  = ldm.get_learned_conditioning(["A photo of a dog"])
-        cond_neutral = ldm.get_learned_conditioning([prompt])
+        cond_target  = ldm.get_learned_conditioning([prompt_target])
+        cond_neutral = ldm.get_learned_conditioning([prompt_neutral])
         uncond_base  = ldm.get_learned_conditioning([n_prompt])
-        
-        cond = {"c_crossattn": [cond_target], 'c_concat': None}
-        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
-        
-        def prompt_strength(t, T):
-            x = t / (T - 1)
-            return x   # smooth ease-in
-            # You can try x, x**3, or sigmoid for different transitions.
 
-        if self.inter_method=="Noise":
-            l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            l2 = ldm.sqrt_alphas_cumprod[t] * right_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            noisy_curve = self.SInt(l1, l2)
-        elif self.inter_method == "Linear":
-            noisy_curve = self.LInt(l1,l2)
-        elif self.inter_method == "Spherical":
-            noisy_curve = self.SInt(l1,l2)
-        elif self.inter_method == "NoiseDiffusion":
-            noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
-        elif self.inter_method == "ProbGEORCE_Noise":
+        if self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
             S = Chi2(len(l1.reshape(-1)))
             reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
@@ -422,11 +444,13 @@ class ContextManager:
             # Compute gradient using autograd
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
-            
+
             noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,1,4,96,96)
-        elif self.inter_method == "ProbGEORCE_ND":
-            noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Data":
+            
+            cond = {"c_crossattn": [cond_target], 'c_concat': None}
+            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+            
             dimension = len(l1.reshape(-1))
             M = nEuclidean(dim=dimension)
             
@@ -442,11 +466,12 @@ class ContextManager:
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
             #v0 = score_fun(left_image)
             v0 = torch.randn_like(left_image)
-            data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,1,4,96,96)
+            with torch.no_grad():
+                data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,1,4,96,96)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = []
             for i, data_img in enumerate(data_curve):
-                alpha = prompt_strength(i, len(data_curve))
+                alpha = self.prompt_strength(i, noisy_curve)
             
                 cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
                 
@@ -458,32 +483,17 @@ class ContextManager:
                                                             unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0])
                 
             noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
-        if self.clip:
-            noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
-        
-        for i, noisy_latent in enumerate(noisy_curve, start=0):
-        
-            # ---- NEW: smooth prompt transition ----
-            alpha = prompt_strength(i, len(noisy_curve))
-        
-            cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
             
-            cond = {"c_crossattn": [cond_blend], 'c_concat': None}
-            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
-        
-            # ---- Your original decode ----
-            samples = self.ddim_sampler.decode(
-                noisy_latent,
-                cond,
-                cur_step,
-                unconditional_guidance_scale=guide_scale,
-                unconditional_conditioning=un_cond,
-                use_original_steps=False
-            )
-        
-            image = ldm.decode_first_stage(samples)
-            image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
-            Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
+            
+        self.sample_images(ldm, 
+                           noisy_curve, 
+                           cond_neutral, 
+                           uncond_base, 
+                           cur_step, 
+                           guide_scale, 
+                           out_dir,
+                           cond_target,
+                           )
             
         return
 
