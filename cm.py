@@ -153,9 +153,8 @@ class ContextManager:
         if t+1 >= len(noisy_curve):
             return 1.0
         else:
-            u = noisy_curve[t+1]-noisy_curve[t]
-            total_error = torch.sum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(-1,4*96*96), axis=1), axis=0)
-            return torch.linalg.norm(u)/total_error
+            total_error = torch.cumsumsum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(-1,4*96*96), axis=1), axis=0)
+            return total_error[t]/total_error[-1]
 
     def noise_diffusion(self,
                         l1, 
@@ -619,7 +618,7 @@ class ContextManager:
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                     use_original_steps=False, return_intermediates=None,
-                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in d for d in data_curve]
             noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(len(imgs),-1,4,96,96)
             
             
