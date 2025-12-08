@@ -36,7 +36,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--image_size', default=768,
                         type=int)
-    parser.add_argument('--target_prompt', default=0,
+    parser.add_argument('--target_prompt', default=1,
                         type=int)
     parser.add_argument('--lam', default=1.0,
                         type=float)

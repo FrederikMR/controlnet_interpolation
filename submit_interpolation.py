@@ -47,7 +47,11 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \\
-        --model {model} \\
+        --imge_types {model} \\
+        --computation_method ivp \\
+        --n_images 2 \\
+        --image_size 768 \\
+        --target_prompt 1 \\
         --method {method} \\
         --lam {lam} \\
         --clip {clip} \\
