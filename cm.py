@@ -391,7 +391,7 @@ class ContextManager:
         l2 = None # Dummy
         right_image = None #Dummy
         # Precompute conditioning
-        cond_target  = ldm.get_learned_conditioning(["A photo of a bunny"])
+        cond_target  = ldm.get_learned_conditioning(["A photo of a dog"])
         cond_neutral = ldm.get_learned_conditioning([prompt])
         uncond_base  = ldm.get_learned_conditioning([n_prompt])
         
