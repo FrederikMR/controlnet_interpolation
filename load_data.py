@@ -70,6 +70,39 @@ class ZipImageDataset(Dataset):
     def __getitem__(self, idx):
         img = Image.open(self.img_paths[idx]).convert('RGB')
         return self.transform(img)
+    
+#%% Subclass loader
+
+class AFHQClassDataset(Dataset):
+    def __init__(self, root_dir, subclass, n_images=None, transform=None):
+        subclass = subclass.lower()
+        subclass_dir = os.path.join(root_dir, subclass)
+
+        if not os.path.isdir(subclass_dir):
+            raise ValueError(f"AFHQ subclass not found: {subclass_dir}")
+
+        self.transform = transform or get_transform()
+        
+        # collect images
+        self.img_paths = [
+            os.path.join(subclass_dir, f)
+            for f in os.listdir(subclass_dir)
+            if f.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+
+        # optional sampling
+        if n_images is not None and n_images < len(self.img_paths):
+            self.img_paths = random.sample(self.img_paths, n_images)
+
+        if len(self.img_paths) == 0:
+            print(f"Warning: No images found in {subclass_dir}")
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, idx):
+        img = Image.open(self.img_paths[idx]).convert("RGB")
+        return self.transform(img)
 
 
 # -----------------------------
@@ -94,34 +127,74 @@ class AFHQ(ImageFolderDataset):
 # -----------------------------
 def load_dataset(name, n_images=None, image_size=256):
     transform = get_transform(image_size)
+
+    name = name.lower()
     
-    if name.lower() == "ffhq":
+    AFHQ_PROMPTS = {
+    "cat":  "A high-quality portrait photo of a cat, detailed fur, natural lighting, realistic and sharp.",
+    "dog":  "A high-quality portrait photo of a dog, detailed fur, natural lighting, realistic and sharp.",
+    "wild": "A high-quality portrait photo of a wild animal, natural fur texture, realistic and detailed.",
+    }
+    AFHQ_GENERIC_PROMPT = "A high-quality close-up portrait of an animal, natural fur texture, detailed and realistic."
+
+
+    # --- FFHQ ---
+    if name == "ffhq":
         zip_path = "/work3/fmry/Data/ffhq/00000-20251208T180936Z-3-001.zip"
-        return ZipImageDataset(zip_path, n_images=n_images, transform=transform)
-    
-    elif name.lower() == "afhq":
-        root_dir = "/work3/fmry/Data/afhq/stargan-v2/data/train/"
-        return AFHQ(root_dir, n_images=n_images, transform=transform)
-    
-    elif name.lower() == "coco":
+        dataset = ZipImageDataset(zip_path, n_images=n_images, transform=transform)
+        prompt = "A high-quality portrait photo of a human face, natural lighting, sharp details, realistic skin texture."
+        return dataset, prompt
+
+    # --- AFHQ subclasses ---
+    elif name in ["afhq-cat", "cat"]:
+        root = "/work3/fmry/Data/afhq/stargan-v2/data/train/"
+        dataset = AFHQClassDataset(root, "cat", n_images=n_images, transform=transform)
+        prompt = AFHQ_PROMPTS["cat"]
+        return dataset, prompt
+
+    elif name in ["afhq-dog", "dog"]:
+        root = "/work3/fmry/Data/afhq/stargan-v2/data/train/"
+        dataset = AFHQClassDataset(root, "dog", n_images=n_images, transform=transform)
+        prompt = AFHQ_PROMPTS["dog"]
+        return dataset, prompt
+
+    elif name in ["afhq-wild", "wild"]:
+        root = "/work3/fmry/Data/afhq/stargan-v2/data/train/"
+        dataset = AFHQClassDataset(root, "wild", n_images=n_images, transform=transform)
+        prompt = AFHQ_PROMPTS["wild"]
+        return dataset, prompt
+
+    # --- Generic AFHQ ---
+    elif name == "afhq":
+        root = "/work3/fmry/Data/afhq/stargan-v2/data/train/"
+        dataset = AFHQ(root, n_images=n_images, transform=transform)
+        prompt = AFHQ_GENERIC_PROMPT
+        return dataset, prompt
+
+    # --- COCO ---
+    elif name == "coco":
         zip_path = "/work3/fmry/Data/coco/train2017.zip"
-        return ZipImageDataset(zip_path, n_images=n_images, transform=transform)
-    
+        dataset = ZipImageDataset(zip_path, n_images=n_images, transform=transform)
+        prompt = "A detailed photograph of an everyday real-world scene, natural lighting, realistic colors, high-quality."
+        return dataset, prompt
+
     else:
         raise ValueError(f"Unknown dataset: {name}")
+
 
 # -----------------------------
 # 6. Example usage
 # -----------------------------
 if __name__ == "__main__":
-    # Load 8 images from FFHQ
-    ffhq_ds = load_dataset("ffhq", n_images=8, image_size=256)
-    print("FFHQ dataset length:", len(ffhq_ds))
-    
-    # Load 10 images from AFHQ
-    afhq_ds = load_dataset("afhq", n_images=10, image_size=256)
-    print("AFHQ dataset length:", len(afhq_ds))
-    
-    # Load 5 images from COCO
-    coco_ds = load_dataset("coco", n_images=5, image_size=256)
-    print("COCO dataset length:", len(coco_ds))
+    ds, prompt = load_dataset("afhq-cat", n_images=8, image_size=256)
+    print("AFHQ-cat length:", len(ds))
+    print("Prompt:", prompt)
+
+    ds, prompt = load_dataset("ffhq", n_images=4)
+    print("FFHQ length:", len(ds))
+    print("Prompt:", prompt)
+
+    ds, prompt = load_dataset("coco", n_images=6)
+    print("COCO length:", len(ds))
+    print("Prompt:", prompt)
+
