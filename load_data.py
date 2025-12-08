@@ -144,6 +144,57 @@ COCO_PROMPT = (
     "A detailed photograph of an everyday real-world scene, natural lighting, realistic colors, high-quality."
 )
 
+# ================================================================
+# 7. Target prompts (semantic transformations)
+# ================================================================
+AFHQ_TARGET_PROMPTS = {
+    "cat":  "A majestic fluffy cat with vibrant fur colors, expressive eyes, and beautiful lighting.",
+    "dog":  "A well-groomed dog with elegant fur texture, expressive face, and warm cinematic lighting.",
+    "wild": "A powerful wild animal in dramatic natural lighting, detailed fur and intense presence.",
+}
+
+AFHQ_GENERIC_TARGET = (
+    "A majestic detailed portrait of an animal with expressive eyes and beautiful lighting."
+)
+
+FFHQ_TARGET_PROMPT = (
+    "A stunning cinematic portrait of a human face, dramatic lighting, expressive details, highly aesthetic."
+)
+
+COCO_TARGET_PROMPT = (
+    "A highly aesthetic and cinematic photograph of a real-world scene with dramatic lighting and rich colors."
+)
+
+TARGET_MAP = {
+    "cat":            "a majestic fluffy cat with bright expressive eyes",
+    "aircraft":       "a futuristic high-tech aircraft flying in dramatic lighting",
+    "apple":          "a perfectly ripe glossy apple with vibrant colors",
+    "banana":         "a beautifully lit fresh banana with rich texture",
+    "bedroom":        "a luxurious modern bedroom interior with warm lighting",
+    "bee":            "a highly detailed macro photo of a bee on a flower",
+    "bird":           "a majestic bird in flight with vibrant feathers",
+    "car":            "a luxury sports car with sleek aerodynamic design",
+    "cherry":         "a bowl of shiny ripe cherries with beautiful reflections",
+    "cup":            "an elegant ceramic teacup in soft natural lighting",
+    "eagle":          "a powerful eagle with its wings spread in dramatic light",
+    "face":           "a stunning cinematic portrait of a face with dramatic shadows",
+    "flower":         "a vibrant blooming flower with delicate petals",
+    "forest":         "a mystical enchanted forest with soft volumetric light",
+    "grape":          "a bunch of glossy grapes with dew drops",
+    "horse":          "a majestic horse running through a field",
+    "house":          "a beautiful luxurious modern mansion",
+    "lion_tiger":     "a majestic big cat with powerful features and intense lighting",
+    "mountain":       "an epic snow-capped mountain under dramatic sky",
+    "panda":          "a cute fluffy panda in a bamboo forest",
+    "peach":          "a perfectly ripe peach with soft velvety skin",
+    "pumpkin":        "a large vibrant pumpkin in warm autumn light",
+    "shoes":          "luxury designer shoes displayed in a stylish scene",
+    "spider":         "a detailed macro shot of a spider weaving a web",
+    "sushi":          "a beautifully arranged sushi platter in soft lighting",
+    "tree":           "an ancient majestic tree with sprawling branches",
+}
+
+
 
 # ================================================================
 # 8. Unified loader
@@ -151,51 +202,322 @@ COCO_PROMPT = (
 def load_dataset(name, n_images=None, image_size=768):
     transform = get_transform(image_size)
     name = name.lower()
-
+    root = "/work3/fmry/Data/afhq/stargan-v2/data/train/"
     # ---- FFHQ ----
     if name == "ffhq":
         zip_path = "/work3/fmry/Data/ffhq/00000-20251208T180936Z-3-001.zip"
         ds = ZipImageDataset(zip_path, n_images=n_images, transform=transform)
-        return ds, FFHQ_PROMPT
+        prompt, target_prompt = FFHQ_PROMPT, FFHQ_TARGET_PROMPT
+        
+        imgs = []
+        for pil, _ in ds:
+            imgs.append(pil)
 
-    # ---- AFHQ subclasses ----
-    root = "/work3/fmry/Data/afhq/stargan-v2/data/train/"
-
-    if name in ("afhq-cat", "cat"):
+    elif name == "afhq-cat":
         ds = AFHQClassDataset(root, "cat", n_images=n_images, transform=transform)
         prompt = AFHQ_PROMPTS["cat"]
-
-    if name in ("afhq-dog", "dog"):
+        target_prompt = AFHQ_TARGET_PROMPTS["cat"]
+        
+        imgs = []
+        for pil, _ in ds:
+            imgs.append(pil)
+        
+    elif name  == "afhq-dog":
         ds = AFHQClassDataset(root, "dog", n_images=n_images, transform=transform)
         prompt = AFHQ_PROMPTS["dog"]
-
-    if name in ("afhq-wild", "wild"):
+        target_prompt = AFHQ_TARGET_PROMPTS["dog"]
+        
+        imgs = []
+        for pil, _ in ds:
+            imgs.append(pil)
+        
+    elif name == "afhq-wild":
         ds = AFHQClassDataset(root, "wild", n_images=n_images, transform=transform)
         prompt = AFHQ_PROMPTS["wild"]
-
-    # ---- Generic AFHQ ----
-    if name == "afhq":
+        target_prompt = AFHQ_TARGET_PROMPTS["wild"]
+        
+        imgs = []
+        for pil, _ in ds:
+            imgs.append(pil)
+        
+    elif name == "afhq":
         ds = AFHQ(root, n_images=n_images, transform=transform)
-        prompt = AFHQ_GENERIC_PROMPT
-
-    # ---- COCO ----
-    if name == "coco":
+        prompt, target_prompt = AFHQ_GENERIC_PROMPT, AFHQ_GENERIC_TARGET
+        
+        imgs = []
+        for pil, _ in ds:
+            imgs.append(pil)
+            
+    elif name == "coco":
         zip_path = "/work3/fmry/Data/coco/train2017.zip"
         ds = ZipImageDataset(zip_path, n_images=n_images, transform=transform)
-        prompt = COCO_PROMPT
+        prompt, target_prompt = COCO_PROMPT, COCO_TARGET_PROMPT
         
+        imgs = []
+        for pil, _ in ds:
+            imgs.append(pil)
         
-    imgs = []
-    for pil, _ in ds:
-        imgs.append(pil)
+    elif name == "cat":
+        img1 = Image.open('sample_imgs/cat1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/cat2.png').resize((image_size, image_size))
+        prompt='a photo of cat'
+        target_prompt = TARGET_MAP[name]
+        imgs = [img1, img2]
+    elif name == "cat":
+        img1 = Image.open('sample_imgs/cat1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/cat2.png').resize((image_size, image_size))
+        prompt='a photo of cat'
+        target_prompt = TARGET_MAP[name]
+        imgs = [img1, img2]
+    elif name == "aircraft":
+        img1 = Image.open('sample_imgs/aircraft1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/aircraft2.png').resize((image_size, image_size))
+        prompt='a photo of aircraft'
+        target_prompt = TARGET_MAP[name]
         
+        imgs = [img1, img2]
+    elif name == "apple":
+        img1 = Image.open('sample_imgs/apple1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/apple2.png').resize((image_size, image_size))
         
-    return imgs, prompt
+        prompt='a photo of apple'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+    elif name == "banana":
+        
+        img1 = Image.open('sample_imgs/banana1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/banana2.png').resize((image_size, image_size))
+        
+        prompt='a photo of banana'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "bedroom":
+        
+        img1 = Image.open('sample_imgs/bedroom1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/bedroom2.png').resize((image_size, image_size))
 
+        prompt='a photo of bed'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "bee":
+        
+        img1 = Image.open('sample_imgs/bee1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/bee2.png').resize((image_size, image_size))
+        
+        prompt='a photo,bee,wasp'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "bird":
+        
+        img1 = Image.open('sample_imgs/bird1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/bird3.png').resize((image_size, image_size))
+        
+        prompt='a photo of bird'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "car":
+        
+        img1 = Image.open('sample_imgs/car1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/car2.png').resize((image_size, image_size))
+        
+        prompt='a photo of car'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "cherry":
+        
+        img1 = Image.open('sample_imgs/cherry1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/cherry2.png').resize((image_size, image_size))
+        
+        prompt='a photo of cherry'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "cup":
+        
+        img1 = Image.open('sample_imgs/cup1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/cup2.png').resize((image_size, image_size))
+        
+        prompt='a photo of cup'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "eagle":
+        
+        img1 = Image.open('sample_imgs/eagle1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/eagle2.png').resize((image_size, image_size))
+        
+        prompt='eagle'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "face":
+        
+        img1 = Image.open('sample_imgs/face1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/face2.png').resize((image_size, image_size))
+        
+        prompt = 'a photo of face'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "flower":
+        
+        img1 = Image.open('sample_imgs/flower1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/flower2.png').resize((image_size, image_size))
+        prompt='a photo of flower'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
     
-    
-
-    raise ValueError(f"Unknown dataset: {name}")
+    elif name == "forest":
+        
+        img1 = Image.open('sample_imgs/forest1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/forest2.png').resize((image_size, image_size))
+        
+        prompt='a photo of forest'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "grape":
+        
+        img1 = Image.open('sample_imgs/grape1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/grape2.png').resize((image_size, image_size))
+        
+        prompt = 'a photo of grape'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "horse":
+        
+        img1 = Image.open('sample_imgs/horse1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/horse2.png').resize((image_size, image_size))
+        prompt='a photo of a horse'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "house":
+        
+        img1 = Image.open('sample_imgs/house1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/house2.png').resize((image_size, image_size))
+        
+        prompt='a photo of house'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "lion_tiger":
+        
+        img1 = Image.open('sample_imgs/lion_tiger1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/lion_tiger2.png').resize((image_size, image_size))
+        
+        prompt = "a photo of a lion's face,a photo of a tiger's face"
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "mountain":
+        
+        img1 = Image.open('sample_imgs/moutain1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/moutain2.png').resize((image_size, image_size))
+        
+        prompt='a photo of moutain and lake'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "panda":
+        
+        img1 = Image.open('sample_imgs/panda1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/panda2.png').resize((image_size, image_size))
+        
+        prompt='a photo of panda'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "peach":
+        
+        img1 = Image.open('sample_imgs/peach1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/peach2.png').resize((image_size, image_size))
+        
+        prompt = 'a photo of fruit,peach'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "peach":
+        
+        img1 = Image.open('sample_imgs/pumpkin1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/pumpkin2.png').resize((image_size, image_size))
+        
+        prompt='a photo of pumpkin'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "shoes":
+        
+        img1 = Image.open('sample_imgs/shoes1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/shoes2.png').resize((image_size, image_size))
+        
+        prompt='shoes'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "spider":
+        
+        img1 = Image.open('sample_imgs/spider1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/spider2.png').resize((image_size, image_size))
+        
+        prompt='a photo of spider'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "sushi":
+        
+        img1 = Image.open('sample_imgs/sushi1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/sushi2.png').resize((image_size, image_size))
+        
+        prompt='a photo of sushi'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    elif name == "tree":
+        
+        img1 = Image.open('sample_imgs/tree1.png').resize((image_size, image_size))
+        img2 = Image.open('sample_imgs/tree2.png').resize((image_size, image_size))
+        
+        prompt='a photo of tree'
+        target_prompt = TARGET_MAP[name]
+        
+        imgs = [img1, img2]
+        
+    else:
+        raise ValueError(f"Unknown dataset: {name}")
+        
+    n_prompt='text, signature, logo, distorted, ugly, weird eyes, lowres, messy, weird face, lopsided, disfigured, bad art, poorly drawn, low quality, drawing, blurry, faded'
+        
+    return imgs, prompt, target_prompt, n_prompt
 
 
 # ================================================================
