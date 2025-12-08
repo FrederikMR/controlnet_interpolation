@@ -17,12 +17,27 @@ from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 
 from torch.distributions.chi2 import Chi2
-from torch.distributions.normal import Normal
 
-from torch_geometry.interpolation import LinearInterpolation, SphericalInterpolation, NoiseDiffusion
-from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean
-from torch_geometry.prob_geodesics import ProbGEORCE_Euclidean_Adaptive, ProbScoreGEORCE_Euclidean
-from torch_geometry.manifolds import nEuclidean, LambdaManifold
+from torch_geometry.interpolation import (
+    LinearInterpolation, 
+    SphericalInterpolation, 
+    NoiseDiffusion,
+    )
+
+from torch_geometry.prob_geodesics import (
+    ProbGEORCE_Euclidean,
+    ProbScoreGEORCE_Euclidean,
+    )
+
+from torch_geometry.prob_means import (
+    ProbGEORCEFM_Euclidean, 
+    ProbScoreGEORCEFM_Euclidean,
+    )
+
+from torch_geometry.manifolds import (
+    nEuclidean, 
+    LambdaManifold,
+    )
 
 class ContextManager:
     def __init__(self, 
@@ -70,9 +85,9 @@ class ContextManager:
         clip_str = '_clip' if self.clip else ''
         if "ProbGEORCE" in self.inter_method:
             lam = str(self.lam).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'/{self.method_name}/{self.inter_method}{clip_str}_{lam}'))
+            out_dir = ''.join((out_dir, f'/{method_name}/{self.inter_method}{clip_str}_{lam}'))
         else:            
-            out_dir = ''.join((out_dir, f'/{self.method_name}/{self.inter_method}{clip_str}'))
+            out_dir = ''.join((out_dir, f'/{method_name}/{self.inter_method}{clip_str}'))
             
         if self.mu is not None:
             mu_str = str(self.mu).replace('.', 'd')
@@ -496,4 +511,124 @@ class ContextManager:
                            )
             
         return
+
+    def images_to_tensors_raw(self,
+                              imgs, 
+                              device='cuda',
+                              ):
+        tensors = []
+        
+        for img in imgs:
+            # ensure RGB
+            if img.mode == 'RGBA':
+                img = img.convert('RGB')
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # convert to tensor, shape [C,H,W], add batch dim
+            tensor = torch.tensor(np.array(img)).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+            tensors.append(tensor.to(device))
+        
+        return tensors
+
+    
+    def mean(self, 
+             imgs, 
+             scale_control=1.5,
+             prompt=None, 
+             n_prompt=None, 
+             min_steps=.3,
+             max_steps=.55, 
+             ddim_steps=250,  
+             guide_scale=7.5,  
+             optimize_cond=0,  
+             cond_lr=1e-4, 
+             bias=0, 
+             ddim_eta=0, 
+             out_dir='blend',
+             ):
+        torch.manual_seed(self.seed)
+        if min_steps < 1:
+            min_steps = int(ddim_steps * min_steps)
+        if max_steps < 1:
+            max_steps = int(ddim_steps * max_steps)
+        base_dir, out_dir = self.create_out_dir(out_dir, "mean")
+        
+        imgs = self.images_to_tensors_raw(imgs, "cuda")
+        
+        ldm = self.model
+        ldm.control_scales = [1] * 13
+
+        cond1 = ldm.get_learned_conditioning([prompt])
+        uncond_base = ldm.get_learned_conditioning([n_prompt])
+        cond = {"c_crossattn": [cond1], 'c_concat': None}
+        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        
+        self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
+        
+        img_first_stage_encodings = [ldm.get_first_stage_encoding(ldm.encode_first_stage(img.float() / 127.5 - 1.0)) for img in imgs]
+
+        kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
+        yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
+        
+        cur_step=140
+        
+        img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
+                                                                  cond, 
+                                                                  cur_step, 
+                                                                  use_original_steps=False, 
+                                                                  return_intermediates=None,
+                                                                  unconditional_guidance_scale=1, 
+                                                                  unconditional_conditioning=un_cond) for img in img_first_stage_encodings], axis=0)
+
+        if self.inter_method == "ProbGEORCE_Noise":
+            dimension = len(l1.reshape(-1))
+            S = Chi2(len(l1.reshape(-1)))
+            
+            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2),
+                                                  init_fun=None,
+                                                  lam = self.lam,
+                                                  N_grid=self.N,
+                                                  tol=1e-4,
+                                                  max_iter=self.max_iter,
+                                                  line_search_params = {'rho': 0.5},
+                                                  device="cuda:0",
+                                                  )
+            
+            noisy_mean, noisy_curve = self.PGEORCE(img_encoded)
+        elif self.inter_method == "ProbGEORCE_Data":
+
+            self.PGEORCE_Score_Data = ProbScoreGEORCEFM_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
+                                                                                                                     score_corrector=None, 
+                                                                                                                     corrector_kwargs=None,
+                                                                                                                     unconditional_guidance_scale=guide_scale, 
+                                                                                                                     unconditional_conditioning=un_cond),
+                                                                  init_fun= None,
+                                                                  lam=self.lam,
+                                                                  N=self.N,
+                                                                  tol=1e-4,
+                                                                  max_iter=self.max_iter,
+                                                                  lr_rate=0.001,
+                                                                  beta1=0.5,
+                                                                  beta2=0.5,
+                                                                  eps=1e-8,
+                                                                  device="cuda:0",
+                                                                  )
+            
+            data_mean, data_curve = self.PGEORCE_Score_Data(img_first_stage_encodings)
+            #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+            noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                    use_original_steps=False, return_intermediates=None,
+                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(len(imgs),-1,4,96,96)
+            
+            
+        self.sample_images(ldm, 
+                           noisy_curve, 
+                           cond1, 
+                           uncond_base, 
+                           cur_step, 
+                           guide_scale, 
+                           out_dir,
+                           )
 
