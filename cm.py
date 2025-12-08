@@ -150,7 +150,7 @@ class ContextManager:
                         noisy_curve,
                         ):
         
-        if t+1 >= len(noisy_curve):
+        if t >= len(noisy_curve) - 1:
             return 1.0
         else:
             total_error = torch.cumsum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(-1,4*96*96), axis=1), axis=0)
