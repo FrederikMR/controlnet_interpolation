@@ -630,7 +630,13 @@ class ContextManager:
             dimension = len(img_encoded[0].reshape(-1))
             S = Chi2(len(img_encoded[0].reshape(-1)))
             
-            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2),
+            def reg_fun(x):
+                
+                print(x.shape)
+                
+                return -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
+            
+            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
                                                   init_fun=None,
                                                   lam = self.lam,
                                                   N_grid=self.N,
