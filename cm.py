@@ -602,10 +602,11 @@ class ContextManager:
         ldm = self.model
         ldm.control_scales = [1] * 13
 
-        cond1 = ldm.get_learned_conditioning([prompt])
-        uncond_base = ldm.get_learned_conditioning([n_prompt])
-        cond = {"c_crossattn": [cond1], 'c_concat': None}
-        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        with torch.no_grad():
+            cond1 = ldm.get_learned_conditioning([prompt])
+            uncond_base = ldm.get_learned_conditioning([n_prompt])
+            cond = {"c_crossattn": [cond1], 'c_concat': None}
+            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
         
         self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
         
