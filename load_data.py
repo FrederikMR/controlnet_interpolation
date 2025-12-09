@@ -127,43 +127,41 @@ class AFHQ(BaseImageDataset):
 # 7. Prompts
 # ================================================================
 AFHQ_PROMPTS = {
-    "cat":  "A high-quality portrait photo of a cat, detailed fur, natural lighting, realistic and sharp.",
-    "dog":  "A high-quality portrait photo of a dog, detailed fur, natural lighting, realistic and sharp.",
-    "wild": "A high-quality portrait photo of a wild animal, natural fur texture, realistic and detailed.",
+    "cat":  "A high-quality portrait of a cat, realistic fur texture, natural lighting, sharp details, anatomically correct, single pair of eyes, realistic ears.",
+    "dog":  "A high-quality portrait of a dog, realistic fur texture, natural lighting, sharp details, anatomically correct, single pair of eyes, realistic ears.",
+    "wild": "A high-quality portrait of a wild animal, realistic fur/skin texture, natural lighting, sharp details, anatomically correct, single pair of eyes.",
 }
 
 AFHQ_GENERIC_PROMPT = (
-    "A high-quality close-up portrait of an animal, natural fur texture, detailed and realistic."
+    "A high-quality close-up portrait of an animal, realistic fur or skin texture, detailed and anatomically correct, single pair of eyes, natural lighting."
 )
 
 FFHQ_PROMPT = (
-    "A high-quality portrait photo of a human face, natural lighting, sharp details, realistic skin texture."
+    "A high-quality realistic human face portrait, perfectly symmetrical, single pair of eyes, normal ears, natural lighting, sharp facial details, realistic skin texture, photorealistic, no extra facial features."
 )
 
 COCO_PROMPT = (
-    "A detailed photograph of an everyday real-world scene, natural lighting, realistic colors, high-quality."
+    "A detailed photograph of an everyday real-world scene, perspective-correct, natural lighting, realistic colors, high-quality, no distorted objects."
 )
 
-# ================================================================
-# 7. Target prompts (semantic transformations)
-# ================================================================
 AFHQ_TARGET_PROMPTS = {
-    "cat":  "A majestic fluffy cat with vibrant fur colors, expressive eyes, and beautiful lighting.",
-    "dog":  "A well-groomed dog with elegant fur texture, expressive face, and warm cinematic lighting.",
-    "wild": "A powerful wild animal in dramatic natural lighting, detailed fur and intense presence.",
+    "cat":  "A majestic fluffy cat with vibrant fur colors, expressive eyes, realistic ears, anatomically correct, beautiful lighting.",
+    "dog":  "A well-groomed dog with elegant fur texture, expressive face, realistic anatomy, warm cinematic lighting.",
+    "wild": "A powerful wild animal in dramatic natural lighting, detailed fur/skin, anatomically correct, intense presence.",
 }
 
 AFHQ_GENERIC_TARGET = (
-    "A majestic detailed portrait of an animal with expressive eyes and beautiful lighting."
+    "A majestic detailed portrait of an animal with expressive eyes, realistic anatomy, and beautiful lighting."
 )
 
 FFHQ_TARGET_PROMPT = (
-    "A stunning cinematic portrait of a human face, dramatic lighting, expressive details, highly aesthetic."
+    "A stunning cinematic portrait of a human face, perfectly symmetrical, single pair of eyes, normal ears, dramatic lighting, expressive details, highly aesthetic."
 )
 
 COCO_TARGET_PROMPT = (
-    "A highly aesthetic and cinematic photograph of a real-world scene with dramatic lighting and rich colors."
+    "A highly aesthetic and cinematic photograph of a real-world scene, perspective-correct, with dramatic lighting and rich realistic colors."
 )
+
 
 TARGET_MAP = {
     "cat":            "a majestic fluffy cat with bright expressive eyes",
