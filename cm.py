@@ -529,13 +529,6 @@ class ContextManager:
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = []
             for i, data_img in enumerate(data_curve):
-                alpha = self.prompt_strength(i, noisy_curve)
-            
-                cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
-                
-                cond = {"c_crossattn": [cond_blend], 'c_concat': None}
-                un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
-                
                 noisy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                             use_original_steps=False, return_intermediates=None,
                                                             unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0])
