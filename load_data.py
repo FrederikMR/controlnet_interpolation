@@ -182,7 +182,7 @@ TARGET_MAP = {
     "forest":         "a mystical enchanted forest with soft volumetric light",
     "grape":          "a bunch of glossy grapes with dew drops",
     "horse":          "a majestic horse running through a field",
-    "house":          "a beautiful luxurious modern mansion",
+    "house":          "a beautiful luxurious old-fashioned mansion",
     "lion_tiger":     "a majestic big cat with powerful features and intense lighting",
     "mountain":       "an epic snow-capped mountain under dramatic sky",
     "panda":          "a cute fluffy panda in a bamboo forest",
