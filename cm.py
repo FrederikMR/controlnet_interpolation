@@ -117,7 +117,7 @@ class ContextManager:
             noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
         
         for i, noisy_latent in enumerate(noisy_curve, start=0):
-            if (i % self.step_save == 0) or (i == 0) or (i==len(noisy_latent)-1):
+            if (i % self.step_save == 0) or (i == 0) or (i==len(noisy_curve)-1):
                 if cond_target is not None:
                     # ---- NEW: smooth prompt transition ----
                     alpha = self.prompt_strength(i, noisy_curve)
