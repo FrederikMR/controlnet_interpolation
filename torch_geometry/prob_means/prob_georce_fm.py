@@ -265,9 +265,9 @@ class ProbGEORCEFM(ABC):
         zi, ui = vmap(self.init_curve, in_dims=(0,None))(self.z_obs, z_mu_init)
         
         energy_init = self.energy(zi, z_mu_init)
-        reg_val_init = torch.sum(self.reg_fun(zi)) + self.reg_fun(z_mu_init)
+        reg_val_init = torch.abs(torch.sum(self.reg_fun(zi)) + self.reg_fun(z_mu_init))
         
-        if torch.abs(reg_val_init) < 1e-4:
+        if reg_val_init < 1e-6:
             self.lam_norm = self.lam
         else:
             self.lam_norm = self.lam*energy_init/reg_val_init
@@ -547,15 +547,15 @@ class ProbGEORCEFM_Embedded(ABC):
         zi, ui = vmap(self.init_curve, in_dims=(0,None))(self.z_obs, z_mu_init)
         
         energy_init = self.energy(zi, z_mu_init)
-        reg_val_init = torch.sum(self.reg_fun(zi)) + self.reg_fun(z_mu_init)
-        proj_val_init = torch.sum(self.proj_error(zi) + self.proj_error(z_mu_init))
+        reg_val_init = torch.abs(torch.sum(self.reg_fun(zi)) + self.reg_fun(z_mu_init))
+        proj_val_init = torch.abs(torch.sum(self.proj_error(zi) + self.proj_error(z_mu_init)))
         
-        if (reg_val_init**2)>1e-6:
+        if reg_val_init>1e-6:
             self.lam1_norm = self.lam1*energy_init/reg_val_init
         else:
             self.lam1_norm = self.lam1
             
-        if (proj_val_init**2)>1e-6:
+        if proj_val_init>1e-6:
             self.lam2_norm = self.lam2*energy_init/proj_val_init
         else:
             self.lam2_norm = self.lam2
@@ -795,9 +795,9 @@ class ProbGEORCEFM_Euclidean(ABC):
         zi, ui = vmap(self.init_curve, in_dims=(0,None))(self.z_obs, z_mu_init)
         
         energy_init = self.energy(zi, z_mu_init)
-        reg_val_init = torch.sum(self.reg_fun(zi)) + self.reg_fun(z_mu_init)
+        reg_val_init = torch.abs(torch.sum(self.reg_fun(zi)) + self.reg_fun(z_mu_init))
         
-        if torch.abs(reg_val_init) < 1e-4:
+        if reg_val_init < 1e-6:
             self.lam_norm = self.lam
         else:
             self.lam_norm = self.lam*energy_init/reg_val_init

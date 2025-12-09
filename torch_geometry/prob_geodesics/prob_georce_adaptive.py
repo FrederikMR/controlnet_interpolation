@@ -285,9 +285,9 @@ class ProbGEORCE_Adaptive(ABC):
         zi, ui = self.initialize()
 
         energy_init = self.energy(zi)
-        reg_val_init = self.reg_fun(zi)
+        reg_val_init = torch.abs(self.reg_fun(zi))
         
-        if reg_val_init < 1e-4:
+        if reg_val_init < 1e-6:
             self.lam_norm = self.lam
         else:
             self.lam_norm = self.lam*energy_init/reg_val_init
@@ -587,15 +587,15 @@ class ProbGEORCE_Embedded_Adaptive(ABC):
         zi, ui = self.initialize()
 
         energy_init = self.energy(zi)
-        reg_val_init = self.reg_fun(zi)
-        proj_val_init = self.proj_error(zi)
+        reg_val_init = torch.abs(self.reg_fun(zi))
+        proj_val_init = torch.abs(self.proj_error(zi))
         
-        if (reg_val_init**2)>1e-6:
+        if reg_val_init>1e-6:
             self.lam1_norm = self.lam1*energy_init/reg_val_init
         else:
             self.lam1_norm = self.lam1
             
-        if (proj_val_init**2)>1e-6:
+        if proj_val_init>1e-6:
             self.lam2_norm = self.lam2*energy_init/proj_val_init
         else:
             self.lam2_norm = self.lam2
@@ -852,9 +852,9 @@ class ProbGEORCE_Euclidean_Adaptive(ABC):
         zi, ui = self.initialize()
 
         energy_init = self.energy(zi)
-        reg_val_init = self.reg_fun(zi)
+        reg_val_init = torch.abs(self.reg_fun(zi))
         
-        if (reg_val_init**2)>1e-6:
+        if reg_val_init>1e-6:
             self.lam_norm = self.lam*energy_init/reg_val_init
         else:
             self.lam_norm = self.lam
@@ -1145,9 +1145,9 @@ class ProbGEORCE_Ito(ABC):
         zi, ui = self.initialize()
 
         energy_init = self.energy(zi)
-        reg_val_init = self.reg_fun(zi)
+        reg_val_init = torch.abs(self.reg_fun(zi))
         
-        if reg_val_init < 1e-4:
+        if reg_val_init < 1e-6:
             self.lam_norm = self.lam
         else:
             self.lam_norm = self.lam*energy_init/reg_val_init

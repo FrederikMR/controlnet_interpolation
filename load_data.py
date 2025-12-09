@@ -162,7 +162,6 @@ COCO_TARGET_PROMPT = (
     "A highly aesthetic and cinematic photograph of a real-world scene, perspective-correct, with dramatic lighting and rich realistic colors."
 )
 
-
 TARGET_MAP = {
     "cat":            "a majestic fluffy cat with bright expressive eyes",
     "aircraft":       "a futuristic high-tech aircraft flying in dramatic lighting",
