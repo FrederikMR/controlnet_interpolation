@@ -48,7 +48,7 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     
     python3 run_interpolation.py \\
         --img_types {model} \\
-        --computation_method mean \\
+        --computation_method bvp \\
         --n_images 10 \\
         --image_size 768 \\
         --target_prompt 1 \\
@@ -80,9 +80,11 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 100
     model = ['house']#, 'president', 'football']
     method = ['ProbGEORCE_Noise', 'ProbGEORCE_Data'] #, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise'7
-    method = ['ProbGEORCE_Noise', 'ProbGEORCE_Data']
+    method = ['ProbGEORCE_Noise']
     clip = [0]#[0,1]
-    lam = [1.0, 20.0]#[0.1, 0.5, 1.0, 10.0]
+    lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
+    
+    model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     
     for mod in model:
         for meth in method:
