@@ -351,10 +351,11 @@ class ContextManager:
 
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
-        cond1 = ldm.get_learned_conditioning([prompt])
-        uncond_base = ldm.get_learned_conditioning([n_prompt])
-        cond = {"c_crossattn": [cond1], 'c_concat': None}
-        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        with torch.no_grad():
+            cond1 = ldm.get_learned_conditioning([prompt])
+            uncond_base = ldm.get_learned_conditioning([n_prompt])
+            cond = {"c_crossattn": [cond1], 'c_concat': None}
+            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
         
         self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
 
@@ -472,10 +473,11 @@ class ContextManager:
 
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
-        cond1 = ldm.get_learned_conditioning([prompt_neutral])
-        uncond_base = ldm.get_learned_conditioning([n_prompt])
-        cond = {"c_crossattn": [cond1], 'c_concat': None}
-        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        with torch.no_grad():
+            cond1 = ldm.get_learned_conditioning([prompt_neutral])
+            uncond_base = ldm.get_learned_conditioning([n_prompt])
+            cond = {"c_crossattn": [cond1], 'c_concat': None}
+            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
         
         self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
 
@@ -493,9 +495,10 @@ class ContextManager:
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
         
         # Precompute conditioning
-        cond_target  = ldm.get_learned_conditioning([prompt_target])
-        cond_neutral = ldm.get_learned_conditioning([prompt_neutral])
-        uncond_base  = ldm.get_learned_conditioning([n_prompt])
+        with torch.no_grad():
+            cond_target  = ldm.get_learned_conditioning([prompt_target])
+            cond_neutral = ldm.get_learned_conditioning([prompt_neutral])
+            uncond_base  = ldm.get_learned_conditioning([n_prompt])
 
         if self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
