@@ -145,6 +145,50 @@ class ContextManager:
         
         return
     
+    def sample_multi_images(self,
+                            ldm,
+                            noisy_curves,
+                            cond_neutral,
+                            uncond_base,
+                            cur_step,
+                            guide_scale,
+                            out_dir,
+                            cond_target=None,
+                            ):
+        
+        if self.clip:
+            noisy_curve = torch.clip(noisy_curves, min=-2.0, max=2.0)
+        
+        for j, noisy_curve in enumerate(noisy_curves, start=0):
+            for i, noisy_latent in enumerate(noisy_curve, start=0):
+                if (i % self.step_save == 0) or (i == 0) or (i==len(noisy_curve)-1):
+                    if cond_target is not None:
+                        # ---- NEW: smooth prompt transition ----
+                        alpha = self.prompt_strength(i, noisy_curve)
+                    
+                        cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
+                    else:
+                        cond_blend = cond_neutral
+                    
+                    cond = {"c_crossattn": [cond_blend], 'c_concat': None}
+                    un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+                
+                    # ---- Your original decode ----
+                    samples = self.ddim_sampler.decode(
+                        noisy_latent,
+                        cond,
+                        cur_step,
+                        unconditional_guidance_scale=guide_scale,
+                        unconditional_conditioning=un_cond,
+                        use_original_steps=False
+                    )
+                
+                    image = ldm.decode_first_stage(samples)
+                    image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+                    Image.fromarray(image[0]).save(f'{out_dir}/{j}_{i}.png')
+        
+        return
+    
     def prompt_strength(self,
                         t, 
                         noisy_curve,
@@ -581,8 +625,8 @@ class ContextManager:
                                                                   unconditional_conditioning=un_cond) for img in img_first_stage_encodings], axis=0)
 
         if self.inter_method == "ProbGEORCE_Noise":
-            dimension = len(l1.reshape(-1))
-            S = Chi2(len(l1.reshape(-1)))
+            dimension = len(img_encoded[0].reshape(-1))
+            S = Chi2(len(img_encoded[0].reshape(-1)))
             
             self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2),
                                                   init_fun=None,
@@ -616,18 +660,22 @@ class ContextManager:
             
             data_mean, data_curve = self.PGEORCE_Score_Data(img_first_stage_encodings)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                    use_original_steps=False, return_intermediates=None,
-                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in d for d in data_curve]
-            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(len(imgs),-1,4,96,96)
+            noisy_curve = []
+            for d in data_curve:
+                dummy_curve = []
+                for data_img in d:
+                    dummy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                                use_original_steps=False, return_intermediates=None,
+                                                                unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
+                dummy_curve = torch.concatenate(dummy_curve, axis=0)
+            noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,1,4,96,96)
             
-            
-        self.sample_images(ldm, 
-                           noisy_curve, 
-                           cond1, 
-                           uncond_base, 
-                           cur_step, 
-                           guide_scale, 
-                           out_dir,
-                           )
+        self.sample_multi_images(ldm, 
+                                 noisy_curve, 
+                                 cond1, 
+                                 uncond_base, 
+                                 cur_step, 
+                                 guide_scale, 
+                                 out_dir,
+                                 )
 

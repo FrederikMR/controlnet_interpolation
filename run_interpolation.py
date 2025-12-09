@@ -32,7 +32,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--computation_method', default="ivp", #bvp, ivp, mean
                         type=str)
-    parser.add_argument('--n_images', default=2,
+    parser.add_argument('--n_images', default=10,
                         type=int)
     parser.add_argument('--image_size', default=768,
                         type=int)
