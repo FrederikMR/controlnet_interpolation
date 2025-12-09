@@ -349,6 +349,8 @@ class ContextManager:
         ldm = self.model
         ldm.control_scales = [1] * 13
 
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
         cond1 = ldm.get_learned_conditioning([prompt])
         uncond_base = ldm.get_learned_conditioning([n_prompt])
         cond = {"c_crossattn": [cond1], 'c_concat': None}
@@ -468,6 +470,8 @@ class ContextManager:
         ldm = self.model
         ldm.control_scales = [1] * 13
 
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
         cond1 = ldm.get_learned_conditioning([prompt_neutral])
         uncond_base = ldm.get_learned_conditioning([n_prompt])
         cond = {"c_crossattn": [cond1], 'c_concat': None}

@@ -24,7 +24,7 @@ def submit_job():
 
 #%% Generate jobs
 
-def generate_job(model, method, lam, clip, N, max_iter=100):
+def generate_job(model, computation_method, method, lam, clip, N, max_iter=100):
 
     with open ('submit_interpolation.sh', 'w') as rsh:
         rsh.write(f'''\
@@ -48,7 +48,7 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     
     python3 run_interpolation.py \\
         --img_types {model} \\
-        --computation_method mean \\
+        --computation_method {computation_method} \\
         --n_images 10 \\
         --image_size 768 \\
         --target_prompt 1 \\
@@ -79,6 +79,7 @@ def loop_jobs(wait_time = 1.0):
     N = 100
     max_iter = 100
     model = ['house']#, 'president', 'football']
+    computation_method = 'mean'
     method = ['ProbGEORCE_Noise', 'ProbGEORCE_Data'] #, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise'7
     method = ['ProbGEORCE_Noise']
     clip = [0]#[0,1]
@@ -92,7 +93,7 @@ def loop_jobs(wait_time = 1.0):
             if "ProbGEORCE" in meth or "test" in meth:
                 for cl in clip:
                     for l in lam:
-                        generate_job(model=mod, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter)
+                        generate_job(model=mod, computation_method=computation_method, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter)
                         try:
                             submit_job()
                         except:
