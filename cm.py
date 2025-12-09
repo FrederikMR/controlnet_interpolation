@@ -603,6 +603,7 @@ class ContextManager:
         self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
         
         img_first_stage_encodings = [ldm.get_first_stage_encoding(ldm.encode_first_stage(img.float() / 127.5 - 1.0)) for img in imgs]
+        print(len(img_first_stage_encodings))
 
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
@@ -615,7 +616,8 @@ class ContextManager:
                                                                   use_original_steps=False, 
                                                                   return_intermediates=None,
                                                                   unconditional_guidance_scale=1, 
-                                                                  unconditional_conditioning=un_cond) for img in img_first_stage_encodings], axis=0)
+                                                                  unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
+        print(img_encoded.shape)
 
         if self.inter_method == "ProbGEORCE_Noise":
             dimension = len(img_encoded[0].reshape(-1))
@@ -632,6 +634,8 @@ class ContextManager:
                                                   )
             
             noisy_mean, noisy_curve = self.PGEORCE(img_encoded)
+            print(noisy_mean.shape)
+            print(noisy_curve.shape)
         elif self.inter_method == "ProbGEORCE_Data":
 
             self.PGEORCE_Score_Data = ProbScoreGEORCEFM_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
@@ -652,6 +656,8 @@ class ContextManager:
                                                                   )
             
             data_mean, data_curve = self.PGEORCE_Score_Data(img_first_stage_encodings)
+            print(data_mean.shape)
+            print(data_curve.shape)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = []
             for d in data_curve:
@@ -662,6 +668,7 @@ class ContextManager:
                                                                 unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
                 dummy_curve = torch.concatenate(dummy_curve, axis=0)
             noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,1,4,96,96)
+            print(noisy_curve.shape)
             
         self.sample_multi_images(ldm, 
                                  noisy_curve, 

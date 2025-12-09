@@ -48,7 +48,7 @@ def generate_job(model, method, lam, clip, N, max_iter=100):
     
     python3 run_interpolation.py \\
         --img_types {model} \\
-        --computation_method ivp \\
+        --computation_method mean \\
         --n_images 10 \\
         --image_size 768 \\
         --target_prompt 1 \\
