@@ -636,6 +636,9 @@ class ContextManager:
             def reg_fun(x):
                 print("Reg fun output")
                 print(x.shape)
+                print(x.device)
+                print(S.log_prob(torch.sum(x**2, axis=-1)).device)
+                print(((torch.sum(x**2, axis=-1)-dimension)**2).device)
                 
                 return -S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=-1)-dimension)**2)
             
