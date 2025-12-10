@@ -214,12 +214,9 @@ def load_dataset(name, n_images=None, image_size=768):
         ds = AFHQClassDataset(root, "cat", n_images=n_images, transform=transform)
         prompt = AFHQ_PROMPTS["cat"]
         target_prompt = AFHQ_TARGET_PROMPTS["cat"]
-        print(image_size)
         imgs = []
         for pil, _ in ds:
             imgs.append(pil)
-            import numpy as np
-            print(np.array(pil).shape)
         
     elif name  == "afhq-dog":
         ds = AFHQClassDataset(root, "dog", n_images=n_images, transform=transform)
@@ -522,12 +519,12 @@ def load_dataset(name, n_images=None, image_size=768):
 # ================================================================
 # 9. Test run
 # ================================================================
-if __name__ == "__main__":
-    ds, prompt = load_dataset("afhq-cat", n_images=5, image_size=768)
-    print("AFHQ cat:", len(ds), "Prompt:", prompt)
-
-    ds, prompt = load_dataset("ffhq", n_images=3)
-    print("FFHQ:", len(ds), "Prompt:", prompt)
-
-    ds, prompt = load_dataset("coco", n_images=3)
-    print("COCO:", len(ds), "Prompt:", prompt)
+#if __name__ == "__main__":
+#    ds, prompt = load_dataset("afhq-cat", n_images=5, image_size=768)
+#    print("AFHQ cat:", len(ds), "Prompt:", prompt)
+#
+#    ds, prompt = load_dataset("ffhq", n_images=3)
+#    print("FFHQ:", len(ds), "Prompt:", prompt)
+#
+#    ds, prompt = load_dataset("coco", n_images=3)
+#    print("COCO:", len(ds), "Prompt:", prompt)

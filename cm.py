@@ -634,7 +634,7 @@ class ContextManager:
             S = Chi2(len(img_encoded[0].reshape(-1)))
             
             def reg_fun(x):
-                
+                print("Reg fun output")
                 print(x.shape)
                 print((-S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=1)-dimension)**2)).shape)
                 
