@@ -561,20 +561,17 @@ class ContextManager:
 
     def images_to_tensors_raw(self,
                               imgs, 
+                              base_dir:str,
                               device='cuda',
                               ):
         tensors = []
         
         for img in imgs:
-            # ensure RGB
-            if img.mode == 'RGBA':
-                img = img.convert('RGB')
-            elif img.mode != 'RGB':
-                img = img.convert('RGB')
-            
-            # convert to tensor, shape [C,H,W], add batch dim
-            tensor = torch.tensor(np.array(img)).permute(2, 0, 1).unsqueeze(0).float() / 255.0
-            tensors.append(tensor.to(device))
+            img.save(f'{base_dir}/{0:03d}.png')
+            if img.mode == 'RGBA':#
+                    img = img.convert('RGB')
+            img = torch.tensor(np.array(img)).permute(2,0,1).unsqueeze(0).cuda()
+            tensors.append(img)
         
         return tensors
 
@@ -601,7 +598,7 @@ class ContextManager:
             max_steps = int(ddim_steps * max_steps)
         base_dir, out_dir = self.create_out_dir(out_dir, "mean")
         
-        imgs = self.images_to_tensors_raw(imgs, "cuda")
+        imgs = self.images_to_tensors_raw(imgs, base_dir, "cuda")
         
         ldm = self.model
         ldm.control_scales = [1] * 13
