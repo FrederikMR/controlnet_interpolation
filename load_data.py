@@ -263,7 +263,7 @@ def load_dataset(name, n_images=None, image_size=768):
             "horse": ["horse1.png", "horse2.png"],
             "house": ["house1.png", "house2.png"],
             "lion_tiger": ["lion_tiger1.png", "lion_tiger2.png"],
-            "mountain": ["moutain.png", "moutain.png"],
+            "mountain": ["moutain1.png", "moutain2.png"],
             "panda": ["panda1.png", "panda2.png"],
             "peach": ["peach1.png", "peach2.png"],
             "pumpkin": ["pumpkin1.png", "pumpkin2.png"],
