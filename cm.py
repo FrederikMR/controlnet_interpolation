@@ -470,7 +470,7 @@ class ContextManager:
         
         ldm = self.model
         ldm.control_scales = [1] * 13
-
+        print(img1.shape)
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         with torch.no_grad():
@@ -489,10 +489,11 @@ class ContextManager:
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
         cur_step=140
-        
+        print(left_image.shape)
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
+        print(l1.shape)
         
         # Precompute conditioning
         with torch.no_grad():
@@ -509,7 +510,7 @@ class ContextManager:
             # Compute gradient using autograd
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
-
+            print(Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).shape)
             noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,1,4,96,96)
         elif self.inter_method == "ProbGEORCE_Data":
             
