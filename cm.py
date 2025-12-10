@@ -393,7 +393,8 @@ class ContextManager:
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
-            S = Chi2(len(l1.reshape(-1)))
+            df = torch.tensor(float(dimension), device="cuda")
+            S = Chi2(df=df)
             self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2),
                                                init_fun=None,
                                                lam = self.lam,
@@ -504,7 +505,8 @@ class ContextManager:
 
         if self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
-            S = Chi2(len(l1.reshape(-1)))
+            df = torch.tensor(float(dimension), device="cuda")
+            S = Chi2(df=df)
             reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), gradS=None, lam=self.lam)
@@ -635,13 +637,7 @@ class ContextManager:
             S = Chi2(df=df)
             
             def reg_fun(x):
-                print("Reg fun output")
-                print(x.shape)
-                print(x.device)
-                print(S.log_prob(torch.sum(x**2, axis=-1)).device)
-                print(((torch.sum(x**2, axis=-1)-dimension)**2).device)
-                
-                return -S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=-1)-dimension)**2)
+                return torch.sum(-S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=-1)-dimension)**2))
             
             self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
                                                   init_fun=None,
