@@ -636,9 +636,8 @@ class ContextManager:
             def reg_fun(x):
                 print("Reg fun output")
                 print(x.shape)
-                print((-S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=1)-dimension)**2)).shape)
                 
-                return -S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=1)-dimension)**2)
+                return -S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=-1)-dimension)**2)
             
             self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
                                                   init_fun=None,
