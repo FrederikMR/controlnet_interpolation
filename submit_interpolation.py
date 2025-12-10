@@ -86,7 +86,7 @@ def loop_jobs(wait_time = 1.0):
     clip = [0]#[0,1]
     lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
     
-    model = ['afhq-cat'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
+    model = ['afhq-cat', 'cat'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     
     for com_meth in computation_methods:
         for mod in model:
