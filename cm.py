@@ -650,6 +650,7 @@ class ContextManager:
                                                   )
             
             noisy_mean, noisy_curve = self.PGEORCE(img_encoded)
+            noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,*latent_shape)
             print(noisy_mean.shape)
             print(noisy_curve.shape)
         elif self.inter_method == "ProbGEORCE_Data":
