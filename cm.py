@@ -196,9 +196,11 @@ class ContextManager:
         
         if t >= len(noisy_curve) - 1:
             return 1.0
+        elif t == 0:
+            return 0.0
         else:
             total_error = torch.cumsum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(len(noisy_curve)-1,-1), axis=1), axis=0)
-            return total_error[t]/total_error[-1]
+            return total_error[t-1]/total_error[-1]
 
     def noise_diffusion(self,
                         l1, 
