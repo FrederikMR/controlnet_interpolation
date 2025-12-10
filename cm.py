@@ -121,6 +121,7 @@ class ContextManager:
                 if cond_target is not None:
                     # ---- NEW: smooth prompt transition ----
                     alpha = self.prompt_strength(i, noisy_curve)
+                    print(alpha)
                 
                     cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
                 else:
