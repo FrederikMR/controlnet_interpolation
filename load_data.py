@@ -214,7 +214,7 @@ def load_dataset(name, n_images=None, image_size=768):
         ds = AFHQClassDataset(root, "cat", n_images=n_images, transform=transform)
         prompt = AFHQ_PROMPTS["cat"]
         target_prompt = AFHQ_TARGET_PROMPTS["cat"]
-        
+        print(image_size)
         imgs = []
         for pil, _ in ds:
             imgs.append(pil)
