@@ -387,6 +387,82 @@ class DDIMSampler(object):
             
         return JTJ
     
+    def vjjv(self, z, v, f):
+        """
+        Computes scalar: v^T J^T J v = || J v ||^2
+        using one JVP.
+        """
+        z = z.clone().detach().requires_grad_(True)
+    
+        # JVP: compute Jv
+        _, Jv = torch.autograd.functional.jvp(f, (z,), (v,), create_graph=True)
+    
+        return (Jv * Jv).sum()
+    
+    def vjjv_grad(self, z, v, f):
+        """
+        Computes gradient_z ( v^T J^T J v ).
+        """
+    
+        z = z.clone().detach().requires_grad_(True)
+    
+        # Jv
+        _, Jv = torch.autograd.functional.jvp(f, (z,), (v,), create_graph=True)
+    
+        # scalar = ||Jv||^2
+        scalar = (Jv * Jv).sum()
+    
+        # gradient wrt z
+        grad_z = torch.autograd.grad(scalar, z)[0]
+        return grad_z
+    
+    def vjjv_batch(self, z, v, f):
+        """
+        z: (B, ...)
+        v: (B, ...)
+        f: function mapping (B, ...) → (B, ...)
+    
+        Returns: (B,) vector with vᵀ Jᵀ J v for each batch element.
+        """
+        z = z.clone().detach().requires_grad_(True)
+    
+        # Batched JVP
+        _, Jv = torch.autograd.functional.jvp(
+            f,
+            (z,),
+            (v,),
+            create_graph=True
+        )
+    
+        # ||Jv||^2 for each batch element
+        return (Jv.flatten(1) ** 2).sum(dim=1)
+    
+    def vjjv_grad_batch(self, z, v, f):
+        """
+        Returns: gradient wrt z of shape (B, ...)
+        """
+        z = z.clone().detach().requires_grad_(True)
+    
+        _, Jv = torch.autograd.functional.jvp(
+            f,
+            (z,),
+            (v,),
+            create_graph=True
+        )
+    
+        # scalar per batch element
+        scalar = (Jv.flatten(1) ** 2).sum(dim=1)
+    
+        # torch.autograd.grad requires a single scalar
+        # so we need to pass grad_outputs as a vector of ones.
+        grad_z = torch.autograd.grad(
+            scalar.sum(),       # turn (B,) into scalar
+            z,
+            create_graph=False
+        )[0]
+    
+        return grad_z   # shape (B, ...)
+    
     def ip_grad(self,x_dec):
         
         def f(z):
