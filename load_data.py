@@ -181,7 +181,7 @@ TARGET_MAP = {
     "horse":          "A majestic horse running through a field, natural lighting",
     "house":          "A luxurious mansion exterior, realistic architecture, natural lighting",
     "lion_tiger":     "A majestic big cat with powerful features, dramatic natural lighting",
-    "mountain":       "A snow-capped mountain under dramatic sky, realistic textures, perspective-correct",
+    "mountain":       "A phot of a snow-capped mountain",
     "panda":          "A cute fluffy panda in bamboo forest, realistic fur, natural lighting",
     "peach":          "A perfectly ripe peach with velvety skin, realistic textures, natural lighting",
     "pumpkin":        "A large vibrant pumpkin, warm autumn lighting, realistic textures",
