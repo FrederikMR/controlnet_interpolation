@@ -218,6 +218,8 @@ def load_dataset(name, n_images=None, image_size=768):
         imgs = []
         for pil, _ in ds:
             imgs.append(pil)
+            import numpy as np
+            print(np.array(pil).shape)
         
     elif name  == "afhq-dog":
         ds = AFHQClassDataset(root, "dog", n_images=n_images, transform=transform)
