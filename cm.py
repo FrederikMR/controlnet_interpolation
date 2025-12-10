@@ -197,7 +197,7 @@ class ContextManager:
         if t >= len(noisy_curve) - 1:
             return 1.0
         else:
-            total_error = torch.cumsum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(-1,4*96*96), axis=1), axis=0)
+            total_error = torch.cumsum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(len(noisy_curve)-1,-1), axis=1), axis=0)
             return total_error[t]/total_error[-1]
 
     def noise_diffusion(self,
@@ -374,6 +374,7 @@ class ContextManager:
         l2, _ = self.ddim_sampler.encode(right_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
+        latent_shape = l1.shape
         
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
@@ -427,7 +428,7 @@ class ContextManager:
             noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                     use_original_steps=False, return_intermediates=None,
                                                     unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
-            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
+            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
             
             
         self.sample_images(ldm, 
@@ -470,7 +471,6 @@ class ContextManager:
         
         ldm = self.model
         ldm.control_scales = [1] * 13
-        print(img1.shape)
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         with torch.no_grad():
@@ -489,11 +489,10 @@ class ContextManager:
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
         cur_step=140
-        print(left_image.shape)
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
-        print(l1.shape)
+        latent_shape = l1.shape
         
         # Precompute conditioning
         with torch.no_grad():
@@ -511,7 +510,7 @@ class ContextManager:
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
             print(Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).shape)
-            noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,1,4,96,96)
+            noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
         elif self.inter_method == "ProbGEORCE_Data":
             
             cond = {"c_crossattn": [cond_target], 'c_concat': None}
@@ -533,7 +532,7 @@ class ContextManager:
             #v0 = score_fun(left_image)
             v0 = torch.randn_like(left_image)
             with torch.no_grad():
-                data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,1,4,96,96)
+                data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,*latent_shape)
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = []
             for i, data_img in enumerate(data_curve):
@@ -541,7 +540,7 @@ class ContextManager:
                                                             use_original_steps=False, return_intermediates=None,
                                                             unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0])
                 
-            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,4,96,96)
+            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
             
             
         self.sample_images(ldm, 
@@ -612,7 +611,7 @@ class ContextManager:
         self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
         
         img_first_stage_encodings = [ldm.get_first_stage_encoding(ldm.encode_first_stage(img.float() / 127.5 - 1.0)) for img in imgs]
-        print(len(img_first_stage_encodings))
+        latent_shape = img_first_stage_encodings[0].shape
 
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
@@ -683,7 +682,7 @@ class ContextManager:
                                                                 use_original_steps=False, return_intermediates=None,
                                                                 unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
                 dummy_curve = torch.concatenate(dummy_curve, axis=0)
-            noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,1,4,96,96)
+            noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,*latent_shape)
             print(noisy_curve.shape)
             
         self.sample_multi_images(ldm, 
