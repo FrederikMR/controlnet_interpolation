@@ -51,7 +51,7 @@ def generate_job(model, computation_method, method, lam, clip, N, max_iter=100):
         --computation_method {computation_method} \\
         --n_images 10 \\
         --image_size 768 \\
-        --target_prompt 0 \\
+        --target_prompt 1 \\
         --method {method} \\
         --lam {lam} \\
         --clip {clip} \\
@@ -83,7 +83,7 @@ def loop_jobs(wait_time = 1.0):
     computation_methods = ['ivp']
     method = ['ProbGEORCE_Noise', 'ProbGEORCE_Data'] #, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise'7
     method = ['ProbGEORCE_Noise']
-    clip = [0]#[0,1]
+    clip = [1]#[0,1]
     lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
     
     model = ['mountain'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
