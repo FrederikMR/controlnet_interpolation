@@ -91,7 +91,7 @@ def run_interpolation()->None:
         if args.target_prompt:
             CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = target_prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
         else:
-            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
+            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "bvp":
         CM.bvp(imgs[0], imgs[1], prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "mean":
