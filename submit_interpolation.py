@@ -51,7 +51,7 @@ def generate_job(model, computation_method, method, lam, clip, N, max_iter=100):
         --computation_method {computation_method} \\
         --n_images 10 \\
         --image_size 768 \\
-        --target_prompt 1 \\
+        --target_prompt 0 \\
         --method {method} \\
         --lam {lam} \\
         --clip {clip} \\
