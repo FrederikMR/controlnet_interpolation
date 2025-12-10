@@ -83,8 +83,8 @@ def loop_jobs(wait_time = 1.0):
     computation_methods = ['ivp']
     method = ['ProbGEORCE_Noise', 'ProbGEORCE_Data'] #, 'Linear', 'NoiseDiffusion', 'Spherical', 'Noise'7
     method = ['ProbGEORCE_Noise']
-    clip = [1]#[0,1]
-    lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
+    clip = [0]#[0,1]
+    lam = [1.0, 100.0]#[0.1, 0.5, 1.0, 10.0]
     
     model = ['mountain'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     
