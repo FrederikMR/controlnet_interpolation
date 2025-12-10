@@ -631,7 +631,8 @@ class ContextManager:
 
         if self.inter_method == "ProbGEORCE_Noise":
             dimension = len(img_encoded[0].reshape(-1))
-            S = Chi2(len(img_encoded[0].reshape(-1)))
+            df = torch.tensor(float(dimension), device="cuda")
+            S = Chi2(df=df)
             
             def reg_fun(x):
                 print("Reg fun output")
