@@ -87,17 +87,17 @@ def run_interpolation()->None:
     
     CM = cm.ContextManager(N=args.N, lam=args.lam, max_iter=args.max_iter, inter_method=args.method, clip=args.clip,
                            mu = mu, nu = nu,
-                           ckpt_path=args.ckpt_path, num_images=args.num_images)
+                           ckpt_path=args.ckpt_path, num_images=args.num_images, seed=args.seed)
     
     if args.computation_method == "ivp":
         if args.target_prompt:
-            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = target_prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/', seed=args.seed)
+            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = target_prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
         else:
-            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/', seed=args.seed)
+            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "bvp":
-        CM.bvp(imgs[0], imgs[1], prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/', seed=args.seed)
+        CM.bvp(imgs[0], imgs[1], prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "mean":
-        CM.mean(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/', seed=args.seed)
+        CM.mean(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
         
     return
 
