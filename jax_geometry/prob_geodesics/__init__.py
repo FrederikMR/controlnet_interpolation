@@ -9,4 +9,4 @@ Created on Fri Jan 17 16:13:51 2025
 #%% Modules
 
 from .prob_georce import ProbGEORCE, ProbGEORCE_Embedded, ProbGEORCE_Euclidean
-from .jax_optimization import JAXOptimization
+from .prob_georce_adaptive import ProbGEORCE_Adaptive, ProbGEORCE_Embedded_Adaptive, ProbGEORCE_Euclidean_Adaptive

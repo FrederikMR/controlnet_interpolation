@@ -41,8 +41,8 @@ class Backtracking(ABC):
     def armijo_condition(self, x_new:Array, obj:Array, alpha:Array, *args)->bool:
         
         val1 = self.obj0+self.c1*alpha*jnp.sum(self.pk*self.grad0)
-        
-        return obj>val1
+
+        return obj>self.obj0
     
     def cond_fun(self, 
                  carry:Tuple,
@@ -50,8 +50,8 @@ class Backtracking(ABC):
         
         alpha, idx, *args = carry
         
-        x_new = lax.stop_gradient(self.update_fun(self.x, alpha, *args))
-        obj = lax.stop_gradient(self.obj_fun(x_new, *args))
+        x_new = lax.stop_gradient(self.update_fun(*self.x, alpha, *args))
+        obj = lax.stop_gradient(self.obj_fun(*x_new, *args))
         
         bool_val = self.armijo_condition(x_new, obj, alpha, *args)
         
@@ -72,7 +72,7 @@ class Backtracking(ABC):
                  )->Array:
         
         self.x = x
-        self.obj0 = lax.stop_gradient(self.obj_fun(x,*args))
+        self.obj0 = lax.stop_gradient(self.obj_fun(*x,*args))
         self.pk = -grad_val
         self.grad0 = grad_val
         

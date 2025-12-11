@@ -136,7 +136,7 @@ class ProbGEORCE(ABC):
                   ui:Array,
                   )->Array:
         
-        return self.z0+jnp.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0)
+        return (self.z0+jnp.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0),)
     
     def cond_fun(self, 
                  carry:Tuple,
@@ -157,7 +157,7 @@ class ProbGEORCE(ABC):
         mui = self.update_scheme(gi, Gi_inv)
         
         ui_hat = -0.5*jnp.einsum('tij,tj->ti', Gi_inv, mui)
-        tau = self.line_search(zi, grad_val, ui_hat, ui)
+        tau = self.line_search((zi,), grad_val, ui_hat, ui)
 
         ui = tau*ui_hat+(1.-tau)*ui
         zi = self.z0+jnp.cumsum(ui[:-1], axis=0)
@@ -191,10 +191,9 @@ class ProbGEORCE(ABC):
         zi, ui = self.initialize()
 
         energy_init = lax.stop_gradient(self.energy(zi))
-        reg_val_init = lax.stop_gradient(self.reg_fun(zi))
+        reg_val_init = jnp.abs(lax.stop_gradient(self.reg_fun(zi)))
         
-        
-        self.lam_norm = lax.cond(jnp.abs(reg_val_init) < 1e-4,
+        self.lam_norm = lax.cond(reg_val_init < 1e-6,
                                  lambda *_: self.lam,
                                  lambda *_: self.lam*energy_init/reg_val_init,
                                  )
@@ -213,10 +212,9 @@ class ProbGEORCE(ABC):
                                                                          grad_val, 
                                                                          0),
                                                                )
-        reg_energy = self.reg_energy(zi)
         zi = jnp.vstack((z0, zi, zN))
             
-        return zi.reshape(-1,*shape), reg_energy, idx
+        return zi.reshape(-1,*shape)
     
 #%% Prob GEORCE Embedded
 
@@ -348,7 +346,7 @@ class ProbGEORCE_Embedded(ABC):
                   ui:Array,
                   )->Array:
         
-        return self.z0+jnp.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0)
+        return (self.z0+jnp.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0),)
     
     def cond_fun(self, 
                  carry:Tuple,
@@ -369,7 +367,7 @@ class ProbGEORCE_Embedded(ABC):
         mui = self.update_scheme(gi, Gi_inv)
         
         ui_hat = -0.5*jnp.einsum('tij,tj->ti', Gi_inv, mui)
-        tau = self.line_search(zi, grad_val, ui_hat, ui)
+        tau = self.line_search((zi,), grad_val, ui_hat, ui)
 
         ui = tau*ui_hat+(1.-tau)*ui
         zi = self.z0+jnp.cumsum(ui[:-1], axis=0)
@@ -403,15 +401,15 @@ class ProbGEORCE_Embedded(ABC):
         zi, ui = self.initialize()
 
         energy_init = lax.stop_gradient(self.energy(zi))
-        reg_val_init = lax.stop_gradient(self.reg_fun(zi))
-        proj_val_init = lax.stop_gradient(self.proj_error(zi))
+        reg_val_init = jnp.abs(lax.stop_gradient(self.reg_fun(zi)))
+        proj_val_init = jnp.abs(lax.stop_gradient(self.proj_error(zi)))
         
-        if (reg_val_init**2)>1e-6:
+        if reg_val_init>1e-6:
             self.lam1_norm = self.lam1*energy_init/reg_val_init
         else:
             self.lam1_norm = self.lam1
             
-        if (proj_val_init**2)>1e-6:
+        if proj_val_init>1e-6:
             self.lam2_norm = self.lam2*energy_init/proj_val_init
         else:
             self.lam2_norm = self.lam2
@@ -525,7 +523,7 @@ class ProbGEORCE_Euclidean(ABC):
                   ui:Array,
                   )->Array:
         
-        return self.z0+jnp.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0)
+        return (self.z0+jnp.cumsum(alpha*ui_hat[:-1]+(1.-alpha)*ui[:-1], axis=0),)
     
     def update_ui(self,
                   gi:Array,
@@ -551,9 +549,9 @@ class ProbGEORCE_Euclidean(ABC):
                     )->Array:
         
         zi, ui, gi, grad_val, idx = carry
-        
+
         ui_hat = self.update_ui(gi)
-        tau = self.line_search(zi, grad_val, ui_hat, ui)
+        tau = self.line_search((zi,), grad_val, ui_hat, ui)
 
         ui = tau*ui_hat+(1.-tau)*ui
         zi = self.z0+jnp.cumsum(ui[:-1], axis=0)
@@ -583,9 +581,9 @@ class ProbGEORCE_Euclidean(ABC):
         zi, ui = self.initialize()
 
         energy_init = lax.stop_gradient(self.energy(zi))
-        reg_val_init = lax.stop_gradient(self.reg_fun(zi))
+        reg_val_init = jnp.abs(lax.stop_gradient(self.reg_fun(zi)))
         
-        if (reg_val_init**2)>1e-6:
+        if reg_val_init>1e-6:
             self.lam_norm = self.lam*energy_init/reg_val_init
         else:
             self.lam_norm = self.lam
