@@ -86,7 +86,7 @@ def loop_jobs(wait_time = 1.0):
     #computation_methods = ['mean']
     #run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
-    model = ['mountain', 'lion_tiger', 'house', 'cat', 'aircraft']
+    model = ['mountain', 'aircraft']
     computation_methods = ['ivp', 'bvp']
     run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
