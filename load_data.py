@@ -124,83 +124,80 @@ class AFHQ(BaseImageDataset):
 
 
 # ================================================================
-# 7. Prompts (updated)
+# 7. Prompts (Optimized)
 # ================================================================
 AFHQ_PROMPTS = {
-    "cat":  "A high-quality close-up portrait of a cat, realistic fur texture, natural lighting, single pair of eyes, anatomically correct, centered composition.",
-    "dog":  "A high-quality close-up portrait of a dog, realistic fur texture, natural lighting, single pair of eyes, anatomically correct, centered composition.",
-    "wild": "A high-quality close-up portrait of a wild animal, realistic fur or skin texture, natural lighting, single pair of eyes, anatomically correct, centered composition.",
+    "cat":  "A photo of a cat",
+    "dog":  "A photo of a dog",
+    "wild": "A photo of a wild animal",
 }
 
-AFHQ_GENERIC_PROMPT = (
-    "A high-quality close-up portrait of an animal, realistic fur or skin texture, natural lighting, single pair of eyes, anatomically correct, centered composition."
-)
+AFHQ_GENERIC_PROMPT = "A photo of an animal"
 
-FFHQ_PROMPT = (
-    "A high-quality realistic human face portrait, close-up, perfectly symmetrical, single pair of eyes, natural lighting, anatomically correct features, photorealistic skin texture."
-)
+FFHQ_PROMPT = "A photo of a human face"
 
-COCO_PROMPT = (
-    "A high-quality photograph of a real-world scene, perspective-correct, natural lighting, realistic colors, sharp details, centered composition, no distortions."
-)
+COCO_PROMPT = "A photo of a real-world scene"
 
+# ---------------------------
+# Target prompts (identity preserving)
+# ---------------------------
 AFHQ_TARGET_PROMPTS = {
-    "cat":  "A majestic fluffy cat, high-quality close-up, expressive eyes, realistic fur texture, natural lighting, anatomically correct, centered composition.",
-    "dog":  "A well-groomed dog, high-quality close-up, expressive face, realistic fur texture, natural lighting, anatomically correct, centered composition.",
-    "wild": "A powerful wild animal, high-quality close-up, expressive eyes, realistic fur or skin texture, natural lighting, anatomically correct, centered composition.",
+    "cat":  "A photo of a cat wearing sunglasses",
+    "dog":  "A photo of a dog wearing sunglasses",
+    "wild": "A photo of a wild animal wearing sunglasses",
 }
 
-AFHQ_GENERIC_TARGET = (
-    "A majestic close-up portrait of an animal with expressive eyes, realistic anatomy, natural lighting, and detailed fur or skin texture."
-)
+AFHQ_GENERIC_TARGET = "A photo of an animal wearing sunglasses"
 
-FFHQ_TARGET_PROMPT = (
-    "A stunning cinematic close-up portrait of a human face, perfectly symmetrical, single pair of eyes, natural lighting, anatomically correct features, photorealistic, highly detailed and expressive."
-)
+FFHQ_TARGET_PROMPT = "A photo of a human face wearing sunglasses"
 
-COCO_TARGET_PROMPT = (
-    "A highly aesthetic cinematic photograph of a real-world scene, perspective-correct, natural lighting, realistic colors, sharp details, centered composition, no distortions."
-)
+COCO_TARGET_PROMPT = "A photo of a real-world scene in the desert"
 
+# -------------------------------------------------------------
+# Identity-preserving target map for fallback single-image datasets
+# -------------------------------------------------------------
 TARGET_MAP = {
-    "cat":            "a majestic fluffy cat with bright expressive eyes",
-    "aircraft":       "a futuristic high-tech aircraft flying under dramatic natural lighting",
-    "apple":          "a perfectly ripe glossy apple with vibrant colors",
-    "banana":         "a fresh banana with rich texture, natural lighting",
-    "bedroom":        "a luxurious modern bedroom interior with warm lighting",
-    "bee":            "a highly detailed macro photo of a bee on a flower, realistic textures",
-    "bird":           "a majestic bird in flight with vibrant feathers, natural lighting",
-    "car":            "a luxury sports car with sleek aerodynamic design, natural lighting",
-    "cherry":         "a bowl of glossy ripe cherries with natural lighting",
-    "cup":            "an elegant ceramic teacup under soft natural lighting",
-    "eagle":          "A powerful eagle in flight, wings spread, dramatic natural lighting",
-    "face":           "A cinematic close-up of a face, expressive details, natural lighting, perfectly symmetrical",
-    "flower":         "A vibrant blooming flower with delicate petals, natural lighting",
-    "forest":         "A mystical forest scene with soft volumetric light, realistic textures",
-    "grape":          "A bunch of glossy grapes with dew drops, natural lighting",
-    "horse":          "A majestic horse running through a field, natural lighting",
-    "house":          "A luxurious mansion exterior, realistic architecture, natural lighting",
-    "lion_tiger":     "A majestic big cat with powerful features, dramatic natural lighting",
-    "mountain":       "A phot of a snow-capped mountain under dramatic sky, realistic textures, perspective-correct",
-    "panda":          "A cute fluffy panda in bamboo forest, realistic fur, natural lighting",
-    "peach":          "A perfectly ripe peach with velvety skin, realistic textures, natural lighting",
-    "pumpkin":        "A large vibrant pumpkin, warm autumn lighting, realistic textures",
-    "shoes":          "Luxury designer shoes displayed in a stylish scene, natural lighting, realistic textures",
-    "spider":         "A detailed macro shot of a spider on a web, realistic textures, natural lighting",
-    "sushi":          "A beautifully arranged sushi platter, soft natural lighting, realistic textures",
-    "tree":           "An ancient majestic tree with sprawling branches, natural lighting, realistic textures",
+    "cat":        "A photo of a cat wearing sunglasses",
+    "aircraft":   "A photo of a fighter jet in dramatic lighting",
+    "apple":      "A photo of a shiny red apple",
+    "banana":     "A photo of a ripe banana on a table",
+    "bedroom":    "A photo of a luxurious bedroom interior",
+    "bee":        "A close-up photo of a bee on a flower",
+    "bird":       "A photo of a bird in flight",
+    "car":        "A photo of a modern car",
+    "cherry":     "A photo of fresh cherries",
+    "cup":        "A photo of a ceramic cup",
+    "eagle":      "A photo of an eagle in flight",
+    "face":       "A photo of a human face wearing sunglasses",
+    "flower":     "A photo of a colorful flower",
+    "forest":     "A photo of a dense forest",
+    "grape":      "A photo of a bunch of grapes",
+    "horse":      "A photo of a running horse",
+    "house":      "A photo of an old-fashioned mansion",
+    "lion_tiger": "A photo of a big cat",
+    "mountain":   "A photo of a snow-capped mountain",
+    "panda":      "A photo of a panda eating bamboo",
+    "peach":      "A photo of a fresh peach",
+    "pumpkin":    "A photo of a pumpkin",
+    "shoes":      "A photo of a pair of boots",
+    "spider":     "A close-up photo of a spider on a web",
+    "sushi":      "A photo of sushi on a plate",
+    "tree":       "A photo of a large tree",
 }
 
 # ================================================================
-# 8. Negative prompts
+# 8. Negative prompts (clean, not overly aggressive)
 # ================================================================
 GENERIC_N_PROMPT = (
-    "text, watermark, logo, signature, distorted, mutated, extra limbs, extra eyes, duplicate features, disfigured, broken anatomy, blurry, low-resolution, poorly drawn, low quality, warped, melted, glitch, unrealistic, ugly, oversaturated"
+    "text, watermark, logo, signature, distorted, mutated, extra limbs, extra eyes, "
+    "duplicate features, disfigured, broken anatomy, blurry, low-resolution, "
+    "low quality, warped, unrealistic, oversaturated"
 )
 
-AFHQ_N_PROMPT = GENERIC_N_PROMPT + ", unnatural fur or skin texture, misaligned eyes, messy composition"
-FFHQ_N_PROMPT = GENERIC_N_PROMPT + ", unnatural facial features, lopsided face, misplaced eyes, messy hair, broken anatomy"
-COCO_N_PROMPT  = GENERIC_N_PROMPT + ", distorted objects, floating parts, inconsistent perspective, unnatural lighting, unnatural shadows"
+AFHQ_N_PROMPT = GENERIC_N_PROMPT + ", unnatural fur texture, misaligned eyes"
+FFHQ_N_PROMPT = GENERIC_N_PROMPT + ", unnatural facial features, misplaced eyes"
+COCO_N_PROMPT = GENERIC_N_PROMPT + ", distorted objects, inconsistent perspective"
+
 
 # ================================================================
 # 9. Unified loader
@@ -218,7 +215,9 @@ def load_dataset(name, n_images=None, image_size=768):
     # ---- Dataset selection ----
     if name == "ffhq":
         ds = ZipImageDataset(ffhq_zip, n_images=n_images, transform=transform)
-        prompt, target_prompt, n_prompt = FFHQ_PROMPT, FFHQ_TARGET_PROMPT, FFHQ_N_PROMPT
+        prompt = FFHQ_PROMPT
+        target_prompt = FFHQ_TARGET_PROMPT
+        n_prompt = FFHQ_N_PROMPT
         
     elif name.startswith("afhq"):
         if name == "afhq-cat":
@@ -232,14 +231,20 @@ def load_dataset(name, n_images=None, image_size=768):
         
         if cls is not None:
             ds = AFHQClassDataset(af_root, cls, n_images=n_images, transform=transform)
-            prompt, target_prompt, n_prompt = AFHQ_PROMPTS[cls], AFHQ_TARGET_PROMPTS[cls], AFHQ_N_PROMPT
+            prompt = AFHQ_PROMPTS[cls]
+            target_prompt = AFHQ_TARGET_PROMPTS[cls]
+            n_prompt = AFHQ_N_PROMPT
         else:
             ds = AFHQ(af_root, n_images=n_images, transform=transform)
-            prompt, target_prompt, n_prompt = AFHQ_GENERIC_PROMPT, AFHQ_GENERIC_TARGET, AFHQ_N_PROMPT
+            prompt = AFHQ_GENERIC_PROMPT
+            target_prompt = AFHQ_GENERIC_TARGET
+            n_prompt = AFHQ_N_PROMPT
             
     elif name == "coco":
         ds = ZipImageDataset(coco_zip, n_images=n_images, transform=transform)
-        prompt, target_prompt, n_prompt = COCO_PROMPT, COCO_TARGET_PROMPT, COCO_N_PROMPT
+        prompt = COCO_PROMPT
+        target_prompt = COCO_TARGET_PROMPT
+        n_prompt = COCO_N_PROMPT
     
     # ---- Sample image dataset for single images ----
     else:
@@ -272,14 +277,18 @@ def load_dataset(name, n_images=None, image_size=768):
             "sushi": ["sushi1.png", "sushi2.png"],
             "tree": ["tree1.png", "tree2.png"],
         }
+
         if name not in sample_imgs:
             raise ValueError(f"Unknown dataset: {name}")
         
+        # Load static image files
         file_list = sample_imgs[name]
         for f in file_list:
             img = Image.open(f'sample_imgs/{f}').resize((image_size, image_size))
             imgs.append(img)
-        prompt = f'a photo of {name}'
+
+        # Prompts
+        prompt = f"A photo of {name.replace('_', ' ')}"
         target_prompt = TARGET_MAP[name]
         n_prompt = GENERIC_N_PROMPT
         
@@ -289,6 +298,7 @@ def load_dataset(name, n_images=None, image_size=768):
             imgs.append(pil)
     
     return imgs, prompt, target_prompt, n_prompt
+
 
 
 
