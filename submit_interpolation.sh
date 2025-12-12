@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J house_ProbGEORCE_Data
+    #BSUB -J aircraft_ProbGEORCE_Noise_bvp
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,17 +17,18 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --img_types house \
-        --computation_method ivp \
-        --n_images 2 \
+        --img_types aircraft \
+        --computation_method bvp \
+        --n_images 10 \
         --image_size 768 \
         --target_prompt 1 \
-        --method ProbGEORCE_Data \
+        --method ProbGEORCE_Noise \
         --lam 10.0 \
-        --clip 0 \
+        --clip 1 \
         --mu -1.0 \
         --nu -1.0 \
         --N 100 \
         --max_iter 100 \
+        --num_images 10 \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
     
