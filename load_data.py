@@ -157,8 +157,8 @@ COCO_TARGET_PROMPT = "A photo of a real-world scene in the desert"
 # Identity-preserving target map for fallback single-image datasets
 # -------------------------------------------------------------
 TARGET_MAP = {
-    "cat":        "A photo of a cat wearing sunglasses",
-    "aircraft":   "A photo of a fighter jet in dramatic lighting",
+    "cat":        "A photo of a fluffy cat",
+    "aircraft":   "A photo of a private jet",
     "apple":      "A photo of a shiny red apple",
     "banana":     "A photo of a ripe banana on a table",
     "bedroom":    "A photo of a luxurious bedroom interior",
@@ -168,13 +168,13 @@ TARGET_MAP = {
     "cherry":     "A photo of fresh cherries",
     "cup":        "A photo of a ceramic cup",
     "eagle":      "A photo of an eagle in flight",
-    "face":       "A photo of a human face wearing sunglasses",
+    "face":       "A photo of a human face with open mouth",
     "flower":     "A photo of a colorful flower",
     "forest":     "A photo of a dense forest",
     "grape":      "A photo of a bunch of grapes",
     "horse":      "A photo of a running horse",
     "house":      "A photo of an old-fashioned mansion",
-    "lion_tiger": "A photo of a big cat",
+    "lion_tiger": "A photo of a tiger",
     "mountain":   "A photo of a snow-capped mountain",
     "panda":      "A photo of a panda eating bamboo",
     "peach":      "A photo of a fresh peach",
