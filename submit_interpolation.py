@@ -82,11 +82,11 @@ def loop_jobs(wait_time = 1.0):
     clip = [0,1]#[0,1]
     lam = [100.0]#[0.1, 0.5, 1.0, 10.0]
 
-    #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    #computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
+    model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
+    computation_methods = ['mean']
+    run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
-    model = ['mountain', 'aircraft']
+    model = ['mountain', 'aircraft', "lion_tiger"]
     computation_methods = ['ivp', 'bvp']
     run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
