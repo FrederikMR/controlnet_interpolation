@@ -169,7 +169,6 @@ class ContextManager:
                         cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
                     else:
                         cond_blend = cond_neutral
-                    cond_blend /= cond_blend.norm()
                     
                     cond = {"c_crossattn": [cond_blend], 'c_concat': None}
                     un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
