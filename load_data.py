@@ -157,8 +157,8 @@ COCO_TARGET_PROMPT = "A photo of a real-world scene in the desert"
 # Identity-preserving target map for fallback single-image datasets
 # -------------------------------------------------------------
 TARGET_MAP = {
-    "cat":        "A photo of a fluffy cat",
-    "aircraft":   "A photo of a aircraft in the dark",
+    "cat":        "A photo of a orange cat",
+    "aircraft":   "A photo of a old aircraft",
     "apple":      "A photo of a shiny red apple",
     "banana":     "A photo of a ripe banana on a table",
     "bedroom":    "A photo of a luxurious bedroom interior",
@@ -192,9 +192,9 @@ GENERIC_N_PROMPT = (
     'text, signature, logo, distorted, ugly, weird eyes, lowres, messy, weird face, lopsided, disfigured, bad art, poorly drawn, low quality, drawing, blurry, faded'
 )
 
-AFHQ_N_PROMPT = GENERIC_N_PROMPT #+ ", unnatural fur texture, misaligned eyes"
-FFHQ_N_PROMPT = GENERIC_N_PROMPT #+ ", unnatural facial features, misplaced eyes"
-COCO_N_PROMPT = GENERIC_N_PROMPT #+ ", distorted objects, inconsistent perspective"
+AFHQ_N_PROMPT = GENERIC_N_PROMPT + ", unnatural fur texture, misaligned eyes"
+FFHQ_N_PROMPT = GENERIC_N_PROMPT + ", unnatural facial features, misplaced eyes"
+COCO_N_PROMPT = GENERIC_N_PROMPT + ", distorted objects, inconsistent perspective"
 
 
 # ================================================================
