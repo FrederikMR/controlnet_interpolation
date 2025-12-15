@@ -189,9 +189,7 @@ TARGET_MAP = {
 # 8. Negative prompts (clean, not overly aggressive)
 # ================================================================
 GENERIC_N_PROMPT = (
-    "text, watermark, logo, signature, distorted, mutated, extra limbs, extra eyes, "
-    "duplicate features, disfigured, broken anatomy, blurry, low-resolution, "
-    "low quality, warped, unrealistic, oversaturated"
+    'text, signature, logo, distorted, ugly, weird eyes, lowres, messy, weird face, lopsided, disfigured, bad art, poorly drawn, low quality, drawing, blurry, faded'
 )
 
 AFHQ_N_PROMPT = GENERIC_N_PROMPT #+ ", unnatural fur texture, misaligned eyes"
