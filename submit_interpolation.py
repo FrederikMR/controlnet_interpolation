@@ -79,8 +79,8 @@ def loop_jobs(wait_time = 1.0):
     N = 100
     max_iter = 100
     method = ['ProbGEORCE_Noise']
-    clip = [0,1]#[0,1]
-    lam = [100.0]#[0.1, 0.5, 1.0, 10.0]
+    clip = [0]#[0,1]
+    lam = [20.0]#[0.1, 0.5, 1.0, 10.0]
 
     model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
