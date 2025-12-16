@@ -396,7 +396,7 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            def project_onto_tangent_space(v, x, r):
+            def project_onto_tangent_space(v, x, r2):
                 """
                 Projects each vector v_i onto the tangent space of the n-sphere with radius r at x_i.
             
@@ -412,18 +412,42 @@ class ContextManager:
                 dot_product = torch.sum(v * x, dim=-1, keepdim=True)
                 
                 # Project v onto the tangent space of the n-sphere with radius r
-                proj_v = v - dot_product * x / (r ** 2)
+                proj_v = v - dot_product * x / r2
                 
                 return proj_v
+            
+            
+            def gradient_of_squared_norm(X, r2):
+                """
+                Computes the gradient of the function f(X) = (||X||^2 - r)^2 with respect to X.
+                
+                Args:
+                    X (torch.Tensor): Tensor of shape (B, n) representing a batch of vectors.
+                    r (float): The constant scalar in the function.
+                
+                Returns:
+                    torch.Tensor: Gradient of f(X) with respect to X, of shape (B, n).
+                """
+                # Compute the squared norm of each vector in the batch (||X||^2)
+                squared_norm = torch.sum(X**2, dim=-1, keepdim=True)  # Shape: (B, 1)
+                
+                # Compute the difference from r
+                diff = squared_norm - r2  # Shape: (B, 1)
+                
+                # Compute the gradient: 4 * (||X||^2 - r) * X
+                gradient = 4 * diff * X  # Shape: (B, n)
+                
+                return gradient
             
             score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, cur_step,
                                                                score_corrector=None, 
                                                                corrector_kwargs=None,
                                                                unconditional_guidance_scale=guide_scale, 
                                                                unconditional_conditioning=un_cond)
-            score_proj_fun = lambda x: project_onto_tangent_space(score_fun(x), x, math.sqrt(dimension))
+            score_proj_fun = lambda x: project_onto_tangent_space(score_fun(x), x, dimension)
+            embedding_fun = lambda x: gradient_of_squared_norm(x, dimension)
         
-            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = score_proj_fun,
+            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = lambda x: score_proj_fun(x) + embedding_fun(x),
                                                      init_fun= None,
                                                      lam=self.lam,
                                                      N=self.N,
