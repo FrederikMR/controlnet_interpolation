@@ -76,10 +76,12 @@ def loop_jobs(wait_time = 1.0):
     #clip = [1]#[0,1]
     #lam = [1.0]#[0.1, 0.5, 1.0, 10.0]
     
+    #Project score to sphere TM
+    
     N = 100
     max_iter = 100
-    method = ['ProbGEORCE_Noise']
-    clip = [0,1]#[0,1]
+    method = ['ProbGEORCE_Noise', 'ProbGEORCE_Noise_Score']
+    clip = [0]#[0,1]
     lam = [20.0]#[0.1, 0.5, 1.0, 10.0]
 
     model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']

@@ -391,6 +391,53 @@ class ContextManager:
             noisy_curve = self.SInt(l1,l2)
         elif self.inter_method == "NoiseDiffusion":
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
+        elif self.inter_method == "ProbGEORCE_Noise_Score":
+            dimension = len(l1.reshape(-1))
+            df = torch.tensor(float(dimension), device="cuda")
+            S = Chi2(df=df)
+            
+            def project_onto_tangent_space(v, x, r):
+                """
+                Projects each vector v_i onto the tangent space of the n-sphere with radius r at x_i.
+            
+                Args:
+                    v (torch.Tensor): Tensor of shape (B, n) representing batch of vectors to project.
+                    x (torch.Tensor): Tensor of shape (B, n) representing batch of points on the n-sphere with radius r.
+                    r (float): The radius of the n-sphere.
+            
+                Returns:
+                    torch.Tensor: Projected vectors of shape (B, n).
+                """
+                # Compute the dot product between v and x
+                dot_product = torch.sum(v * x, dim=-1, keepdim=True)
+                
+                # Project v onto the tangent space of the n-sphere with radius r
+                proj_v = v - dot_product * x / (r ** 2)
+                
+                return proj_v
+            
+            score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, cur_step,
+                                                               score_corrector=None, 
+                                                               corrector_kwargs=None,
+                                                               unconditional_guidance_scale=guide_scale, 
+                                                               unconditional_conditioning=un_cond)
+            score_proj_fun = lambda x: project_onto_tangent_space(score_fun(x), x, math.sqrt(dimension))
+        
+            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = score_proj_fun,
+                                                     init_fun= None,
+                                                     lam=self.lam,
+                                                     N=self.N,
+                                                     tol=1e-4,
+                                                     max_iter=self.max_iter,
+                                                     lr_rate=0.01,
+                                                     beta1=0.5,
+                                                     beta2=0.5,
+                                                     eps=1e-8,
+                                                     device="cuda:0",
+                                                     )
+            
+            noisy_curve = self.PGEORCE(l1, l2)            
+
         elif self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
             df = torch.tensor(float(dimension), device="cuda")
