@@ -395,7 +395,26 @@ class ContextManager:
             dimension = len(l1.reshape(-1))
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2),
+            
+            def soft_hinge_penalty_batch(v, lower=-2.0, upper=2.0):
+                """
+                Calculates the soft hinge penalty for each entry in the tensor `v`
+                to ensure they stay within the interval [lower, upper].
+                
+                Args:
+                - v (torch.Tensor): The input batch of vectors (N x D)
+                - lower (float): Lower bound for the interval
+                - upper (float): Upper bound for the interval
+                
+                Returns:
+                - penalty (torch.Tensor): The soft hinge penalty for each vector in v
+                """
+                # Apply soft hinge (ReLU-style) penalty for each element in the batch
+                penalty = torch.relu(v - upper)**2 + torch.relu(lower - v)**2
+                # Sum the penalties across each vector (i.e., across the second dimension)
+                return penalty.sum(dim=1).mean()  # mean over batch
+            
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) + torch.sum((torch.sum(x**2, axis=1)-dimension)**2) + soft_hinge_penalty_batch(x),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
@@ -507,7 +526,26 @@ class ContextManager:
             dimension = len(l1.reshape(-1))
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
-            reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) +  0.1*torch.sum((torch.sum(x**2, axis=1)-dimension)**2)
+            
+            def soft_hinge_penalty_batch(v, lower=-2.0, upper=2.0):
+                """
+                Calculates the soft hinge penalty for each entry in the tensor `v`
+                to ensure they stay within the interval [lower, upper].
+                
+                Args:
+                - v (torch.Tensor): The input batch of vectors (N x D)
+                - lower (float): Lower bound for the interval
+                - upper (float): Upper bound for the interval
+                
+                Returns:
+                - penalty (torch.Tensor): The soft hinge penalty for each vector in v
+                """
+                # Apply soft hinge (ReLU-style) penalty for each element in the batch
+                penalty = torch.relu(v - upper)**2 + torch.relu(lower - v)**2
+                # Sum the penalties across each vector (i.e., across the second dimension)
+                return penalty.sum(dim=1).mean()  # mean over batch
+            
+            reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) + torch.sum((torch.sum(x**2, axis=1)-dimension)**2) + soft_hinge_penalty_batch(x)
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), gradS=None, lam=self.lam)
             # Compute gradient using autograd
@@ -631,8 +669,26 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
+            def soft_hinge_penalty_batch(v, lower=-2.0, upper=2.0):
+                """
+                Calculates the soft hinge penalty for each entry in the tensor `v`
+                to ensure they stay within the interval [lower, upper].
+                
+                Args:
+                - v (torch.Tensor): The input batch of vectors (N x D)
+                - lower (float): Lower bound for the interval
+                - upper (float): Upper bound for the interval
+                
+                Returns:
+                - penalty (torch.Tensor): The soft hinge penalty for each vector in v
+                """
+                # Apply soft hinge (ReLU-style) penalty for each element in the batch
+                penalty = torch.relu(v - upper)**2 + torch.relu(lower - v)**2
+                # Sum the penalties across each vector (i.e., across the second dimension)
+                return penalty.sum(dim=1).mean()  # mean over batch
+            
             def reg_fun(x):
-                return torch.sum(-S.log_prob(torch.sum(x**2, axis=-1)) +  0.1*((torch.sum(x**2, axis=-1)-dimension)**2))
+                return torch.sum(-S.log_prob(torch.sum(x**2, axis=-1)) + ((torch.sum(x**2, axis=-1)-dimension)**2) + soft_hinge_penalty_batch(x))
             
             self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
                                                   init_fun=None,
