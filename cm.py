@@ -407,7 +407,13 @@ class ContextManager:
             #                                   )
             
             reg_fun1 = lambda x: torch.sum((torch.sum(x**2, axis=-1)-dimension)**2)
-            reg_fun2 = lambda x: torch.sum((x**2 / torch.sum(x**2, axis=-1)) - 1./dimension)
+            reg_fun2 = lambda x: torch.sum(
+                (
+                    x**2 / torch.sum(x**2, dim=-1, keepdim=True)
+                    - 1.0 / dimension
+                    )**2
+                )
+
             
             self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: reg_fun1(x) + reg_fun2(x),
                                                init_fun=None,
