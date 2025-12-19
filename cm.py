@@ -391,101 +391,25 @@ class ContextManager:
             noisy_curve = self.SInt(l1,l2)
         elif self.inter_method == "NoiseDiffusion":
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
-        elif self.inter_method == "ProbGEORCE_Noise_Score":
-            dimension = len(l1.reshape(-1))
-            df = torch.tensor(float(dimension), device="cuda")
-            S = Chi2(df=df)
-            
-            def project_onto_tangent_space(v, x, r2):
-                """
-                Projects each vector v_i onto the tangent space of the n-sphere with radius r at x_i.
-            
-                Args:
-                    v (torch.Tensor): Tensor of shape (B, n) representing batch of vectors to project.
-                    x (torch.Tensor): Tensor of shape (B, n) representing batch of points on the n-sphere with radius r.
-                    r (float): The radius of the n-sphere.
-            
-                Returns:
-                    torch.Tensor: Projected vectors of shape (B, n).
-                """
-                # Compute the dot product between v and x
-                dot_product = torch.sum(v * x, dim=-1, keepdim=True)
-                
-                # Project v onto the tangent space of the n-sphere with radius r
-                proj_v = v - dot_product * x / r2
-                
-                return proj_v
-            
-            
-            def gradient_of_squared_norm(X, r2):
-                """
-                Computes the gradient of the function f(X) = (||X||^2 - r)^2 with respect to X.
-                
-                Args:
-                    X (torch.Tensor): Tensor of shape (B, n) representing a batch of vectors.
-                    r (float): The constant scalar in the function.
-                
-                Returns:
-                    torch.Tensor: Gradient of f(X) with respect to X, of shape (B, n).
-                """
-                # Compute the squared norm of each vector in the batch (||X||^2)
-                squared_norm = torch.sum(X**2, dim=-1, keepdim=True)  # Shape: (B, 1)
-                
-                # Compute the difference from r
-                diff = squared_norm - r2  # Shape: (B, 1)
-                
-                # Compute the gradient: 4 * (||X||^2 - r) * X
-                gradient = 4 * diff * X  # Shape: (B, n)
-                
-                return gradient
-            
-            score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, cur_step,
-                                                               score_corrector=None, 
-                                                               corrector_kwargs=None,
-                                                               unconditional_guidance_scale=guide_scale, 
-                                                               unconditional_conditioning=un_cond)
-            score_proj_fun = lambda x: project_onto_tangent_space(score_fun(x), x, dimension)
-            embedding_fun = lambda x: gradient_of_squared_norm(x, dimension)
-        
-            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = lambda x: score_proj_fun(x) + embedding_fun(x),
-                                                     init_fun= None,
-                                                     lam=self.lam,
-                                                     N=self.N,
-                                                     tol=1e-4,
-                                                     max_iter=self.max_iter,
-                                                     lr_rate=0.01,
-                                                     beta1=0.5,
-                                                     beta2=0.5,
-                                                     eps=1e-8,
-                                                     device="cuda:0",
-                                                     )
-            
-            noisy_curve = self.PGEORCE(l1, l2)            
-
         elif self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            def soft_hinge_penalty_batch(v, lower=-2.0, upper=2.0):
-                """
-                Calculates the soft hinge penalty for each entry in the tensor `v`
-                to ensure they stay within the interval [lower, upper].
-                
-                Args:
-                - v (torch.Tensor): The input batch of vectors (N x D)
-                - lower (float): Lower bound for the interval
-                - upper (float): Upper bound for the interval
-                
-                Returns:
-                - penalty (torch.Tensor): The soft hinge penalty for each vector in v
-                """
-                # Apply soft hinge (ReLU-style) penalty for each element in the batch
-                penalty = torch.relu(v - upper)**2 + torch.relu(lower - v)**2
-                # Sum the penalties across each vector (i.e., across the second dimension)
-                return penalty.sum(dim=1).mean()  # mean over batch
+            #self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) + torch.sum((torch.sum(x**2, axis=1)-dimension)**2) + soft_hinge_penalty_batch(x),
+            #                                   init_fun=None,
+            #                                   lam = self.lam,
+            #                                   N=self.N,
+            #                                   tol=1e-4,
+            #                                   max_iter=self.max_iter,
+            #                                   line_search_params = {'rho': 0.5},
+            #                                   device="cuda:0",
+            #                                   )
             
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) + torch.sum((torch.sum(x**2, axis=1)-dimension)**2) + soft_hinge_penalty_batch(x),
+            reg_fun1 = lambda x: torch.sum((torch.sum(x**2, axis=-1)-dimension)**2)
+            reg_fun2 = lambda x: torch.sum((x**2 / torch.sum(x**2, axis=-1)) - 1./dimension)
+            
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: reg_fun1(x) + reg_fun2(x),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
