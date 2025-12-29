@@ -500,14 +500,14 @@ class ContextManager:
             ):
                 d = X.shape[1]
                 loss = (
-                    1.0 * shell_loss(X)
-                  + 1.0 * radial_orthogonality_loss(X)
+                    1.0 * shell_loss(X) / torch.sqrt(d)
+                  + 1.0 * radial_orthogonality_loss(X) / d
                   + 0.5 * increment_correlation_loss(X)
                   + 1.0 * covariance_loss(X)
                   + 0.5 * coordinate_balance_loss(X)
                   + 0.3 * projection_gaussianity_loss(X)   # much weaker
-                  + 0.5 * tangent_norm_loss(X)
-                  + 1.0 * softmax_coordinate_loss(X, max_val=2.0)
+                  + 0.5 * tangent_norm_loss(X) / torch.sqrt(d)
+                  + 0.5 * softmax_coordinate_loss(X, max_val=2.5)
                 )
                 
                 return loss
