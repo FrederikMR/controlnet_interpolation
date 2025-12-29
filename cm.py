@@ -501,7 +501,7 @@ class ContextManager:
                 loss += w_incorr * increment_correlation_loss(X) #seems to work, still a little blurred
                 loss += w_cov * covariance_loss(X)  #seems to work, still a little blurred, definitely helps on the blurred part
                 loss += w_balance * coordinate_balance_loss(X) #seems to work, still a little blurred
-                loss += w_projection * d * projection_gaussianity_loss(X, n_proj=32)
+                loss += w_projection * projection_gaussianity_loss(X, n_proj=32)
                 return loss
             
             self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: gaussian_curve_loss(x),
