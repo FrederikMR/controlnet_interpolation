@@ -1,6 +1,6 @@
     #! /bin/bash
     #BSUB -q gpuv100
-    #BSUB -J ProbGEORCE_RSphere1000_100
+    #BSUB -J SGD_RSphere20_100
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -19,9 +19,9 @@
     python3 runtime.py \
         --manifold Sphere \
         --lam 1.0 \
-        --dim 1000 \
+        --dim 20 \
         --T 100 \
-        --method ProbGEORCE \
+        --method SGD \
         --jax_lr_rate 0.01 \
         --tol 0.0001 \
         --max_iter 1000 \
