@@ -496,8 +496,8 @@ class ContextManager:
                 loss = 0.0
                 d = X.shape[1]
                 loss += w_shell * shell_loss(X)
-                loss += w_dist * local_distance_loss(X)
-                #loss += w_radial * radial_orthogonality_loss(X)
+                #loss += w_dist * local_distance_loss(X)
+                loss += w_radial * radial_orthogonality_loss(X)
                 #loss += w_incorr * increment_correlation_loss(X)
                 #loss += w_cov * covariance_loss(X)
                 #loss += w_balance * coordinate_balance_loss(X)
