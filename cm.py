@@ -457,7 +457,7 @@ class ContextManager:
                 var = X.var(dim=0)
                 return ((var - 1.0) ** 2).mean()
             
-            U = torch.randn(32, dimension, device="cuda")
+            U = torch.randn(100, dimension, device="cuda")
             U = U / U.norm(dim=1, keepdim=True)
             def projection_gaussianity_loss(X):
                 """
@@ -498,7 +498,7 @@ class ContextManager:
                   + 0.5 * increment_correlation_loss(X)
                   + 1.0 * covariance_loss(X)
                   + 0.5 * coordinate_balance_loss(X)
-                  + 0.3 * projection_gaussianity_loss(X)   # much weaker
+                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
                   + 0.5 * tangent_norm_loss(X)
                 )
                 
