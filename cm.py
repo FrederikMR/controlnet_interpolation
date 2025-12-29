@@ -487,6 +487,13 @@ class ContextManager:
                 if target is None:
                     target = norms.mean().detach()
                 return ((norms - target) ** 2).mean()
+            
+            def softmax_coordinate_loss(X, max_val=4.0, beta=10.0):
+                """
+                Smooth penalty for exceeding max_val using a softplus-like function.
+                """
+                excess = X.abs() - max_val
+                return (torch.log1p(torch.exp(beta * excess)) / beta).mean()
 
             def gaussian_curve_loss(
                 X,
@@ -498,8 +505,9 @@ class ContextManager:
                   + 0.5 * increment_correlation_loss(X)
                   + 1.0 * covariance_loss(X)
                   + 0.5 * coordinate_balance_loss(X)
-                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
-                  #+ 0.5 * tangent_norm_loss(X)
+                  + 0.3 * projection_gaussianity_loss(X)   # much weaker
+                  + 0.5 * tangent_norm_loss(X)
+                  + 1.0 * softmax_coordinate_loss(X, max_val=2.0)
                 )
                 
                 return loss
