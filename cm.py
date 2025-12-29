@@ -482,26 +482,28 @@ class ContextManager:
                     + ((m4 - 3) ** 2).mean()
                 )
                 return loss
+            
+            def tangent_norm_loss(X, target=None):
+                dx = X[1:] - X[:-1]
+                norms = dx.norm(dim=1)
+                if target is None:
+                    target = norms.mean().detach()
+                return ((norms - target) ** 2).mean()
 
             def gaussian_curve_loss(
                 X,
-                w_shell=1.0,
-                w_dist=1.0,
-                w_radial=1.0,
-                w_incorr=0.5,
-                w_cov=1.0,
-                w_balance=0.5,
-                w_projection=1.0,
             ):
-                loss = 0.0
                 d = X.shape[1]
-                loss += w_shell * shell_loss(X) #Works, slightly blurred for lam=10.0
-                #loss += w_dist * local_distance_loss(X) #Does not work for lam=10.0
-                loss += w_radial * radial_orthogonality_loss(X) #seems to work, still a little blurred
-                loss += w_incorr * increment_correlation_loss(X) #seems to work, still a little blurred
-                loss += w_cov * covariance_loss(X)  #seems to work, still a little blurred, definitely helps on the blurred part
-                loss += w_balance * coordinate_balance_loss(X) #seems to work, still a little blurred
-                loss += w_projection * projection_gaussianity_loss(X, n_proj=32)
+                loss = (
+                    1.0 * shell_loss(X)
+                  + 1.0 * radial_orthogonality_loss(X)
+                  + 0.5 * increment_correlation_loss(X)
+                  + 1.0 * covariance_loss(X)
+                  + 0.5 * coordinate_balance_loss(X)
+                  + 0.3 * projection_gaussianity_loss(X)   # much weaker
+                  + 0.5 * tangent_norm_loss(X)
+                )
+                
                 return loss
             
             self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: gaussian_curve_loss(x),
