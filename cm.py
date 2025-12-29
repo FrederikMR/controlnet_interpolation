@@ -507,7 +507,7 @@ class ContextManager:
                   + 0.5 * coordinate_balance_loss(X)
                   + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
                   + 0.5 * tangent_norm_loss(X)
-                  + 0.5 * d * softmax_coordinate_loss(X, max_val=2.5)
+                  + 0.5 * softmax_coordinate_loss(X, max_val=2.5)
                 )
                 
                 return loss
