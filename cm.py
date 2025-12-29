@@ -498,8 +498,8 @@ class ContextManager:
                   + 0.5 * increment_correlation_loss(X)
                   + 1.0 * covariance_loss(X)
                   + 0.5 * coordinate_balance_loss(X)
-                  + 0.3 * projection_gaussianity_loss(X)   # much weaker
-                  + 0.5 * tangent_norm_loss(X)
+                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
+                  #+ 0.5 * tangent_norm_loss(X)
                 )
                 
                 return loss
