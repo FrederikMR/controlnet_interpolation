@@ -948,16 +948,17 @@ class ContextManager:
             def gaussian_curve_loss(
                 X,
             ):
+                X = X.reshape(-1, X.shape[-1])
                 d = X.shape[-1]
                 loss = (
-                    1.0 * torch.vmap(shell_loss)(X)
-                  + 1.0 * torch.vmap(radial_orthogonality_loss)(X)
-                  + 0.5 * torch.vmap(increment_correlation_loss)(X)
-                  + 1.0 * torch.vmap(covariance_loss)(X)
-                  + 0.5 * torch.vmap(coordinate_balance_loss)(X)
-                  + 0.3 * d * torch.vmap(projection_gaussianity_loss)(X)   # much weaker
-                  + 0.5 * torch.vmap(tangent_norm_loss)(X)
-                  + 0.5 * torch.vmap(lambda x: softmax_coordinate_loss(x, max_val=2.5))(X)
+                    1.0 * shell_loss(X)
+                  + 1.0 * radial_orthogonality_loss(X)
+                  + 0.5 * increment_correlation_loss(X)
+                  + 1.0 * covariance_loss(X)
+                  + 0.5 * coordinate_balance_loss(X)
+                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
+                  + 0.5 * tangent_norm_loss(X)
+                  + 0.5 * softmax_coordinate_loss(X, max_val=2.5)
                 )
                 
                 return loss
