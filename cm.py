@@ -625,27 +625,115 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            def soft_hinge_penalty_batch(v, lower=-2.0, upper=2.0):
+            def shell_loss(X):
                 """
-                Calculates the soft hinge penalty for each entry in the tensor `v`
-                to ensure they stay within the interval [lower, upper].
-                
-                Args:
-                - v (torch.Tensor): The input batch of vectors (N x D)
-                - lower (float): Lower bound for the interval
-                - upper (float): Upper bound for the interval
-                
-                Returns:
-                - penalty (torch.Tensor): The soft hinge penalty for each vector in v
+                Enforces ||x|| ≈ sqrt(d)
                 """
-                # Apply soft hinge (ReLU-style) penalty for each element in the batch
-                penalty = torch.relu(v - upper)**2 + torch.relu(lower - v)**2
-                # Sum the penalties across each vector (i.e., across the second dimension)
-                return penalty.sum(dim=1).mean()  # mean over batch
+                d = X.shape[1]
+                target = d ** 0.5
+                norms = X.norm(dim=1)
+                return ((norms - target) ** 2).mean()
             
-            reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) + torch.sum((torch.sum(x**2, axis=1)-dimension)**2) + soft_hinge_penalty_batch(x)
+            def local_distance_loss(X, k=1):
+                """
+                Enforces ||x_i - x_{i+k}||^2 ≈ 2d
+                """
+                d = X.shape[1]
+                diffs = X[k:] - X[:-k]
+                dist2 = (diffs ** 2).sum(dim=1)
+                return ((dist2 - 2 * d) ** 2).mean()
+            
+            def radial_orthogonality_loss(X):
+                """
+                Enforces x_i ⟂ (x_{i+1} - x_i)
+                """
+                dx = X[1:] - X[:-1]
+                dots = (X[:-1] * dx).sum(dim=1)
+                return (dots ** 2).mean()
+            
+            def increment_correlation_loss(X):
+                """
+                Penalizes correlation between consecutive increments
+                """
+                dx = X[1:] - X[:-1]
+                dx = dx / (dx.norm(dim=1, keepdim=True) + 1e-8)
+                corr = (dx[1:] * dx[:-1]).sum(dim=1)
+                return (corr ** 2).mean()
+            
+            
+            def covariance_loss(X):
+                """
+                Enforces empirical covariance ≈ I
+                """
+                Xc = X - X.mean(dim=0, keepdim=True)
+                N, d = X.shape
+                cov = (Xc.T @ Xc) / N
+                return ((cov - torch.eye(d, device=X.device)) ** 2).mean()
+            
+            def coordinate_balance_loss(X):
+                """
+                Prevents variance collapse in some dimensions
+                """
+                var = X.var(dim=0)
+                return ((var - 1.0) ** 2).mean()
+            
+            U = torch.randn(100, dimension, device="cuda")
+            U = U / U.norm(dim=1, keepdim=True)
+            def projection_gaussianity_loss(X):
+                """
+                Enforces Gaussianity of random 1D projections
+                """
+                N, d = X.shape
+            
+                proj = X @ U.T  # (N, n_proj)
+            
+                # Moment matching on projections
+                mean = proj.mean(dim=0)
+                var = proj.var(dim=0, unbiased=False)
+                m3 = ((proj - mean) ** 3).mean(dim=0)
+                m4 = ((proj - mean) ** 4).mean(dim=0)
+            
+                loss = (
+                    (mean ** 2).mean()
+                    + ((var - 1) ** 2).mean()
+                    + (m3 ** 2).mean()
+                    + ((m4 - 3) ** 2).mean()
+                )
+                return loss
+            
+            def tangent_norm_loss(X, target=None):
+                dx = X[1:] - X[:-1]
+                norms = dx.norm(dim=1)
+                if target is None:
+                    target = norms.mean().detach()
+                return ((norms - target) ** 2).mean()
+            
+            def softmax_coordinate_loss(X, max_val=4.0, beta=10.0):
+                """
+                Smooth penalty for exceeding max_val using a softplus-like function.
+                """
+                excess = X.abs() - max_val
+                return (torch.log1p(torch.exp(beta * excess)) / beta).mean()
+
+            def gaussian_curve_loss(
+                X,
+            ):
+                d = X.shape[1]
+                loss = (
+                    1.0 * shell_loss(X)
+                  + 1.0 * radial_orthogonality_loss(X)
+                  + 0.5 * increment_correlation_loss(X)
+                  + 1.0 * covariance_loss(X)
+                  + 0.5 * coordinate_balance_loss(X)
+                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
+                  + 0.5 * tangent_norm_loss(X)
+                  + 0.5 * d * softmax_coordinate_loss(X, max_val=2.5)
+                )
+                
+                return loss
+
             M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), gradS=None, lam=self.lam)
+            Mlambda = LambdaManifold(M=M, S=lambda x: gaussian_curve_loss, gradS=None, lam=self.lam)
             # Compute gradient using autograd
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
@@ -767,28 +855,114 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            def soft_hinge_penalty_batch(v, lower=-2.0, upper=2.0):
+            def shell_loss(X):
                 """
-                Calculates the soft hinge penalty for each entry in the tensor `v`
-                to ensure they stay within the interval [lower, upper].
-                
-                Args:
-                - v (torch.Tensor): The input batch of vectors (N x D)
-                - lower (float): Lower bound for the interval
-                - upper (float): Upper bound for the interval
-                
-                Returns:
-                - penalty (torch.Tensor): The soft hinge penalty for each vector in v
+                Enforces ||x|| ≈ sqrt(d)
                 """
-                # Apply soft hinge (ReLU-style) penalty for each element in the batch
-                penalty = torch.relu(v - upper)**2 + torch.relu(lower - v)**2
-                # Sum the penalties across each vector (i.e., across the second dimension)
-                return penalty.sum(dim=1).mean()  # mean over batch
+                d = X.shape[1]
+                target = d ** 0.5
+                norms = X.norm(dim=1)
+                return ((norms - target) ** 2).mean()
             
-            def reg_fun(x):
-                return torch.sum(-S.log_prob(torch.sum(x**2, axis=-1)) + ((torch.sum(x**2, axis=-1)-dimension)**2) + soft_hinge_penalty_batch(x))
+            def local_distance_loss(X, k=1):
+                """
+                Enforces ||x_i - x_{i+k}||^2 ≈ 2d
+                """
+                d = X.shape[1]
+                diffs = X[k:] - X[:-k]
+                dist2 = (diffs ** 2).sum(dim=1)
+                return ((dist2 - 2 * d) ** 2).mean()
             
-            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
+            def radial_orthogonality_loss(X):
+                """
+                Enforces x_i ⟂ (x_{i+1} - x_i)
+                """
+                dx = X[1:] - X[:-1]
+                dots = (X[:-1] * dx).sum(dim=1)
+                return (dots ** 2).mean()
+            
+            def increment_correlation_loss(X):
+                """
+                Penalizes correlation between consecutive increments
+                """
+                dx = X[1:] - X[:-1]
+                dx = dx / (dx.norm(dim=1, keepdim=True) + 1e-8)
+                corr = (dx[1:] * dx[:-1]).sum(dim=1)
+                return (corr ** 2).mean()
+            
+            
+            def covariance_loss(X):
+                """
+                Enforces empirical covariance ≈ I
+                """
+                Xc = X - X.mean(dim=0, keepdim=True)
+                N, d = X.shape
+                cov = (Xc.T @ Xc) / N
+                return ((cov - torch.eye(d, device=X.device)) ** 2).mean()
+            
+            def coordinate_balance_loss(X):
+                """
+                Prevents variance collapse in some dimensions
+                """
+                var = X.var(dim=0)
+                return ((var - 1.0) ** 2).mean()
+            
+            U = torch.randn(100, dimension, device="cuda")
+            U = U / U.norm(dim=1, keepdim=True)
+            def projection_gaussianity_loss(X):
+                """
+                Enforces Gaussianity of random 1D projections
+                """
+                N, d = X.shape
+            
+                proj = X @ U.T  # (N, n_proj)
+            
+                # Moment matching on projections
+                mean = proj.mean(dim=0)
+                var = proj.var(dim=0, unbiased=False)
+                m3 = ((proj - mean) ** 3).mean(dim=0)
+                m4 = ((proj - mean) ** 4).mean(dim=0)
+            
+                loss = (
+                    (mean ** 2).mean()
+                    + ((var - 1) ** 2).mean()
+                    + (m3 ** 2).mean()
+                    + ((m4 - 3) ** 2).mean()
+                )
+                return loss
+            
+            def tangent_norm_loss(X, target=None):
+                dx = X[1:] - X[:-1]
+                norms = dx.norm(dim=1)
+                if target is None:
+                    target = norms.mean().detach()
+                return ((norms - target) ** 2).mean()
+            
+            def softmax_coordinate_loss(X, max_val=4.0, beta=10.0):
+                """
+                Smooth penalty for exceeding max_val using a softplus-like function.
+                """
+                excess = X.abs() - max_val
+                return (torch.log1p(torch.exp(beta * excess)) / beta).mean()
+
+            def gaussian_curve_loss(
+                X,
+            ):
+                d = X.shape[1]
+                loss = (
+                    1.0 * shell_loss(X)
+                  + 1.0 * radial_orthogonality_loss(X)
+                  + 0.5 * increment_correlation_loss(X)
+                  + 1.0 * covariance_loss(X)
+                  + 0.5 * coordinate_balance_loss(X)
+                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
+                  + 0.5 * d * tangent_norm_loss(X)
+                  + 0.5 * softmax_coordinate_loss(X, max_val=2.5)
+                )
+                
+                return loss
+            
+            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = lambda x: gaussian_curve_loss(x),
                                                   init_fun=None,
                                                   lam = self.lam,
                                                   N_grid=self.N,
