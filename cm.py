@@ -733,7 +733,7 @@ class ContextManager:
                 return loss
 
             M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, S=lambda x: gaussian_curve_loss, gradS=None, lam=self.lam)
+            Mlambda = LambdaManifold(M=M, S=lambda x: gaussian_curve_loss(x.reshape(-1,dimension)), gradS=None, lam=self.lam)
             # Compute gradient using autograd
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
