@@ -367,8 +367,7 @@ class ContextManager:
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
-        cur_step=140
-        
+        cur_step=140        
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
@@ -406,16 +405,106 @@ class ContextManager:
             #                                   device="cuda:0",
             #                                   )
             
-            reg_fun1 = lambda x: torch.sum((torch.sum(x**2, axis=-1)-dimension)**2)
-            reg_fun2 = lambda x: torch.sum(
-                (
-                    x**2 / torch.sum(x**2, dim=-1, keepdim=True)
-                    - 1.0 / dimension
-                    )**2
-                )
-
+            def shell_loss(X):
+                """
+                Enforces ||x|| ≈ sqrt(d)
+                """
+                d = X.shape[1]
+                target = d ** 0.5
+                norms = X.norm(dim=1)
+                return ((norms - target) ** 2).mean()
             
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: reg_fun1(x) + reg_fun2(x),
+            def local_distance_loss(X, k=1):
+                """
+                Enforces ||x_i - x_{i+k}||^2 ≈ 2d
+                """
+                d = X.shape[1]
+                diffs = X[k:] - X[:-k]
+                dist2 = (diffs ** 2).sum(dim=1)
+                return ((dist2 - 2 * d) ** 2).mean()
+            
+            def radial_orthogonality_loss(X):
+                """
+                Enforces x_i ⟂ (x_{i+1} - x_i)
+                """
+                dx = X[1:] - X[:-1]
+                dots = (X[:-1] * dx).sum(dim=1)
+                return (dots ** 2).mean()
+            
+            def increment_correlation_loss(X):
+                """
+                Penalizes correlation between consecutive increments
+                """
+                dx = X[1:] - X[:-1]
+                dx = dx / (dx.norm(dim=1, keepdim=True) + 1e-8)
+                corr = (dx[1:] * dx[:-1]).sum(dim=1)
+                return (corr ** 2).mean()
+            
+            
+            def covariance_loss(X):
+                """
+                Enforces empirical covariance ≈ I
+                """
+                Xc = X - X.mean(dim=0, keepdim=True)
+                N, d = X.shape
+                cov = (Xc.T @ Xc) / N
+                return ((cov - torch.eye(d, device=X.device)) ** 2).mean()
+            
+            def coordinate_balance_loss(X):
+                """
+                Prevents variance collapse in some dimensions
+                """
+                var = X.var(dim=0)
+                return ((var - 1.0) ** 2).mean()
+            
+            def projection_gaussianity_loss(X, n_proj=32):
+                """
+                Enforces Gaussianity of random 1D projections
+                """
+                N, d = X.shape
+                device = X.device
+            
+                U = torch.randn(n_proj, d, device=device)
+                U = U / U.norm(dim=1, keepdim=True)
+            
+                proj = X @ U.T  # (N, n_proj)
+            
+                # Moment matching on projections
+                mean = proj.mean(dim=0)
+                var = proj.var(dim=0, unbiased=False)
+                m3 = ((proj - mean) ** 3).mean(dim=0)
+                m4 = ((proj - mean) ** 4).mean(dim=0)
+            
+                loss = (
+                    (mean ** 2).mean()
+                    + ((var - 1) ** 2).mean()
+                    + (m3 ** 2).mean()
+                    + ((m4 - 3) ** 2).mean()
+                )
+                return loss
+
+            def gaussian_curve_loss(
+                X,
+                w_shell=1.0,
+                w_dist=1.0,
+                w_radial=1.0,
+                w_incorr=0.5,
+                w_cov=1.0,
+                w_balance=0.5,
+                w_projection=1.0,
+            ):
+                loss = 0.0
+                d = X.shape[1]
+                loss += w_shell * shell_loss(X)
+                loss += w_dist * local_distance_loss(X)
+                loss += w_radial * radial_orthogonality_loss(X)
+                loss += w_incorr * increment_correlation_loss(X)
+                loss += w_cov * covariance_loss(X)
+                loss += w_balance * coordinate_balance_loss(X)
+                loss += w_projection * d * projection_gaussianity_loss(X, n_proj=32)
+                return loss
+            
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: gaussian_curve_loss(x),
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
