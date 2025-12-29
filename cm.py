@@ -457,15 +457,13 @@ class ContextManager:
                 var = X.var(dim=0)
                 return ((var - 1.0) ** 2).mean()
             
-            def projection_gaussianity_loss(X, n_proj=32):
+            U = torch.randn(32, dimension, device="cuda")
+            U = U / U.norm(dim=1, keepdim=True)
+            def projection_gaussianity_loss(X):
                 """
                 Enforces Gaussianity of random 1D projections
                 """
                 N, d = X.shape
-                device = X.device
-            
-                U = torch.randn(n_proj, d, device=device)
-                U = U / U.norm(dim=1, keepdim=True)
             
                 proj = X @ U.T  # (N, n_proj)
             
