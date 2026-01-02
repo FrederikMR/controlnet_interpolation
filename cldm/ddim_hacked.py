@@ -319,6 +319,84 @@ class DDIMSampler(object):
         if return_intermediates:
             out.update({'intermediates': intermediates})
         return x_next, out
+    
+    @torch.no_grad()
+    def encode_one_step(
+        self,
+        x_t,
+        step_idx,
+        c,
+        use_original_steps=False,
+        unconditional_guidance_scale=1.0,
+        unconditional_conditioning=None,
+    ):
+        """
+        Perform ONE DDIM encoding step: x_t -> x_{t+1}
+        """
+    
+        # --- timestep selection ---
+        timesteps = (
+            np.arange(self.ddpm_num_timesteps)
+            if use_original_steps
+            else self.ddim_timesteps
+        )
+    
+        t = torch.full(
+            (x_t.shape[0],),
+            timesteps[step_idx],
+            device=x_t.device,
+            dtype=torch.long
+        )
+    
+        # --- alpha selection ---
+        if use_original_steps:
+            alpha_next = self.alphas_cumprod[step_idx]
+            alpha = self.alphas_cumprod_prev[step_idx]
+        else:
+            alpha_next = self.ddim_alphas[step_idx]
+            alpha = self.ddim_alphas_prev[step_idx]
+    
+        # --- noise prediction ---
+        if unconditional_guidance_scale == 1.0:
+            eps = self.model.apply_model(x_t, t, c)
+        else:
+            assert unconditional_conditioning is not None
+    
+            merged_dict = {}
+            for key in unconditional_conditioning.keys():
+                if unconditional_conditioning[key] is not None and c[key] is not None:
+                    merged_dict[key] = [
+                        torch.cat((
+                            unconditional_conditioning[key][0],
+                            c[key][0]
+                        ))
+                    ]
+                else:
+                    merged_dict[key] = None
+    
+            eps_uncond, eps_cond = torch.chunk(
+                self.model.apply_model(
+                    torch.cat((x_t, x_t)),
+                    torch.cat((t, t)),
+                    merged_dict
+                ),
+                2
+            )
+            eps = eps_uncond + unconditional_guidance_scale * (eps_cond - eps_uncond)
+    
+        # --- DDIM forward update ---
+        x_next = (
+            (alpha_next / alpha).sqrt() * x_t
+            + alpha_next.sqrt()
+            * (
+                (1 / alpha_next - 1).sqrt()
+                - (1 / alpha - 1).sqrt()
+            )
+            * eps
+        )
+    
+        return x_next
+
 
     @torch.no_grad()
     def stochastic_encode(self, x0, t, use_original_steps=False, noise=None):

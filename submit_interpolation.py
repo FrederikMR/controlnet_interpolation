@@ -85,7 +85,7 @@ def loop_jobs(wait_time = 1.0):
     lam = [1.0]#[0.1, 0.5, 1.0, 10.0]
 
     model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    #model = ['afhq-cat']
+    model = ['afhq-cat']
     computation_methods = ['mean']
     run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
@@ -93,7 +93,7 @@ def loop_jobs(wait_time = 1.0):
     #model = ['cat']
     #computation_methods = ['bvp']#['ivp', 'bvp']
     computation_methods = ['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
     return
                             

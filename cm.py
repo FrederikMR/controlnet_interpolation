@@ -951,7 +951,6 @@ class ContextManager:
                 X = X.reshape(-1, X.shape[-1])
                 d = X.shape[-1]
                 loss = (
-                    1.0 * shell_loss(X)
                   + 1.0 * radial_orthogonality_loss(X)
                   + 0.5 * increment_correlation_loss(X)
                   + 1.0 * covariance_loss(X)
@@ -963,7 +962,112 @@ class ContextManager:
                 
                 return loss
             
-            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = lambda x: gaussian_curve_loss(x),
+            
+            import torch
+            import torch.nn.functional as F
+            
+            def noise_space_loss(
+                self,
+                x_t,
+                ddim_index,          # IMPORTANT: index in ddim_timesteps
+                cond,
+                score_corrector=None,
+                corrector_kwargs=None,
+                unconditional_guidance_scale=1.0,
+                unconditional_conditioning=None,
+                use_original_steps=False,
+                lambda_score=1.0,
+                lambda_prior=1e-4,
+                lambda_stable=0.1,
+            ):
+                """
+                x_t: latent at DDIM index i (requires_grad=True)
+                ddim_index: integer index into ddim_timesteps
+                """
+            
+                device = x_t.device
+            
+                # --- timestep tensor ---
+                t_val = (
+                    self.ddim_sampler.ddim_timesteps[ddim_index]
+                    if not use_original_steps
+                    else ddim_index
+                )
+            
+                t = torch.full(
+                    (x_t.shape[0],),
+                    t_val,
+                    device=device,
+                    dtype=torch.long
+                )
+            
+                # ------------------------------------------------
+                # 1. Score regularization (stay on manifold)
+                # ------------------------------------------------
+                eps_pred = self.ddim_sampler.pred_eps(
+                    x_t,
+                    cond,
+                    t,
+                    score_corrector=score_corrector,
+                    corrector_kwargs=corrector_kwargs,
+                    unconditional_guidance_scale=unconditional_guidance_scale,
+                    unconditional_conditioning=unconditional_conditioning,
+                )
+            
+                loss_score = eps_pred.pow(2).mean()
+            
+                # ------------------------------------------------
+                # 2. Gaussian prior
+                # ------------------------------------------------
+                loss_prior = x_t.pow(2).mean()
+            
+                # ------------------------------------------------
+                # 3. Decode → encode stability
+                # ------------------------------------------------
+                with torch.no_grad():
+                    x_prev, _ = self.ddim_sampler.p_sample_ddim(
+                        x_t,
+                        cond,
+                        t,
+                        index=ddim_index,
+                        use_original_steps=use_original_steps,
+                        unconditional_guidance_scale=unconditional_guidance_scale,
+                        unconditional_conditioning=unconditional_conditioning,
+                    )
+            
+                x_prev = x_prev.detach()
+            
+                x_recon = self.ddim_sampler.encode_one_step(
+                    x_prev,
+                    step_idx=ddim_index,
+                    c=cond,
+                    use_original_steps=use_original_steps,
+                    unconditional_guidance_scale=unconditional_guidance_scale,
+                    unconditional_conditioning=unconditional_conditioning,
+                )
+            
+                loss_stable = torch.mean((x_t - x_recon) ** 2)
+            
+                # ------------------------------------------------
+                # Total
+                # ------------------------------------------------
+                total_loss = (
+                    lambda_score * loss_score
+                    + lambda_prior * loss_prior
+                    + lambda_stable * loss_stable
+                )
+            
+                return total_loss
+
+            
+            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = lambda x: noise_space_loss(x, 
+                                                                                       cur_step,
+                                                                                       cond,
+                                                                                       score_corrector=None, 
+                                                                                       corrector_kwargs=None,
+                                                                                       unconditional_guidance_scale=guide_scale, 
+                                                                                       unconditional_conditioning=un_cond,
+                                                                                       ),
                                                   init_fun=None,
                                                   lam = self.lam,
                                                   N_grid=self.N,
