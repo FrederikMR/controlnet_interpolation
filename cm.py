@@ -189,6 +189,99 @@ class ContextManager:
         
         return
     
+    def noise_space_loss(
+            self,
+            x_t,
+            ddim_index,          # IMPORTANT: index in ddim_timesteps
+            cond,
+            score_corrector=None,
+            corrector_kwargs=None,
+            unconditional_guidance_scale=1.0,
+            unconditional_conditioning=None,
+            use_original_steps=False,
+            lambda_score=1.0,
+            lambda_prior=1e-4,
+            lambda_stable=0.1,
+            ):
+        """
+        x_t: latent at DDIM index i (requires_grad=True)
+        ddim_index: integer index into ddim_timesteps
+        """
+    
+        device = x_t.device
+    
+        # --- timestep tensor ---
+        t_val = (
+            self.ddim_sampler.ddim_timesteps[ddim_index]
+            if not use_original_steps
+            else ddim_index
+        )
+    
+        t = torch.full(
+            (x_t.shape[0],),
+            t_val,
+            device=device,
+            dtype=torch.long
+        )
+    
+        # ------------------------------------------------
+        # 1. Score regularization (stay on manifold)
+        # ------------------------------------------------
+        eps_pred = self.ddim_sampler.pred_eps(
+            x_t,
+            cond,
+            t,
+            score_corrector=score_corrector,
+            corrector_kwargs=corrector_kwargs,
+            unconditional_guidance_scale=unconditional_guidance_scale,
+            unconditional_conditioning=unconditional_conditioning,
+        )
+    
+        loss_score = eps_pred.pow(2).mean()
+    
+        # ------------------------------------------------
+        # 2. Gaussian prior
+        # ------------------------------------------------
+        loss_prior = x_t.pow(2).mean()
+    
+        # ------------------------------------------------
+        # 3. Decode → encode stability
+        # ------------------------------------------------
+        with torch.no_grad():
+            x_prev, _ = self.ddim_sampler.p_sample_ddim(
+                x_t,
+                cond,
+                t,
+                index=ddim_index,
+                use_original_steps=use_original_steps,
+                unconditional_guidance_scale=unconditional_guidance_scale,
+                unconditional_conditioning=unconditional_conditioning,
+            )
+    
+        x_prev = x_prev.detach()
+    
+        x_recon = self.ddim_sampler.encode_one_step(
+            x_prev,
+            step_idx=ddim_index,
+            c=cond,
+            use_original_steps=use_original_steps,
+            unconditional_guidance_scale=unconditional_guidance_scale,
+            unconditional_conditioning=unconditional_conditioning,
+        )
+    
+        loss_stable = torch.mean((x_t - x_recon) ** 2)
+    
+        # ------------------------------------------------
+        # Total
+        # ------------------------------------------------
+        total_loss = (
+            lambda_score * loss_score
+            + lambda_prior * loss_prior
+            + lambda_stable * loss_stable
+        )
+    
+        return total_loss
+    
     def prompt_strength(self,
                         t, 
                         noisy_curve,
@@ -395,124 +488,21 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            #self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: -torch.sum(S.log_prob(torch.sum(x**2, axis=-1))) + torch.sum((torch.sum(x**2, axis=1)-dimension)**2) + soft_hinge_penalty_batch(x),
-            #                                   init_fun=None,
-            #                                   lam = self.lam,
-            #                                   N=self.N,
-            #                                   tol=1e-4,
-            #                                   max_iter=self.max_iter,
-            #                                   line_search_params = {'rho': 0.5},
-            #                                   device="cuda:0",
-            #                                   )
-            
-            def shell_loss(X):
-                """
-                Enforces ||x|| ≈ sqrt(d)
-                """
-                d = X.shape[1]
-                target = d ** 0.5
-                norms = X.norm(dim=1)
-                return ((norms - target) ** 2).mean()
-            
-            def local_distance_loss(X, k=1):
-                """
-                Enforces ||x_i - x_{i+k}||^2 ≈ 2d
-                """
-                d = X.shape[1]
-                diffs = X[k:] - X[:-k]
-                dist2 = (diffs ** 2).sum(dim=1)
-                return ((dist2 - 2 * d) ** 2).mean()
-            
-            def radial_orthogonality_loss(X):
-                """
-                Enforces x_i ⟂ (x_{i+1} - x_i)
-                """
-                dx = X[1:] - X[:-1]
-                dots = (X[:-1] * dx).sum(dim=1)
-                return (dots ** 2).mean()
-            
-            def increment_correlation_loss(X):
-                """
-                Penalizes correlation between consecutive increments
-                """
-                dx = X[1:] - X[:-1]
-                dx = dx / (dx.norm(dim=1, keepdim=True) + 1e-8)
-                corr = (dx[1:] * dx[:-1]).sum(dim=1)
-                return (corr ** 2).mean()
-            
-            
-            def covariance_loss(X):
-                """
-                Enforces empirical covariance ≈ I
-                """
-                Xc = X - X.mean(dim=0, keepdim=True)
-                N, d = X.shape
-                cov = (Xc.T @ Xc) / N
-                return ((cov - torch.eye(d, device=X.device)) ** 2).mean()
-            
-            def coordinate_balance_loss(X):
-                """
-                Prevents variance collapse in some dimensions
-                """
-                var = X.var(dim=0)
-                return ((var - 1.0) ** 2).mean()
-            
-            U = torch.randn(100, dimension, device="cuda")
-            U = U / U.norm(dim=1, keepdim=True)
-            def projection_gaussianity_loss(X):
-                """
-                Enforces Gaussianity of random 1D projections
-                """
-                N, d = X.shape
-            
-                proj = X @ U.T  # (N, n_proj)
-            
-                # Moment matching on projections
-                mean = proj.mean(dim=0)
-                var = proj.var(dim=0, unbiased=False)
-                m3 = ((proj - mean) ** 3).mean(dim=0)
-                m4 = ((proj - mean) ** 4).mean(dim=0)
-            
-                loss = (
-                    (mean ** 2).mean()
-                    + ((var - 1) ** 2).mean()
-                    + (m3 ** 2).mean()
-                    + ((m4 - 3) ** 2).mean()
+            reg_fun = lambda x: self.noise_space_loss(
+                x,
+                cur_step,          # IMPORTANT: index in ddim_timesteps
+                cond,
+                score_corrector=None,
+                corrector_kwargs=None,
+                unconditional_guidance_scale=1.0,
+                unconditional_conditioning=None,
+                use_original_steps=False,
+                lambda_score=1.0,
+                lambda_prior=1e-4,
+                lambda_stable=0.1,
                 )
-                return loss
             
-            def tangent_norm_loss(X, target=None):
-                dx = X[1:] - X[:-1]
-                norms = dx.norm(dim=1)
-                if target is None:
-                    target = norms.mean().detach()
-                return ((norms - target) ** 2).mean()
-            
-            def softmax_coordinate_loss(X, max_val=4.0, beta=10.0):
-                """
-                Smooth penalty for exceeding max_val using a softplus-like function.
-                """
-                excess = X.abs() - max_val
-                return (torch.log1p(torch.exp(beta * excess)) / beta).mean()
-
-            def gaussian_curve_loss(
-                X,
-            ):
-                d = X.shape[1]
-                loss = (
-                    1.0 * shell_loss(X)
-                  + 1.0 * radial_orthogonality_loss(X)
-                  + 0.5 * increment_correlation_loss(X)
-                  + 1.0 * covariance_loss(X)
-                  + 0.5 * coordinate_balance_loss(X)
-                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
-                  + 0.5 * tangent_norm_loss(X)
-                  + 0.5 * softmax_coordinate_loss(X, max_val=2.5)
-                )
-                
-                return loss
-            
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = lambda x: gaussian_curve_loss(x),
+            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = reg_fun,
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
@@ -625,115 +615,22 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            def shell_loss(X):
-                """
-                Enforces ||x|| ≈ sqrt(d)
-                """
-                d = X.shape[1]
-                target = d ** 0.5
-                norms = X.norm(dim=1)
-                return ((norms - target) ** 2).mean()
-            
-            def local_distance_loss(X, k=1):
-                """
-                Enforces ||x_i - x_{i+k}||^2 ≈ 2d
-                """
-                d = X.shape[1]
-                diffs = X[k:] - X[:-k]
-                dist2 = (diffs ** 2).sum(dim=1)
-                return ((dist2 - 2 * d) ** 2).mean()
-            
-            def radial_orthogonality_loss(X):
-                """
-                Enforces x_i ⟂ (x_{i+1} - x_i)
-                """
-                dx = X[1:] - X[:-1]
-                dots = (X[:-1] * dx).sum(dim=1)
-                return (dots ** 2).mean()
-            
-            def increment_correlation_loss(X):
-                """
-                Penalizes correlation between consecutive increments
-                """
-                dx = X[1:] - X[:-1]
-                dx = dx / (dx.norm(dim=1, keepdim=True) + 1e-8)
-                corr = (dx[1:] * dx[:-1]).sum(dim=1)
-                return (corr ** 2).mean()
-            
-            
-            def covariance_loss(X):
-                """
-                Enforces empirical covariance ≈ I
-                """
-                Xc = X - X.mean(dim=0, keepdim=True)
-                N, d = X.shape
-                cov = (Xc.T @ Xc) / N
-                return ((cov - torch.eye(d, device=X.device)) ** 2).mean()
-            
-            def coordinate_balance_loss(X):
-                """
-                Prevents variance collapse in some dimensions
-                """
-                var = X.var(dim=0)
-                return ((var - 1.0) ** 2).mean()
-            
-            U = torch.randn(100, dimension, device="cuda")
-            U = U / U.norm(dim=1, keepdim=True)
-            def projection_gaussianity_loss(X):
-                """
-                Enforces Gaussianity of random 1D projections
-                """
-                N, d = X.shape
-            
-                proj = X @ U.T  # (N, n_proj)
-            
-                # Moment matching on projections
-                mean = proj.mean(dim=0)
-                var = proj.var(dim=0, unbiased=False)
-                m3 = ((proj - mean) ** 3).mean(dim=0)
-                m4 = ((proj - mean) ** 4).mean(dim=0)
-            
-                loss = (
-                    (mean ** 2).mean()
-                    + ((var - 1) ** 2).mean()
-                    + (m3 ** 2).mean()
-                    + ((m4 - 3) ** 2).mean()
+            reg_fun = lambda x: self.noise_space_loss(
+                x,
+                cur_step,          # IMPORTANT: index in ddim_timesteps
+                cond,
+                score_corrector=None,
+                corrector_kwargs=None,
+                unconditional_guidance_scale=1.0,
+                unconditional_conditioning=None,
+                use_original_steps=False,
+                lambda_score=1.0,
+                lambda_prior=1e-4,
+                lambda_stable=0.1,
                 )
-                return loss
-            
-            def tangent_norm_loss(X, target=None):
-                dx = X[1:] - X[:-1]
-                norms = dx.norm(dim=1)
-                if target is None:
-                    target = norms.mean().detach()
-                return ((norms - target) ** 2).mean()
-            
-            def softmax_coordinate_loss(X, max_val=4.0, beta=10.0):
-                """
-                Smooth penalty for exceeding max_val using a softplus-like function.
-                """
-                excess = X.abs() - max_val
-                return (torch.log1p(torch.exp(beta * excess)) / beta).mean()
-
-            def gaussian_curve_loss(
-                X,
-            ):
-                d = X.shape[1]
-                loss = (
-                    1.0 * shell_loss(X)
-                  + 1.0 * radial_orthogonality_loss(X)
-                  + 0.5 * increment_correlation_loss(X)
-                  + 1.0 * covariance_loss(X)
-                  + 0.5 * coordinate_balance_loss(X)
-                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
-                  + 0.5 * tangent_norm_loss(X)
-                  + 0.5 * softmax_coordinate_loss(X, max_val=2.5)
-                )
-                
-                return loss
 
             M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, S=lambda x: gaussian_curve_loss(x.reshape(-1,dimension)), gradS=None, lam=self.lam)
+            Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)), gradS=None, lam=self.lam)
             # Compute gradient using autograd
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
@@ -855,121 +752,9 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            def shell_loss(X):
-                """
-                Enforces ||x|| ≈ sqrt(d)
-                """
-                d = X.shape[1]
-                target = d ** 0.5
-                norms = X.norm(dim=1)
-                return ((norms - target) ** 2).mean()
-            
-            def local_distance_loss(X, k=1):
-                """
-                Enforces ||x_i - x_{i+k}||^2 ≈ 2d
-                """
-                d = X.shape[1]
-                diffs = X[k:] - X[:-k]
-                dist2 = (diffs ** 2).sum(dim=1)
-                return ((dist2 - 2 * d) ** 2).mean()
-            
-            def radial_orthogonality_loss(X):
-                """
-                Enforces x_i ⟂ (x_{i+1} - x_i)
-                """
-                dx = X[1:] - X[:-1]
-                dots = (X[:-1] * dx).sum(dim=1)
-                return (dots ** 2).mean()
-            
-            def increment_correlation_loss(X):
-                """
-                Penalizes correlation between consecutive increments
-                """
-                dx = X[1:] - X[:-1]
-                dx = dx / (dx.norm(dim=1, keepdim=True) + 1e-8)
-                corr = (dx[1:] * dx[:-1]).sum(dim=1)
-                return (corr ** 2).mean()
-            
-            
-            def covariance_loss(X):
-                """
-                Enforces empirical covariance ≈ I
-                """
-                Xc = X - X.mean(dim=0, keepdim=True)
-                N, d = X.shape
-                cov = (Xc.T @ Xc) / N
-                return ((cov - torch.eye(d, device=X.device)) ** 2).mean()
-            
-            def coordinate_balance_loss(X):
-                """
-                Prevents variance collapse in some dimensions
-                """
-                var = X.var(dim=0)
-                return ((var - 1.0) ** 2).mean()
-            
-            U = torch.randn(100, dimension, device="cuda")
-            U = U / U.norm(dim=1, keepdim=True)
-            def projection_gaussianity_loss(X):
-                """
-                Enforces Gaussianity of random 1D projections
-                """
-                N, d = X.shape
-            
-                proj = X @ U.T  # (N, n_proj)
-            
-                # Moment matching on projections
-                mean = proj.mean(dim=0)
-                var = proj.var(dim=0, unbiased=False)
-                m3 = ((proj - mean) ** 3).mean(dim=0)
-                m4 = ((proj - mean) ** 4).mean(dim=0)
-            
-                loss = (
-                    (mean ** 2).mean()
-                    + ((var - 1) ** 2).mean()
-                    + (m3 ** 2).mean()
-                    + ((m4 - 3) ** 2).mean()
-                )
-                return loss
-            
-            def tangent_norm_loss(X, target=None):
-                dx = X[1:] - X[:-1]
-                norms = dx.norm(dim=1)
-                if target is None:
-                    target = norms.mean().detach()
-                return ((norms - target) ** 2).mean()
-            
-            def softmax_coordinate_loss(X, max_val=4.0, beta=10.0):
-                """
-                Smooth penalty for exceeding max_val using a softplus-like function.
-                """
-                excess = X.abs() - max_val
-                return (torch.log1p(torch.exp(beta * excess)) / beta).mean()
-
-            def gaussian_curve_loss(
-                X,
-            ):
-                X = X.reshape(-1, X.shape[-1])
-                d = X.shape[-1]
-                loss = (
-                  + 1.0 * radial_orthogonality_loss(X)
-                  + 0.5 * increment_correlation_loss(X)
-                  + 1.0 * covariance_loss(X)
-                  + 0.5 * coordinate_balance_loss(X)
-                  + 0.3 * d * projection_gaussianity_loss(X)   # much weaker
-                  + 0.5 * tangent_norm_loss(X)
-                  + 0.5 * softmax_coordinate_loss(X, max_val=2.5)
-                )
-                
-                return loss
-            
-            
-            import torch
-            import torch.nn.functional as F
-            
-            def noise_space_loss(
-                self,
-                x_t,
-                ddim_index,          # IMPORTANT: index in ddim_timesteps
+            reg_fun = lambda x: self.noise_space_loss(
+                x,
+                cur_step,          # IMPORTANT: index in ddim_timesteps
                 cond,
                 score_corrector=None,
                 corrector_kwargs=None,
@@ -979,95 +764,9 @@ class ContextManager:
                 lambda_score=1.0,
                 lambda_prior=1e-4,
                 lambda_stable=0.1,
-            ):
-                """
-                x_t: latent at DDIM index i (requires_grad=True)
-                ddim_index: integer index into ddim_timesteps
-                """
-            
-                device = x_t.device
-            
-                # --- timestep tensor ---
-                t_val = (
-                    self.ddim_sampler.ddim_timesteps[ddim_index]
-                    if not use_original_steps
-                    else ddim_index
                 )
-            
-                t = torch.full(
-                    (x_t.shape[0],),
-                    t_val,
-                    device=device,
-                    dtype=torch.long
-                )
-            
-                # ------------------------------------------------
-                # 1. Score regularization (stay on manifold)
-                # ------------------------------------------------
-                eps_pred = self.ddim_sampler.pred_eps(
-                    x_t,
-                    cond,
-                    t,
-                    score_corrector=score_corrector,
-                    corrector_kwargs=corrector_kwargs,
-                    unconditional_guidance_scale=unconditional_guidance_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                )
-            
-                loss_score = eps_pred.pow(2).mean()
-            
-                # ------------------------------------------------
-                # 2. Gaussian prior
-                # ------------------------------------------------
-                loss_prior = x_t.pow(2).mean()
-            
-                # ------------------------------------------------
-                # 3. Decode → encode stability
-                # ------------------------------------------------
-                with torch.no_grad():
-                    x_prev, _ = self.ddim_sampler.p_sample_ddim(
-                        x_t,
-                        cond,
-                        t,
-                        index=ddim_index,
-                        use_original_steps=use_original_steps,
-                        unconditional_guidance_scale=unconditional_guidance_scale,
-                        unconditional_conditioning=unconditional_conditioning,
-                    )
-            
-                x_prev = x_prev.detach()
-            
-                x_recon = self.ddim_sampler.encode_one_step(
-                    x_prev,
-                    step_idx=ddim_index,
-                    c=cond,
-                    use_original_steps=use_original_steps,
-                    unconditional_guidance_scale=unconditional_guidance_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                )
-            
-                loss_stable = torch.mean((x_t - x_recon) ** 2)
-            
-                # ------------------------------------------------
-                # Total
-                # ------------------------------------------------
-                total_loss = (
-                    lambda_score * loss_score
-                    + lambda_prior * loss_prior
-                    + lambda_stable * loss_stable
-                )
-            
-                return total_loss
 
-            
-            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = lambda x: noise_space_loss(x, 
-                                                                                       cur_step,
-                                                                                       cond,
-                                                                                       score_corrector=None, 
-                                                                                       corrector_kwargs=None,
-                                                                                       unconditional_guidance_scale=guide_scale, 
-                                                                                       unconditional_conditioning=un_cond,
-                                                                                       ),
+            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
                                                   init_fun=None,
                                                   lam = self.lam,
                                                   N_grid=self.N,

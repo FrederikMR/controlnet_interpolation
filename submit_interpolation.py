@@ -82,7 +82,7 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 100
     method = ['ProbGEORCE_Noise']
     clip = [0]#[0,1]
-    lam = [1.0]#[0.1, 0.5, 1.0, 10.0]
+    lam = [20.0]#[0.1, 0.5, 1.0, 10.0]
 
     model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
@@ -90,10 +90,9 @@ def loop_jobs(wait_time = 1.0):
     run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
     model = ['house', 'mountain', 'aircraft', "lion_tiger"]
-    #model = ['cat']
-    #computation_methods = ['bvp']#['ivp', 'bvp']
+    model = ['cat']
     computation_methods = ['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
     
     return
                             
