@@ -230,15 +230,16 @@ class ContextManager:
         # ------------------------------------------------
         # 1. Score regularization (single UNet forward)
         # ------------------------------------------------
-        eps_pred = self.ddim_sampler.pred_eps(
-            x_t,
-            cond,
-            t,
-            score_corrector=score_corrector,
-            corrector_kwargs=corrector_kwargs,
-            unconditional_guidance_scale=unconditional_guidance_scale,
-            unconditional_conditioning=unconditional_conditioning,
-        )
+        with torch.cuda.amp.autocast(dtype=torch.float16):
+            eps_pred = self.ddim_sampler.pred_eps(
+                x_t,
+                cond,
+                t,
+                score_corrector=score_corrector,
+                corrector_kwargs=corrector_kwargs,
+                unconditional_guidance_scale=unconditional_guidance_scale,
+                unconditional_conditioning=unconditional_conditioning,
+            )
     
         loss_score = eps_pred.pow(2).mean()
     
