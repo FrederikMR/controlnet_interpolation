@@ -220,7 +220,7 @@ class ContextManager:
         )
     
         t = torch.full(
-            (x_t.shape[0],),
+            (1,),#(x_t.shape[0],),
             t_val,
             device=device,
             dtype=torch.long
@@ -229,15 +229,15 @@ class ContextManager:
         # ------------------------------------------------
         # 1. Score regularization (stay on manifold)
         # ------------------------------------------------
-        eps_pred = self.ddim_sampler.pred_eps(
-            x_t,
+        eps_pred = torch.stack([self.ddim_sampler.pred_eps(
+            x.reshape(-1, *x.shape),
             cond,
             t,
             score_corrector=score_corrector,
             corrector_kwargs=corrector_kwargs,
             unconditional_guidance_scale=unconditional_guidance_scale,
             unconditional_conditioning=unconditional_conditioning,
-        )
+        ) for x in x_t])
     
         loss_score = eps_pred.pow(2).mean()
     
@@ -250,26 +250,26 @@ class ContextManager:
         # 3. Decode → encode stability
         # ------------------------------------------------
         with torch.no_grad():
-            x_prev, _ = self.ddim_sampler.p_sample_ddim(
-                x_t,
+            x_prev = torch.stack([self.ddim_sampler.p_sample_ddim(
+                x.reshape(-1, *x.shape),
                 cond,
                 t,
                 index=ddim_index,
                 use_original_steps=use_original_steps,
                 unconditional_guidance_scale=unconditional_guidance_scale,
                 unconditional_conditioning=unconditional_conditioning,
-            )
+            )[0] for x in x_t])
     
         x_prev = x_prev.detach()
     
-        x_recon = self.ddim_sampler.encode_one_step(
-            x_prev,
+        x_recon = torch.stack([self.ddim_sampler.encode_one_step(
+            x.reshape(-1, *x.shape),
             step_idx=ddim_index,
             c=cond,
             use_original_steps=use_original_steps,
             unconditional_guidance_scale=unconditional_guidance_scale,
             unconditional_conditioning=unconditional_conditioning,
-        )
+        ) for x in x_prev])
     
         loss_stable = torch.mean((x_t - x_recon) ** 2)
     
