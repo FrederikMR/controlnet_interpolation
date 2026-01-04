@@ -207,6 +207,8 @@ class ContextManager:
         x_t: latent at DDIM index i (requires_grad=True)
         ddim_index: integer index into ddim_timesteps
         """
+        
+        x_t = x_t.reshape(-1, 4, 96, 96)
     
         device = x_t.device
     
@@ -274,6 +276,99 @@ class ContextManager:
         # ------------------------------------------------
         # Total
         # ------------------------------------------------
+        total_loss = (
+            lambda_score * loss_score
+            + lambda_prior * loss_prior
+            + lambda_stable * loss_stable
+        )
+    
+        return total_loss
+    
+    def data_space_loss(
+            self,
+            x0,
+            ddim_index,              # index into ddim_timesteps
+            cond,
+            score_corrector=None,
+            corrector_kwargs=None,
+            unconditional_guidance_scale=1.0,
+            unconditional_conditioning=None,
+            use_original_steps=False,
+            lambda_score=1.0,
+            lambda_prior=1e-4,
+            lambda_stable=0.1,
+            ):
+        """
+        x0: latent in data space (requires_grad=True)
+        """
+    
+        # --- Step 1: encode to noise space ---
+        x_t, _ = self.ddim_sampler.encode(
+            x0,
+            c=cond,
+            t_enc=ddim_index,
+            use_original_steps=use_original_steps,
+            unconditional_guidance_scale=unconditional_guidance_scale,
+            unconditional_conditioning=unconditional_conditioning,
+        )
+    
+        # --- Step 2: score regularization ---
+        t_val = (
+            self.ddim_sampler.ddim_timesteps[ddim_index]
+            if not use_original_steps
+            else ddim_index
+        )
+        t = torch.full(
+            (x0.shape[0],),
+            t_val,
+            device=x0.device,
+            dtype=torch.long
+        )
+    
+        eps_pred = self.ddim_sampler.pred_eps(
+            x_t,
+            cond,
+            t,
+            score_corrector=score_corrector,
+            corrector_kwargs=corrector_kwargs,
+            unconditional_guidance_scale=unconditional_guidance_scale,
+            unconditional_conditioning=unconditional_conditioning,
+        )
+        loss_score = eps_pred.pow(2).mean()
+    
+        # --- Step 3: Gaussian prior on x0 ---
+        loss_prior = x0.pow(2).mean()
+    
+        # --- Step 4: decode → encode stability ---
+        with torch.no_grad():
+            x_prev, _ = self.ddim_sampler.p_sample_ddim(
+                x_t,
+                cond,
+                t,
+                index=ddim_index,
+                use_original_steps=use_original_steps,
+                unconditional_guidance_scale=unconditional_guidance_scale,
+                unconditional_conditioning=unconditional_conditioning,
+            )
+            x_prev = x_prev.detach()
+    
+        # Map back to data space
+        x_recon = self.ddim_sampler.encode_one_step(
+            x_prev,
+            step_idx=ddim_index,
+            c=cond,
+            use_original_steps=use_original_steps,
+            unconditional_guidance_scale=unconditional_guidance_scale,
+            unconditional_conditioning=unconditional_conditioning,
+        )
+    
+        # For data-space loss, we need to map back to x0
+        # If you have a decoder that maps latent → x0 space, you could do:
+        # x0_recon = decode(x_recon)  # optional
+        # Here we just use x_recon in latent space as a proxy
+        loss_stable = torch.mean((x_t - x_recon) ** 2)
+    
+        # --- Total ---
         total_loss = (
             lambda_score * loss_score
             + lambda_prior * loss_prior
@@ -516,11 +611,22 @@ class ContextManager:
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Data":
-            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
-                                                                                                                   score_corrector=None, 
-                                                                                                                   corrector_kwargs=None,
-                                                                                                                   unconditional_guidance_scale=guide_scale, 
-                                                                                                                   unconditional_conditioning=un_cond),
+            
+            reg_fun = lambda x: self.data_space_loss(
+                                                    x,
+                                                    cur_step,          # IMPORTANT: index in ddim_timesteps
+                                                    cond,
+                                                    score_corrector=None,
+                                                    corrector_kwargs=None,
+                                                    unconditional_guidance_scale=1.0,
+                                                    unconditional_conditioning=None,
+                                                    use_original_steps=False,
+                                                    lambda_score=1.0,
+                                                    lambda_prior=1e-4,
+                                                    lambda_stable=0.1,
+                                                    )
+            
+            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = reg_fun,
                                                                 init_fun= None,
                                                                 lam=self.lam,
                                                                 N=self.N,
@@ -637,22 +743,21 @@ class ContextManager:
             noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
         elif self.inter_method == "ProbGEORCE_Data":
             
-            cond = {"c_crossattn": [cond_target], 'c_concat': None}
-            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+            reg_fun = lambda x: self.data_space_loss(
+                                                    x,
+                                                    cur_step,          # IMPORTANT: index in ddim_timesteps
+                                                    cond,
+                                                    score_corrector=None,
+                                                    corrector_kwargs=None,
+                                                    unconditional_guidance_scale=1.0,
+                                                    unconditional_conditioning=None,
+                                                    use_original_steps=False,
+                                                    lambda_score=1.0,
+                                                    lambda_prior=1e-4,
+                                                    lambda_stable=0.1,
+                                                    )
             
-            dimension = len(l1.reshape(-1))
-            M = nEuclidean(dim=dimension)
-            
-            @torch.no_grad()
-            def score_fun(x):
-                
-                return  -self.ddim_sampler.score_fun(x,cond, 0,
-                                                     score_corrector=None, 
-                                                     corrector_kwargs=None,
-                                                     unconditional_guidance_scale=1., 
-                                                     unconditional_conditioning=un_cond,
-                                                     )
-            Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
+            Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
             #v0 = score_fun(left_image)
             v0 = torch.randn_like(left_image)
             with torch.no_grad():
@@ -779,12 +884,22 @@ class ContextManager:
             noisy_mean, noisy_curve = self.PGEORCE(img_encoded)
             noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,*latent_shape)
         elif self.inter_method == "ProbGEORCE_Data":
+            
+            reg_fun = lambda x: self.data_space_loss(
+                                                    x,
+                                                    cur_step,          # IMPORTANT: index in ddim_timesteps
+                                                    cond,
+                                                    score_corrector=None,
+                                                    corrector_kwargs=None,
+                                                    unconditional_guidance_scale=1.0,
+                                                    unconditional_conditioning=None,
+                                                    use_original_steps=False,
+                                                    lambda_score=1.0,
+                                                    lambda_prior=1e-4,
+                                                    lambda_stable=0.1,
+                                                    )
 
-            self.PGEORCE_Score_Data = ProbScoreGEORCEFM_Euclidean(score_fun = lambda x: -self.ddim_sampler.score_fun(x,cond, 0,
-                                                                                                                     score_corrector=None, 
-                                                                                                                     corrector_kwargs=None,
-                                                                                                                     unconditional_guidance_scale=guide_scale, 
-                                                                                                                     unconditional_conditioning=un_cond),
+            self.PGEORCE_Score_Data = ProbScoreGEORCEFM_Euclidean(score_fun = reg_fun,
                                                                   init_fun= None,
                                                                   lam=self.lam,
                                                                   N=self.N,
