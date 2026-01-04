@@ -192,10 +192,8 @@ class ContextManager:
     def noise_space_loss(
         self,
         x_t,
-        ddim_index,          # index in ddim_timesteps
+        ddim_index,
         cond,
-        score_corrector=None,
-        corrector_kwargs=None,
         unconditional_guidance_scale=1.0,
         unconditional_conditioning=None,
         use_original_steps=False,
@@ -204,44 +202,36 @@ class ContextManager:
         lambda_stable=0.1,
     ):
         """
-        x_t: (B, 4, H, W), requires_grad=True
+        x_t: (1, 4, H, W), requires_grad=True
         """
-   
+        
         x_t = x_t.reshape(-1, 4, 96, 96)
-        # ---- sanity checks ----
-        assert x_t.ndim == 4, "x_t must be (B, 4, H, W)"
+    
         B = x_t.shape[0]
         device = x_t.device
     
-        # ---- timestep ----
         t_val = (
             self.ddim_sampler.ddim_timesteps[ddim_index]
             if not use_original_steps
             else ddim_index
         )
     
-        t = torch.full(
-            (B,),
-            t_val,
-            device=device,
-            dtype=torch.long
-        )
+        t = torch.full((B,), t_val, device=device, dtype=torch.long)
     
         # ------------------------------------------------
-        # 1. Score regularization (single UNet forward)
+        # 1. Score term (NO gradients through UNet)
         # ------------------------------------------------
-        with torch.cuda.amp.autocast(dtype=torch.float16):
+        with torch.no_grad():
             eps_pred = self.ddim_sampler.pred_eps(
                 x_t,
                 cond,
                 t,
-                score_corrector=score_corrector,
-                corrector_kwargs=corrector_kwargs,
                 unconditional_guidance_scale=unconditional_guidance_scale,
                 unconditional_conditioning=unconditional_conditioning,
             )
     
-        loss_score = eps_pred.pow(2).mean()
+        # Score-matching style loss
+        loss_score = (x_t * eps_pred).mean()
     
         # ------------------------------------------------
         # 2. Gaussian prior
@@ -249,7 +239,7 @@ class ContextManager:
         loss_prior = x_t.pow(2).mean()
     
         # ------------------------------------------------
-        # 3. Decode → encode stability (no gradients through sampler)
+        # 3. Decode → encode stability (no UNet gradients)
         # ------------------------------------------------
         with torch.no_grad():
             x_prev, _ = self.ddim_sampler.p_sample_ddim(
@@ -262,28 +252,23 @@ class ContextManager:
                 unconditional_conditioning=unconditional_conditioning,
             )
     
-        # encode_one_step is deterministic; gradients should NOT flow through it
-        x_recon = self.ddim_sampler.encode_one_step(
-            x_prev,
-            step_idx=ddim_index,
-            c=cond,
-            use_original_steps=use_original_steps,
-            unconditional_guidance_scale=unconditional_guidance_scale,
-            unconditional_conditioning=unconditional_conditioning,
-        )
+            x_recon = self.ddim_sampler.encode_one_step(
+                x_prev,
+                step_idx=ddim_index,
+                c=cond,
+                use_original_steps=use_original_steps,
+                unconditional_guidance_scale=unconditional_guidance_scale,
+                unconditional_conditioning=unconditional_conditioning,
+            )
     
         loss_stable = (x_t - x_recon).pow(2).mean()
     
-        # ------------------------------------------------
-        # Total
-        # ------------------------------------------------
-        total_loss = (
+        return (
             lambda_score * loss_score
             + lambda_prior * loss_prior
             + lambda_stable * loss_stable
         )
-    
-        return total_loss
+
     
     def data_space_loss(
             self,
