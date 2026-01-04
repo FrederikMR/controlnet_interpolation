@@ -190,29 +190,30 @@ class ContextManager:
         return
     
     def noise_space_loss(
-            self,
-            x_t,
-            ddim_index,          # IMPORTANT: index in ddim_timesteps
-            cond,
-            score_corrector=None,
-            corrector_kwargs=None,
-            unconditional_guidance_scale=1.0,
-            unconditional_conditioning=None,
-            use_original_steps=False,
-            lambda_score=1.0,
-            lambda_prior=1e-4,
-            lambda_stable=0.1,
-            ):
+        self,
+        x_t,
+        ddim_index,          # index in ddim_timesteps
+        cond,
+        score_corrector=None,
+        corrector_kwargs=None,
+        unconditional_guidance_scale=1.0,
+        unconditional_conditioning=None,
+        use_original_steps=False,
+        lambda_score=1.0,
+        lambda_prior=1e-4,
+        lambda_stable=0.1,
+    ):
         """
-        x_t: latent at DDIM index i (requires_grad=True)
-        ddim_index: integer index into ddim_timesteps
+        x_t: (B, 4, H, W), requires_grad=True
         """
-        
+   
         x_t = x_t.reshape(-1, 4, 96, 96)
-    
+        # ---- sanity checks ----
+        assert x_t.ndim == 4, "x_t must be (B, 4, H, W)"
+        B = x_t.shape[0]
         device = x_t.device
     
-        # --- timestep tensor ---
+        # ---- timestep ----
         t_val = (
             self.ddim_sampler.ddim_timesteps[ddim_index]
             if not use_original_steps
@@ -220,24 +221,24 @@ class ContextManager:
         )
     
         t = torch.full(
-            (1,),#(x_t.shape[0],),
+            (B,),
             t_val,
             device=device,
             dtype=torch.long
         )
     
         # ------------------------------------------------
-        # 1. Score regularization (stay on manifold)
+        # 1. Score regularization (single UNet forward)
         # ------------------------------------------------
-        eps_pred = torch.stack([self.ddim_sampler.pred_eps(
-            x.reshape(-1, *x.shape),
+        eps_pred = self.ddim_sampler.pred_eps(
+            x_t,
             cond,
             t,
             score_corrector=score_corrector,
             corrector_kwargs=corrector_kwargs,
             unconditional_guidance_scale=unconditional_guidance_scale,
             unconditional_conditioning=unconditional_conditioning,
-        ) for x in x_t])
+        )
     
         loss_score = eps_pred.pow(2).mean()
     
@@ -247,31 +248,30 @@ class ContextManager:
         loss_prior = x_t.pow(2).mean()
     
         # ------------------------------------------------
-        # 3. Decode → encode stability
+        # 3. Decode → encode stability (no gradients through sampler)
         # ------------------------------------------------
         with torch.no_grad():
-            x_prev = torch.stack([self.ddim_sampler.p_sample_ddim(
-                x.reshape(-1, *x.shape),
+            x_prev, _ = self.ddim_sampler.p_sample_ddim(
+                x_t,
                 cond,
                 t,
                 index=ddim_index,
                 use_original_steps=use_original_steps,
                 unconditional_guidance_scale=unconditional_guidance_scale,
                 unconditional_conditioning=unconditional_conditioning,
-            )[0] for x in x_t])
+            )
     
-        x_prev = x_prev.detach()
-    
-        x_recon = torch.stack([self.ddim_sampler.encode_one_step(
-            x.reshape(-1, *x.shape),
+        # encode_one_step is deterministic; gradients should NOT flow through it
+        x_recon = self.ddim_sampler.encode_one_step(
+            x_prev,
             step_idx=ddim_index,
             c=cond,
             use_original_steps=use_original_steps,
             unconditional_guidance_scale=unconditional_guidance_scale,
             unconditional_conditioning=unconditional_conditioning,
-        ) for x in x_prev])
+        )
     
-        loss_stable = torch.mean((x_t - x_recon) ** 2)
+        loss_stable = (x_t - x_recon).pow(2).mean()
     
         # ------------------------------------------------
         # Total
