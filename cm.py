@@ -207,9 +207,9 @@ class ContextManager:
         x_t: (1, 4, H, W), requires_grad=True
         """
         
-        x_t = x_t.reshape(-1, 4, 96, 96)
+        x_t = x_t.reshape(-1, 1, 4, 96, 96)
     
-        B = x_t.shape[0]
+        B = x_t.shape[1]
         device = x_t.device
     
         t_val = (
@@ -224,15 +224,18 @@ class ContextManager:
         # 1. Score term (NO gradients through UNet)
         # ------------------------------------------------
         with torch.no_grad():
-            eps_pred = self.ddim_sampler.pred_eps(
-                x_t,
-                cond,
-                t,
-                score_corrector=score_corrector,
-                corrector_kwargs=corrector_kwargs,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-                unconditional_conditioning=unconditional_conditioning,
-            )
+            eps_pred = []
+            for x in x_t:
+                eps_pred.append(self.ddim_sampler.pred_eps(
+                    x,
+                    cond,
+                    t,
+                    score_corrector=score_corrector,
+                    corrector_kwargs=corrector_kwargs,
+                    unconditional_guidance_scale=unconditional_guidance_scale,
+                    unconditional_conditioning=unconditional_conditioning,
+                ))
+        eps_pred = torch.stack(eps_pred)
     
         # Score-matching style loss
         loss_score = (x_t * eps_pred).mean()
