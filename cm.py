@@ -194,7 +194,7 @@ class ContextManager:
         x_t,
         ddim_index,
         cond,
-        score_corrector = None,
+        score_corrector=None,
         corrector_kwargs=None,
         unconditional_guidance_scale=1.0,
         unconditional_conditioning=None,
@@ -204,55 +204,63 @@ class ContextManager:
         lambda_stable=0.1,
     ):
         """
-        x_t: (1, 4, H, W), requires_grad=True
+        x_t: (N, 4, H, W), requires_grad=True
         """
-        
-        x_t = x_t.reshape(-1, 1, 4, 96, 96)
     
-        B = x_t.shape[1]
+        # ------------------------------------------------
+        # Reshape to explicit batch
+        # ------------------------------------------------
+        x_t = x_t.view(-1, 1, 4, 96, 96)
+        B = x_t.shape[0]
         device = x_t.device
     
+        # ------------------------------------------------
+        # Timestep tensor
+        # ------------------------------------------------
         t_val = (
             self.ddim_sampler.ddim_timesteps[ddim_index]
             if not use_original_steps
             else ddim_index
         )
-    
-        t = torch.full((B,), t_val, device=device, dtype=torch.long)
+        t = torch.full((1,), t_val, device=device, dtype=torch.long)
     
         # ------------------------------------------------
         # 1. Score term (NO gradients through UNet)
         # ------------------------------------------------
-        with torch.no_grad():
-            eps_pred = []
-            for x in x_t:
-                eps_pred.append(self.ddim_sampler.pred_eps(
-                    x,
+        eps_preds = []
+    
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            for i in range(B):
+                eps = self.ddim_sampler.pred_eps(
+                    x_t[i:i+1],  # keep batch dim
                     cond,
                     t,
                     score_corrector=score_corrector,
                     corrector_kwargs=corrector_kwargs,
                     unconditional_guidance_scale=unconditional_guidance_scale,
                     unconditional_conditioning=unconditional_conditioning,
-                ))
-        eps_pred = torch.stack(eps_pred)
+                )
+                eps_preds.append(eps)
     
-        # Score-matching style loss
+        eps_pred = torch.cat(eps_preds, dim=0)  # (B, 4, H, W)
+    
+        # Gradient flows ONLY to x_t
         loss_score = (x_t * eps_pred).mean()
     
         # ------------------------------------------------
-        # 2. Gaussian prior
+        # 2. Gaussian prior (grad flows to x_t)
         # ------------------------------------------------
         loss_prior = x_t.pow(2).mean()
     
         # ------------------------------------------------
-        # 3. Decode → encode stability (no UNet gradients)
+        # 3. Stability term (NO gradients through UNet)
         # ------------------------------------------------
-        with torch.no_grad():
-            x_recon = []
-            for x in x_t:
+        x_recons = []
+    
+        with torch.no_grad(), torch.cuda.amp.autocast():
+            for i in range(B):
                 x_prev, _ = self.ddim_sampler.p_sample_ddim(
-                    x,
+                    x_t[i:i+1],
                     cond,
                     t,
                     index=ddim_index,
@@ -263,23 +271,30 @@ class ContextManager:
                     unconditional_conditioning=unconditional_conditioning,
                 )
     
-                x_recon.append(self.ddim_sampler.encode_one_step(
+                x_enc = self.ddim_sampler.encode_one_step(
                     x_prev,
                     step_idx=ddim_index,
                     c=cond,
                     use_original_steps=use_original_steps,
                     unconditional_guidance_scale=unconditional_guidance_scale,
                     unconditional_conditioning=unconditional_conditioning,
-                ))
-        x_recon = torch.stack(x_recon)
+                )
+    
+                x_recons.append(x_enc)
+    
+        x_recon = torch.cat(x_recons, dim=0)  # (B, 4, H, W)
     
         loss_stable = (x_t - x_recon).pow(2).mean()
     
+        # ------------------------------------------------
+        # Final weighted loss
+        # ------------------------------------------------
         return (
             lambda_score * loss_score
             + lambda_prior * loss_prior
             + lambda_stable * loss_stable
         )
+
 
     
     def data_space_loss(
