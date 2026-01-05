@@ -249,26 +249,29 @@ class ContextManager:
         # 3. Decode → encode stability (no UNet gradients)
         # ------------------------------------------------
         with torch.no_grad():
-            x_prev, _ = self.ddim_sampler.p_sample_ddim(
-                x_t,
-                cond,
-                t,
-                index=ddim_index,
-                score_corrector=score_corrector,
-                corrector_kwargs=corrector_kwargs,
-                use_original_steps=use_original_steps,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-                unconditional_conditioning=unconditional_conditioning,
-            )
+            x_recon = []
+            for x in x_t:
+                x_prev, _ = self.ddim_sampler.p_sample_ddim(
+                    x,
+                    cond,
+                    t,
+                    index=ddim_index,
+                    score_corrector=score_corrector,
+                    corrector_kwargs=corrector_kwargs,
+                    use_original_steps=use_original_steps,
+                    unconditional_guidance_scale=unconditional_guidance_scale,
+                    unconditional_conditioning=unconditional_conditioning,
+                )
     
-            x_recon = self.ddim_sampler.encode_one_step(
-                x_prev,
-                step_idx=ddim_index,
-                c=cond,
-                use_original_steps=use_original_steps,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-                unconditional_conditioning=unconditional_conditioning,
-            )
+                x_recon.append(self.ddim_sampler.encode_one_step(
+                    x_prev,
+                    step_idx=ddim_index,
+                    c=cond,
+                    use_original_steps=use_original_steps,
+                    unconditional_guidance_scale=unconditional_guidance_scale,
+                    unconditional_conditioning=unconditional_conditioning,
+                ))
+        x_recon = torch.stack(x_recon)
     
         loss_stable = (x_t - x_recon).pow(2).mean()
     
