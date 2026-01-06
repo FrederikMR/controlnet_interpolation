@@ -270,6 +270,8 @@ class ContextManager:
                     unconditional_guidance_scale=unconditional_guidance_scale,
                     unconditional_conditioning=unconditional_conditioning,
                 )
+                
+                print(x_prev.shape)
     
                 x_enc = self.ddim_sampler.encode_one_step(
                     x_prev,

@@ -383,6 +383,9 @@ class DDIMSampler(object):
                 2
             )
             eps = eps_uncond + unconditional_guidance_scale * (eps_cond - eps_uncond)
+            
+        print(type(alpha))
+        print(type(alpha_next))
     
         # --- DDIM forward update ---
         x_next = (
