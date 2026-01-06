@@ -296,6 +296,7 @@ class ContextManager:
         
         print(x_shape)
         print(grad_val.shape)
+        print(grad_val.view(x_shape).shape)
         
         return grad_val.view(x_shape)                 # (T, d)
 
