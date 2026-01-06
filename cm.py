@@ -293,6 +293,10 @@ class ContextManager:
         # ------------------------------------------------
         # Return flattened gradient
         # ------------------------------------------------
+        
+        print(x_shape)
+        print(grad_val.shape)
+        
         return grad_val.view(x_shape)                 # (T, d)
 
     def data_space_loss(
