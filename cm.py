@@ -614,7 +614,10 @@ class ContextManager:
                                                N=self.N,
                                                tol=1e-4,
                                                max_iter=self.max_iter,
-                                               line_search_params = {'rho': 0.5},
+                                               lr_rate=0.001,
+                                               beta1=0.5,
+                                               beta2=0.5,
+                                               eps=1e-8,
                                                device="cuda:0",
                                                )
             
@@ -903,7 +906,10 @@ class ContextManager:
                                                   N_grid=self.N,
                                                   tol=1e-4,
                                                   max_iter=self.max_iter,
-                                                  line_search_params = {'rho': 0.5},
+                                                  lr_rate=0.001,
+                                                  beta1=0.5,
+                                                  beta2=0.5,
+                                                  eps=1e-8,
                                                   device="cuda:0",)
 
             #self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
