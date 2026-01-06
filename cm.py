@@ -189,7 +189,7 @@ class ContextManager:
         
         return
     
-    def noise_space_loss(
+    def noise_space_grad(
         self,
         x_t,
         ddim_index,
@@ -204,15 +204,20 @@ class ContextManager:
         lambda_stable=0.1,
     ):
         """
-        x_t: (N, 4, H, W), requires_grad=True
+        Returns ∇_{x_t} noise_space_loss
+    
+        x_t: (T, d) flattened
+        return: (T, d)
         """
     
         # ------------------------------------------------
         # Reshape to explicit batch
         # ------------------------------------------------
-        x_t = x_t.view(-1, 4, 96, 96)
+        x_shape = x_t.shape                      # (T, d)
+        x_t = x_t.view(-1, 4, 96, 96)             # (B, 4, H, W)
         B = x_t.shape[0]
         device = x_t.device
+        numel = x_t.numel()                      # for mean normalization
     
         # ------------------------------------------------
         # Timestep tensor
@@ -225,14 +230,14 @@ class ContextManager:
         t = torch.full((1,), t_val, device=device, dtype=torch.long)
     
         # ------------------------------------------------
-        # 1. Score term (NO gradients through UNet)
+        # 1. eps_pred (NO gradients through UNet)
         # ------------------------------------------------
         eps_preds = []
     
         with torch.no_grad(), torch.cuda.amp.autocast():
             for i in range(B):
                 eps = self.ddim_sampler.pred_eps(
-                    x_t[i:i+1],  # keep batch dim
+                    x_t[i:i+1],
                     cond,
                     t,
                     score_corrector=score_corrector,
@@ -242,18 +247,10 @@ class ContextManager:
                 )
                 eps_preds.append(eps)
     
-        eps_pred = torch.cat(eps_preds, dim=0)  # (B, 4, H, W)
-    
-        # Gradient flows ONLY to x_t
-        loss_score = (x_t * eps_pred).mean()
+        eps_pred = torch.cat(eps_preds, dim=0)    # (B, 4, H, W)
     
         # ------------------------------------------------
-        # 2. Gaussian prior (grad flows to x_t)
-        # ------------------------------------------------
-        loss_prior = x_t.pow(2).mean()
-    
-        # ------------------------------------------------
-        # 3. Stability term (NO gradients through UNet)
+        # 2. x_recon (NO gradients through UNet)
         # ------------------------------------------------
         x_recons = []
     
@@ -282,21 +279,22 @@ class ContextManager:
     
                 x_recons.append(x_enc)
     
-        x_recon = torch.cat(x_recons, dim=0)  # (B, 4, H, W)
-    
-        loss_stable = (x_t - x_recon).pow(2).mean()
+        x_recon = torch.cat(x_recons, dim=0)      # (B, 4, H, W)
     
         # ------------------------------------------------
-        # Final weighted loss
+        # 3. Explicit gradient (mean-normalized)
         # ------------------------------------------------
-        return (
-            lambda_score * loss_score
-            + lambda_prior * loss_prior
-            + lambda_stable * loss_stable
+        grad_val = (
+            lambda_score * eps_pred / numel
+            + 2.0 * lambda_prior * x_t / numel
+            + 2.0 * lambda_stable * (x_t - x_recon) / numel
         )
-
-
     
+        # ------------------------------------------------
+        # Return flattened gradient
+        # ------------------------------------------------
+        return grad_val.view(x_shape)                 # (T, d)
+
     def data_space_loss(
             self,
             x0,
@@ -596,7 +594,7 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            reg_fun = lambda x: self.noise_space_loss(
+            reg_fun = lambda x: self.noise_space_grad(
                 x,
                 cur_step,          # IMPORTANT: index in ddim_timesteps
                 cond,
@@ -610,7 +608,7 @@ class ContextManager:
                 lambda_stable=0.1,
                 )
             
-            self.PGEORCE = ProbGEORCE_Euclidean(reg_fun = reg_fun,
+            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = reg_fun,
                                                init_fun=None,
                                                lam = self.lam,
                                                N=self.N,
@@ -734,7 +732,21 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            reg_fun = lambda x: self.noise_space_loss(
+            reg_fun = lambda x: self.noise_space_grad(
+                x,
+                cur_step,          # IMPORTANT: index in ddim_timesteps
+                cond,
+                score_corrector=None,
+                corrector_kwargs=None,
+                unconditional_guidance_scale=1.0,
+                unconditional_conditioning=None,
+                use_original_steps=False,
+                lambda_score=1.0,
+                lambda_prior=1e-4,
+                lambda_stable=0.1,
+                )
+            
+            reg_fun = lambda x: self.noise_space_grad(
                 x,
                 cur_step,          # IMPORTANT: index in ddim_timesteps
                 cond,
@@ -749,7 +761,8 @@ class ContextManager:
                 )
 
             M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)), gradS=None, lam=self.lam)
+            Mlambda = LambdaManifold(M=M, gradS=lambda x: reg_fun(x.reshape(-1,dimension)), S=None, lam=self.lam)
+            #Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)), gradS=None, lam=self.lam)
             # Compute gradient using autograd
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
@@ -870,7 +883,7 @@ class ContextManager:
             df = torch.tensor(float(dimension), device="cuda")
             S = Chi2(df=df)
             
-            reg_fun = lambda x: self.noise_space_loss(
+            reg_fun = lambda x: self.noise_space_grad(
                 x,
                 cur_step,          # IMPORTANT: index in ddim_timesteps
                 cond,
@@ -883,16 +896,25 @@ class ContextManager:
                 lambda_prior=1e-4,
                 lambda_stable=0.1,
                 )
-
-            self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
+            
+            self.PGEORCE = ProbScoreGEORCEFM_Euclidean(score_fun = reg_fun,
                                                   init_fun=None,
                                                   lam = self.lam,
                                                   N_grid=self.N,
                                                   tol=1e-4,
                                                   max_iter=self.max_iter,
                                                   line_search_params = {'rho': 0.5},
-                                                  device="cuda:0",
-                                                  )
+                                                  device="cuda:0",)
+
+            #self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
+            #                                      init_fun=None,
+            #                                      lam = self.lam,
+            #                                      N_grid=self.N,
+            #                                      tol=1e-4,
+            #                                      max_iter=self.max_iter,
+            #                                      line_search_params = {'rho': 0.5},
+            #                                      device="cuda:0",
+            #                                      )
             
             noisy_mean, noisy_curve = self.PGEORCE(img_encoded)
             noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,*latent_shape)
