@@ -210,7 +210,7 @@ class ContextManager:
         # ------------------------------------------------
         # Reshape to explicit batch
         # ------------------------------------------------
-        x_t = x_t.view(-1, 1, 4, 96, 96)
+        x_t = x_t.view(-1, 4, 96, 96)
         B = x_t.shape[0]
         device = x_t.device
     
