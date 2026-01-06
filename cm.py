@@ -620,7 +620,7 @@ class ContextManager:
                                                N=self.N,
                                                tol=1e-4,
                                                max_iter=self.max_iter,
-                                               lr_rate=0.001,
+                                               lr_rate=0.0001,
                                                beta1=0.5,
                                                beta2=0.5,
                                                eps=1e-8,
