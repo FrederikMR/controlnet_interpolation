@@ -29,7 +29,7 @@ def generate_job(model, computation_method, method, lam, clip, N, max_iter=100):
     with open ('submit_interpolation.sh', 'w') as rsh:
         rsh.write(f'''\
     #! /bin/bash
-    #BSUB -q gpuv100
+    #BSUB -q gpua100
     #BSUB -J {model}_{method}_{computation_method}
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
@@ -82,7 +82,7 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 100
     method = ['ProbGEORCE_Noise']
     clip = [0]#[0,1]
-    lam = [10.0]#[0.1, 0.5, 1.0, 10.0]
+    lam = [1.0]#[0.1, 0.5, 1.0, 10.0]
 
     model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
