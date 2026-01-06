@@ -354,7 +354,7 @@ class DDIMSampler(object):
             alpha = self.alphas_cumprod_prev[step_idx]
         else:
             alpha_next = self.ddim_alphas[step_idx]
-            alpha = self.ddim_alphas_prev[step_idx]
+            alpha = torch.tensor(self.ddim_alphas_prev[step_idx])
     
         # --- noise prediction ---
         if unconditional_guidance_scale == 1.0:
@@ -383,9 +383,6 @@ class DDIMSampler(object):
                 2
             )
             eps = eps_uncond + unconditional_guidance_scale * (eps_cond - eps_uncond)
-            
-        print(type(alpha))
-        print(type(alpha_next))
     
         # --- DDIM forward update ---
         x_next = (
