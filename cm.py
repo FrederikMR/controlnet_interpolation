@@ -214,7 +214,8 @@ class ContextManager:
         # Reshape to explicit batch
         # ------------------------------------------------
         x_shape = x_t.shape                      # (T, d)
-        x_t = x_t.view(-1, 4, 96, 96)             # (B, 4, H, W)
+        inner_shape = int(math.sqrt(x_t.shape[-1]//4))
+        x_t = x_t.view(-1, 4, inner_shape, inner_shape)             # (B, 4, H, W)
         B = x_t.shape[0]
         device = x_t.device
         numel = x_t.numel()                      # for mean normalization
