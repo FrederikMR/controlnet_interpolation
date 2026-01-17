@@ -596,14 +596,14 @@ class ContextManager:
         elif self.inter_method == "NoiseDiffusion":
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE_Score_Noise":
-            score_fun = lambda x: self.score_fun(x,
-                                                 cond,
-                                                 cur_step,
-                                                 score_corrector=None,
-                                                 corrector_kwargs=None,
-                                                 unconditional_guidance_scale=1.,
-                                                 unconditional_conditioning=None,
-                                                 )
+            score_fun = lambda x: self.ddim_sampler.score_fun(x,
+                                                              cond,
+                                                              cur_step,
+                                                              score_corrector=None,
+                                                              corrector_kwargs=None,
+                                                              unconditional_guidance_scale=1.,
+                                                              unconditional_conditioning=None,
+                                                              )
             
             self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = score_fun,
                                                init_fun=None,
