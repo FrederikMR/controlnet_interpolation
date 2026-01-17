@@ -595,6 +595,30 @@ class ContextManager:
             noisy_curve = self.SInt(l1,l2)
         elif self.inter_method == "NoiseDiffusion":
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
+        elif self.inter_method == "ProbGEORCE_Score_Noise":
+            score_fun = lambda x: self.score_fun(x,
+                                                 cond,
+                                                 cur_step,
+                                                 score_corrector=None,
+                                                 corrector_kwargs=None,
+                                                 unconditional_guidance_scale=1.,
+                                                 unconditional_conditioning=None,
+                                                 )
+            
+            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = score_fun,
+                                               init_fun=None,
+                                               lam = self.lam,
+                                               N=self.N,
+                                               tol=1e-4,
+                                               max_iter=self.max_iter,
+                                               lr_rate=0.001,
+                                               beta1=0.5,
+                                               beta2=0.5,
+                                               eps=1e-8,
+                                               device="cuda:0",
+                                               )
+            
+            noisy_curve = self.PGEORCE(l1, l2)
         elif self.inter_method == "ProbGEORCE_Noise":
             dimension = len(l1.reshape(-1))
             df = torch.tensor(float(dimension), device="cuda")

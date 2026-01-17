@@ -436,9 +436,166 @@ class DDIMSampler(object):
                                           unconditional_conditioning=unconditional_conditioning)
             if callback: callback(i)
         return x_dec
+    
+    @torch.no_grad()
+    def sds_score_fun(
+        self,
+        x: torch.Tensor,
+        c,                              # positive conditioning (dict)
+        t: int,                         # DDPM timestep (int)
+        unconditional_conditioning,     # uncond conditioning (dict)
+        negative_conditioning=None,     # optional negative conditioning (dict)
+        guidance_scale=7.5,
+        neg_guidance_scale=0.0,
+        weight_type="one_minus_alpha",             # "none" | "alpha" | "one_minus_alpha"
+    ):
+        """
+        Compute an SDS-style pseudo-score for Stable Diffusion / ControlNet.
+    
+        Returns:
+            (N, C*H*W) tensor of pseudo-score vectors
+        """
+    
+        # reshape flattened latents
+        if x.ndim == 2:
+            x = x.reshape(-1, 4, 96, 96)
+    
+        device = x.device
+        N = x.shape[0]
+    
+        # timestep tensor
+        t_batch = torch.full(
+            (N,),
+            t,
+            device=device,
+            dtype=torch.long
+        )
+    
+        # --- ε_uncond ---
+        eps_uncond = self.model.apply_model(
+            x,
+            t_batch,
+            unconditional_conditioning
+        )
+    
+        # --- ε_cond ---
+        eps_cond = self.model.apply_model(
+            x,
+            t_batch,
+            c
+        )
+    
+        # CFG-style SDS gradient
+        grad = eps_uncond - eps_cond
+        grad = guidance_scale * grad
+    
+        # --- optional negative prompt ---
+        if negative_conditioning is not None and neg_guidance_scale > 0:
+            eps_neg = self.model.apply_model(
+                x,
+                t_batch,
+                negative_conditioning
+            )
+            grad = grad + neg_guidance_scale * (eps_neg - eps_uncond)
+    
+        # --- optional timestep weighting ---
+        if weight_type != "none":
+            alpha_bar_t = self.model.alphas_cumprod[t].to(device)
+            if weight_type == "alpha":
+                w = alpha_bar_t
+            elif weight_type == "one_minus_alpha":
+                w = 1.0 - alpha_bar_t
+            else:
+                raise ValueError(f"Unknown weight_type: {weight_type}")
+    
+            grad = w * grad
+    
+        return grad.reshape(N, -1)
+    
+    @torch.no_grad()
+    def score_fun(
+        self,
+        x: torch.Tensor,
+        c,
+        t: int,
+        score_corrector=None,
+        corrector_kwargs=None,
+        unconditional_guidance_scale=1.,
+        unconditional_conditioning=None,
+    ):
+        """
+        Memory-safe SDS / CFG-style pseudo-score.
+        Same signature as original score_fun.
+        """
+    
+        batch_size = 1  # <-- tune this to fit your GPU
+    
+        # reshape flattened latents
+        if x.ndim == 2:
+            x = x.reshape(-1, 4, 96, 96)
+    
+        device = x.device
+        N = x.shape[0]
+    
+        # timestep weight (computed once)
+        alpha_bar_t = self.model.alphas_cumprod[t].to(device)
+        w = 1.0 - alpha_bar_t
+    
+        scores = []
+    
+        for i in range(0, N, batch_size):
+            x_chunk = x[i:i + batch_size]
+    
+            t_chunk = torch.full(
+                (x_chunk.shape[0],),
+                t,
+                device=device,
+                dtype=torch.long
+            )
+    
+            # unconditional conditioning is required
+            if unconditional_conditioning is None:
+                raise ValueError("unconditional_conditioning must be provided for SDS-style score")
+    
+            # --- ε_uncond ---
+            eps_uncond = self.model.apply_model(
+                x_chunk,
+                t_chunk,
+                unconditional_conditioning
+            )
+    
+            # --- ε_cond ---
+            eps_cond = self.model.apply_model(
+                x_chunk,
+                t_chunk,
+                c
+            )
+    
+            # CFG-style SDS gradient
+            grad = eps_uncond - eps_cond
+            grad = unconditional_guidance_scale * grad
+    
+            # optional score corrector (rare in SDS)
+            if score_corrector is not None:
+                assert self.model.parameterization == "eps", "Score corrector only supported for eps models"
+                grad = score_corrector.modify_score(
+                    self.model,
+                    grad,
+                    x_chunk,
+                    t_chunk,
+                    c,
+                    **(corrector_kwargs or {})
+                )
+    
+            grad = w * grad
+            grad = grad.reshape(x_chunk.shape[0], -1)
+    
+            scores.append(grad)
+    
+        return torch.cat(scores, dim=0).reshape(N, -1)
 
     @torch.no_grad()
-    def score_fun(self, x: torch.Tensor, c, t: int,
+    def score_fun_naive(self, x: torch.Tensor, c, t: int,
                   score_corrector=None, corrector_kwargs=None,
                   unconditional_guidance_scale=1., unconditional_conditioning=None):
         """
