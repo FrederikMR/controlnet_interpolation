@@ -602,7 +602,7 @@ class ContextManager:
                                                               score_corrector=None,
                                                               corrector_kwargs=None,
                                                               unconditional_guidance_scale=1.,
-                                                              unconditional_conditioning=None,
+                                                              unconditional_conditioning=un_cond,
                                                               )
             
             self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = score_fun,
@@ -631,7 +631,7 @@ class ContextManager:
                 score_corrector=None,
                 corrector_kwargs=None,
                 unconditional_guidance_scale=1.0,
-                unconditional_conditioning=None,
+                unconditional_conditioning=un_cond,
                 use_original_steps=False,
                 lambda_score=1.0,
                 lambda_prior=1e-4,
@@ -663,7 +663,7 @@ class ContextManager:
                                                     score_corrector=None,
                                                     corrector_kwargs=None,
                                                     unconditional_guidance_scale=1.0,
-                                                    unconditional_conditioning=None,
+                                                    unconditional_conditioning=un_cond,
                                                     use_original_steps=False,
                                                     lambda_score=1.0,
                                                     lambda_prior=1e-4,
