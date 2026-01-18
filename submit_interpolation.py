@@ -79,7 +79,7 @@ def loop_jobs(wait_time = 1.0):
     #Project score to sphere TM
     
     N = 100
-    max_iter = 100
+    max_iter = 1000
     method = ['ProbGEORCE_Score_Noise']
     clip = [0]#[0,1]
     lam = [1.0, 10.0]#[0.1, 0.5, 1.0, 10.0]
