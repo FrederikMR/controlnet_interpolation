@@ -396,7 +396,7 @@ class ContextManager:
                                                               cur_step,
                                                               score_corrector=None,
                                                               corrector_kwargs=None,
-                                                              unconditional_guidance_scale=1.,
+                                                              unconditional_guidance_scale=guide_scale,
                                                               unconditional_conditioning=un_cond,
                                                               )
             
@@ -425,7 +425,7 @@ class ContextManager:
                 cond,
                 score_corrector=None,
                 corrector_kwargs=None,
-                unconditional_guidance_scale=1.0,
+                unconditional_guidance_scale=guide_scale,
                 unconditional_conditioning=un_cond,
                 use_original_steps=False,
                 lambda_score=1.0,
@@ -457,7 +457,7 @@ class ContextManager:
                                                     cond,
                                                     score_corrector=None,
                                                     corrector_kwargs=None,
-                                                    unconditional_guidance_scale=1.0,
+                                                    unconditional_guidance_scale=guide_scale,
                                                     unconditional_conditioning=un_cond,
                                                     use_original_steps=False,
                                                     lambda_score=1.0,
@@ -482,7 +482,7 @@ class ContextManager:
             #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                     use_original_steps=False, return_intermediates=None,
-                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+                                                    unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
             noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
             
             
@@ -602,10 +602,11 @@ class ContextManager:
                                                               cur_step,
                                                               score_corrector=None,
                                                               corrector_kwargs=None,
-                                                              unconditional_guidance_scale=1.,
+                                                              unconditional_guidance_scale=guide_scale,
                                                               unconditional_conditioning=un_cond,
                                                               )
             
+            M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
             #v0 = score_fun(left_image)
             v0 = torch.randn_like(left_image)
