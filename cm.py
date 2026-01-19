@@ -123,14 +123,14 @@ class ContextManager:
             
             
         tol = 1e-4
-        lr_rate = 0.0001
+        lr_rate = 0.001
         beta1 = 0.5
         beta2 = 0.5
         eps = 1e-8
         device = "cuda:0"
         if method == "ivp":
             M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, gradS=lambda x: reg_fun(x.reshape(-1,dimension)), S=None, lam=self.lam)
+            Mlambda = LambdaManifold(M=M, gradS=lambda x: score_fun(x.reshape(-1,dimension)), S=None, lam=self.lam)
             return lambda x,v: Mlambda.Exp_ode_Euclidean(x.reshape(1,-1), v.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
         elif method == "bvp":
             return ProbScoreGEORCE_Euclidean(score_fun = score_fun,
@@ -184,7 +184,7 @@ class ContextManager:
         base_dir = out_dir
         clip_str = '_clip' if self.clip else ''
         if "ProbGEORCE" == self.inter_method:
-            inter_method = "ProbGEORCE_{self.reg_type}_{self.interpolation_space}"
+            inter_method = f"ProbGEORCE_{self.reg_type}_{self.interpolation_space}"
             lam = str(self.lam).replace('.', 'd')
             out_dir = ''.join((out_dir, f'/{method_name}/{inter_method}{clip_str}_{lam}'))
         else:            
