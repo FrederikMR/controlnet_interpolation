@@ -602,7 +602,7 @@ class ContextManager:
                                                               cur_step,
                                                               score_corrector=None,
                                                               corrector_kwargs=None,
-                                                              unconditional_guidance_scale=guide_scale,
+                                                              unconditional_guidance_scale=1.0,
                                                               unconditional_conditioning=un_cond,
                                                               )
             
