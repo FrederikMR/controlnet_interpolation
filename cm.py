@@ -595,6 +595,23 @@ class ContextManager:
             #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
             v0 = torch.randn_like(l1)
             noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
+        elif self.inter_method == "ProbGEORCE_Score_Noise":
+            
+            score_fun = lambda x: self.ddim_sampler.score_fun(x,
+                                                              cond,
+                                                              cur_step,
+                                                              score_corrector=None,
+                                                              corrector_kwargs=None,
+                                                              unconditional_guidance_scale=1.,
+                                                              unconditional_conditioning=un_cond,
+                                                              )
+            
+            Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
+            #v0 = score_fun(left_image)
+            v0 = torch.randn_like(left_image)
+            with torch.no_grad():
+                noisy_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,*latent_shape)
+            
         elif self.inter_method == "ProbGEORCE_Data":
             
             reg_fun = lambda x: self.data_space_loss(
