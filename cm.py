@@ -76,6 +76,19 @@ class ContextManager:
             self.step_save = max(int(N / num_images), 1)
         self.seed = seed
         
+    def prompt_strength(self,
+                        t, 
+                        noisy_curve,
+                        ):
+        
+        if t >= len(noisy_curve) - 1:
+            return 1.0
+        elif t == 0:
+            return 0.0
+        else:
+            total_error = torch.cumsum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(len(noisy_curve)-1,-1), axis=1), axis=0)
+            return total_error[t-1]/total_error[-1]
+        
     def create_out_dir(self,
                        out_dir:str,
                        method_name:str,
@@ -188,224 +201,6 @@ class ContextManager:
                     Image.fromarray(image[0]).save(f'{out_dir}/{j}_{i}.png')
         
         return
-    
-    def noise_space_grad(
-        self,
-        x_t,
-        ddim_index,
-        cond,
-        score_corrector=None,
-        corrector_kwargs=None,
-        unconditional_guidance_scale=1.0,
-        unconditional_conditioning=None,
-        use_original_steps=False,
-        lambda_score=1.0,
-        lambda_prior=1e-4,
-        lambda_stable=0.1,
-    ):
-        """
-        Returns ∇_{x_t} noise_space_loss
-    
-        x_t: (T, d) flattened
-        return: (T, d)
-        """
-    
-        # ------------------------------------------------
-        # Reshape to explicit batch
-        # ------------------------------------------------
-        x_shape = x_t.shape                      # (T, d)
-        inner_shape = int(math.sqrt(x_t.shape[-1]//4))
-        x_t = x_t.view(-1, 4, inner_shape, inner_shape)             # (B, 4, H, W)
-        B = x_t.shape[0]
-        device = x_t.device
-        numel = x_t.numel()                      # for mean normalization
-    
-        # ------------------------------------------------
-        # Timestep tensor
-        # ------------------------------------------------
-        t_val = (
-            self.ddim_sampler.ddim_timesteps[ddim_index]
-            if not use_original_steps
-            else ddim_index
-        )
-        t = torch.full((1,), t_val, device=device, dtype=torch.long)
-    
-        # ------------------------------------------------
-        # 1. eps_pred (NO gradients through UNet)
-        # ------------------------------------------------
-        eps_preds = []
-    
-        with torch.no_grad(), torch.cuda.amp.autocast():
-            for i in range(B):
-                eps = self.ddim_sampler.pred_eps(
-                    x_t[i:i+1],
-                    cond,
-                    t,
-                    score_corrector=score_corrector,
-                    corrector_kwargs=corrector_kwargs,
-                    unconditional_guidance_scale=unconditional_guidance_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                )
-                eps_preds.append(eps)
-    
-        eps_pred = torch.cat(eps_preds, dim=0)    # (B, 4, H, W)
-    
-        # ------------------------------------------------
-        # 2. x_recon (NO gradients through UNet)
-        # ------------------------------------------------
-        x_recons = []
-    
-        with torch.no_grad(), torch.cuda.amp.autocast():
-            for i in range(B):
-                x_prev, _ = self.ddim_sampler.p_sample_ddim(
-                    x_t[i:i+1],
-                    cond,
-                    t,
-                    index=ddim_index,
-                    score_corrector=score_corrector,
-                    corrector_kwargs=corrector_kwargs,
-                    use_original_steps=use_original_steps,
-                    unconditional_guidance_scale=unconditional_guidance_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                )
-    
-                x_enc = self.ddim_sampler.encode_one_step(
-                    x_prev,
-                    step_idx=ddim_index,
-                    c=cond,
-                    use_original_steps=use_original_steps,
-                    unconditional_guidance_scale=unconditional_guidance_scale,
-                    unconditional_conditioning=unconditional_conditioning,
-                )
-    
-                x_recons.append(x_enc)
-    
-        x_recon = torch.cat(x_recons, dim=0)      # (B, 4, H, W)
-    
-        # ------------------------------------------------
-        # 3. Explicit gradient (mean-normalized)
-        # ------------------------------------------------
-        grad_val = (
-            lambda_score * eps_pred / numel
-            + 2.0 * lambda_prior * x_t / numel
-            + 2.0 * lambda_stable * (x_t - x_recon) / numel
-        )
-    
-        # ------------------------------------------------
-        # Return flattened gradient
-        # ------------------------------------------------
-        
-        print(x_shape)
-        print(grad_val.shape)
-        print(grad_val.view(x_shape).shape)
-        
-        return grad_val.view(x_shape)                 # (T, d)
-
-    def data_space_loss(
-            self,
-            x0,
-            ddim_index,              # index into ddim_timesteps
-            cond,
-            score_corrector=None,
-            corrector_kwargs=None,
-            unconditional_guidance_scale=1.0,
-            unconditional_conditioning=None,
-            use_original_steps=False,
-            lambda_score=1.0,
-            lambda_prior=1e-4,
-            lambda_stable=0.1,
-            ):
-        """
-        x0: latent in data space (requires_grad=True)
-        """
-    
-        # --- Step 1: encode to noise space ---
-        x_t, _ = self.ddim_sampler.encode(
-            x0,
-            c=cond,
-            t_enc=ddim_index,
-            use_original_steps=use_original_steps,
-            unconditional_guidance_scale=unconditional_guidance_scale,
-            unconditional_conditioning=unconditional_conditioning,
-        )
-    
-        # --- Step 2: score regularization ---
-        t_val = (
-            self.ddim_sampler.ddim_timesteps[ddim_index]
-            if not use_original_steps
-            else ddim_index
-        )
-        t = torch.full(
-            (x0.shape[0],),
-            t_val,
-            device=x0.device,
-            dtype=torch.long
-        )
-    
-        eps_pred = self.ddim_sampler.pred_eps(
-            x_t,
-            cond,
-            t,
-            score_corrector=score_corrector,
-            corrector_kwargs=corrector_kwargs,
-            unconditional_guidance_scale=unconditional_guidance_scale,
-            unconditional_conditioning=unconditional_conditioning,
-        )
-        loss_score = eps_pred.pow(2).mean()
-    
-        # --- Step 3: Gaussian prior on x0 ---
-        loss_prior = x0.pow(2).mean()
-    
-        # --- Step 4: decode → encode stability ---
-        with torch.no_grad():
-            x_prev, _ = self.ddim_sampler.p_sample_ddim(
-                x_t,
-                cond,
-                t,
-                index=ddim_index,
-                use_original_steps=use_original_steps,
-                unconditional_guidance_scale=unconditional_guidance_scale,
-                unconditional_conditioning=unconditional_conditioning,
-            )
-            x_prev = x_prev.detach()
-    
-        # Map back to data space
-        x_recon = self.ddim_sampler.encode_one_step(
-            x_prev,
-            step_idx=ddim_index,
-            c=cond,
-            use_original_steps=use_original_steps,
-            unconditional_guidance_scale=unconditional_guidance_scale,
-            unconditional_conditioning=unconditional_conditioning,
-        )
-    
-        # For data-space loss, we need to map back to x0
-        # If you have a decoder that maps latent → x0 space, you could do:
-        # x0_recon = decode(x_recon)  # optional
-        # Here we just use x_recon in latent space as a proxy
-        loss_stable = torch.mean((x_t - x_recon) ** 2)
-    
-        # --- Total ---
-        total_loss = (
-            lambda_score * loss_score
-            + lambda_prior * loss_prior
-            + lambda_stable * loss_stable
-        )
-    
-        return total_loss
-    
-    def prompt_strength(self,
-                        t, 
-                        noisy_curve,
-                        ):
-        
-        if t >= len(noisy_curve) - 1:
-            return 1.0
-        elif t == 0:
-            return 0.0
-        else:
-            total_error = torch.cumsum(torch.linalg.norm((noisy_curve[1:]-noisy_curve[:-1]).reshape(len(noisy_curve)-1,-1), axis=1), axis=0)
-            return total_error[t-1]/total_error[-1]
 
     def noise_diffusion(self,
                         l1, 
