@@ -606,6 +606,7 @@ class ContextManager:
                                                               unconditional_conditioning=un_cond,
                                                               )
             
+            dimension = len(l1.reshape(-1))
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
             #v0 = score_fun(left_image)
