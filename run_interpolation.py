@@ -52,6 +52,10 @@ def parse_args():
                         type=int)
     parser.add_argument('--num_images', default=10,
                         type=int)
+    parser.add_argument('--reg_type', default="score",
+                        type=str)
+    parser.add_argument('--interpolation_space', default="noise",
+                        type=str)
     parser.add_argument('--seed', default=2712,
                         type=int)
     parser.add_argument('--ckpt_path', default="models/control_v11p_sd21_openpose.ckpt",
@@ -87,7 +91,10 @@ def run_interpolation()->None:
     
     CM = cm.ContextManager(N=args.N, lam=args.lam, max_iter=args.max_iter, inter_method=args.method, clip=args.clip,
                            mu = mu, nu = nu,
-                           ckpt_path=args.ckpt_path, num_images=args.num_images, seed=args.seed)
+                           ckpt_path=args.ckpt_path, num_images=args.num_images, seed=args.seed,
+                           reg_type=args.reg_type,
+                           interpolation_space=args.interpolation_space,
+                           )
     
     if args.computation_method == "ivp":
         if args.target_prompt:

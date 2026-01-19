@@ -51,6 +51,8 @@ class ContextManager:
                  ckpt_path:str = "models/control_v11p_sd21_openpose.ckpt",
                  num_images:int=None,
                  seed:int=2712,
+                 reg_type:str="score",
+                 interpolation_space:str="noise",
                  ):
                  
         self.inter_method = inter_method
@@ -76,6 +78,91 @@ class ContextManager:
             self.step_save = max(int(N / num_images), 1)
         self.seed = seed
         
+        self.reg_type = reg_type
+        self.interpolation_space = interpolation_space
+        
+    def get_reg_fun(self,
+                    dimension,
+                    latent_shape,
+                    cur_step,
+                    cond,
+                    un_cond,
+                    guide_scale,
+                    method:str="bvp",
+                    ):
+        
+        if self.interpolation_space == "data":
+            cur_step = 0
+            
+        if self.reg_type == "score":
+            score_fun = lambda x: self.ddim_sampler.score_fun(x,
+                                                              cond,
+                                                              cur_step,
+                                                              score_corrector=None,
+                                                              corrector_kwargs=None,
+                                                              unconditional_guidance_scale=guide_scale,
+                                                              unconditional_conditioning=un_cond,
+                                                              )
+        elif self.reg_type == "score_naive":
+            score_fun = lambda x: self.ddim_sampler.score_fun_naive(x,
+                                                                    cond,
+                                                                    cur_step,
+                                                                    score_corrector=None,
+                                                                    corrector_kwargs=None,
+                                                                    unconditional_guidance_scale=guide_scale,
+                                                                    unconditional_conditioning=un_cond,
+                                                                    )
+        elif self.reg_type == "prior":
+            S = Chi2(df=float(dimension))
+            
+            reg_fun = lambda x: -S.log_prob(x).mean()
+            
+            score_fun = grad(reg_fun)
+        else:
+            raise ValueError(f"Invalid reg_type: {self.reg_type}")
+            
+            
+        tol = 1e-4
+        lr_rate = 0.0001
+        beta1 = 0.5
+        beta2 = 0.5
+        eps = 1e-8
+        device = "cuda:0"
+        if method == "ivp":
+            M = nEuclidean(dim=dimension)
+            Mlambda = LambdaManifold(M=M, gradS=lambda x: reg_fun(x.reshape(-1,dimension)), S=None, lam=self.lam)
+            return lambda x,v: Mlambda.Exp_ode_Euclidean(x.reshape(1,-1), v.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
+        elif method == "bvp":
+            return ProbScoreGEORCE_Euclidean(score_fun = score_fun,
+                                             init_fun=None,
+                                             lam = self.lam,
+                                             N=self.N,
+                                             tol=tol,
+                                             max_iter=self.max_iter,
+                                             lr_rate=lr_rate,
+                                             beta1=beta1,
+                                             beta2=beta2,
+                                             eps=eps,
+                                             device=device,
+                                             )
+        elif method == "mean":
+            return ProbScoreGEORCEFM_Euclidean(score_fun = score_fun,
+                                               init_fun= None,
+                                               lam=self.lam,
+                                               N=self.N,
+                                               tol=tol,
+                                               max_iter=self.max_iter,
+                                               lr_rate=lr_rate,
+                                               beta1=beta1,
+                                               beta2=beta2,
+                                               eps=eps,
+                                               device="cuda:0",
+                                               )
+        else:
+            raise ValueError(f"Invalid method: {method}")
+        
+        return score_fun
+        
     def prompt_strength(self,
                         t, 
                         noisy_curve,
@@ -96,9 +183,10 @@ class ContextManager:
         
         base_dir = out_dir
         clip_str = '_clip' if self.clip else ''
-        if "ProbGEORCE" in self.inter_method:
+        if "ProbGEORCE" == self.inter_method:
+            inter_method = "ProbGEORCE_{self.reg_type}_{self.interpolation_space}"
             lam = str(self.lam).replace('.', 'd')
-            out_dir = ''.join((out_dir, f'/{method_name}/{self.inter_method}{clip_str}_{lam}'))
+            out_dir = ''.join((out_dir, f'/{method_name}/{inter_method}{clip_str}_{lam}'))
         else:            
             out_dir = ''.join((out_dir, f'/{method_name}/{self.inter_method}{clip_str}'))
             
@@ -114,6 +202,22 @@ class ContextManager:
         os.makedirs(out_dir)
         
         return base_dir, out_dir
+    
+    def images_to_tensors_raw(self,
+                              imgs, 
+                              base_dir:str,
+                              device='cuda',
+                              ):
+        tensors = []
+        
+        for img in imgs:
+            img.save(f'{base_dir}/{0:03d}.png')
+            if img.mode == 'RGBA':#
+                    img = img.convert('RGB')
+            img = torch.tensor(np.array(img)).permute(2,0,1).unsqueeze(0).cuda()
+            tensors.append(img)
+        
+        return tensors
     
     def sample_images(self,
                       ldm,
@@ -367,7 +471,7 @@ class ContextManager:
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
-        cur_step=140        
+        cur_step = ddim_steps#140 
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
@@ -390,101 +494,31 @@ class ContextManager:
             noisy_curve = self.SInt(l1,l2)
         elif self.inter_method == "NoiseDiffusion":
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
-        elif self.inter_method == "ProbGEORCE_Score_Noise":
-            score_fun = lambda x: self.ddim_sampler.score_fun(x,
-                                                              cond,
-                                                              cur_step,
-                                                              score_corrector=None,
-                                                              corrector_kwargs=None,
-                                                              unconditional_guidance_scale=guide_scale,
-                                                              unconditional_conditioning=un_cond,
-                                                              )
-            
-            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = score_fun,
-                                               init_fun=None,
-                                               lam = self.lam,
-                                               N=self.N,
-                                               tol=1e-4,
-                                               max_iter=self.max_iter,
-                                               lr_rate=0.001,
-                                               beta1=0.5,
-                                               beta2=0.5,
-                                               eps=1e-8,
-                                               device="cuda:0",
-                                               )
-            
-            noisy_curve = self.PGEORCE(l1, l2)
-        elif self.inter_method == "ProbGEORCE_Noise":
+        elif self.inter_method == "ProbGEORCE":
             dimension = len(l1.reshape(-1))
-            df = torch.tensor(float(dimension), device="cuda")
-            S = Chi2(df=df)
+            latent_shape = l1.shape
+            bvp_method = self.get_reg_fun(dimension=dimension, 
+                                          latent_shape=latent_shape,
+                                          cur_step=cur_step, 
+                                          cond=cond, 
+                                          un_cond=un_cond,
+                                          guide_scale=guide_scale,
+                                          method = "bvp"
+                                          )
             
-            reg_fun = lambda x: self.noise_space_grad(
-                x,
-                cur_step,          # IMPORTANT: index in ddim_timesteps
-                cond,
-                score_corrector=None,
-                corrector_kwargs=None,
-                unconditional_guidance_scale=guide_scale,
-                unconditional_conditioning=un_cond,
-                use_original_steps=False,
-                lambda_score=1.0,
-                lambda_prior=1e-4,
-                lambda_stable=0.1,
-                )
-            
-            self.PGEORCE = ProbScoreGEORCE_Euclidean(score_fun = reg_fun,
-                                               init_fun=None,
-                                               lam = self.lam,
-                                               N=self.N,
-                                               tol=1e-4,
-                                               max_iter=self.max_iter,
-                                               lr_rate=0.0001,
-                                               beta1=0.5,
-                                               beta2=0.5,
-                                               eps=1e-8,
-                                               device="cuda:0",
-                                               )
-            
-            noisy_curve = self.PGEORCE(l1, l2)
+            if self.interpolation_space == "noise":
+                noisy_curve = bvp_method(l1, l2)
+            elif self.interpolation_space == "data":
+                data_curve = bvp_method(left_image, right_image)
+                #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                        use_original_steps=False, return_intermediates=None,
+                                                        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
+            else:
+                raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
         elif self.inter_method == "ProbGEORCE_ND":
             noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
-        elif self.inter_method == "ProbGEORCE_Data":
-            
-            reg_fun = lambda x: self.data_space_loss(
-                                                    x,
-                                                    cur_step,          # IMPORTANT: index in ddim_timesteps
-                                                    cond,
-                                                    score_corrector=None,
-                                                    corrector_kwargs=None,
-                                                    unconditional_guidance_scale=guide_scale,
-                                                    unconditional_conditioning=un_cond,
-                                                    use_original_steps=False,
-                                                    lambda_score=1.0,
-                                                    lambda_prior=1e-4,
-                                                    lambda_stable=0.1,
-                                                    )
-            
-            self.PGEORCE_Score_Data = ProbScoreGEORCE_Euclidean(score_fun = reg_fun,
-                                                                init_fun= None,
-                                                                lam=self.lam,
-                                                                N=self.N,
-                                                                tol=1e-4,
-                                                                max_iter=self.max_iter,
-                                                                lr_rate=0.001,
-                                                                beta1=0.5,
-                                                                beta2=0.5,
-                                                                eps=1e-8,
-                                                                device="cuda:0",
-                                                                )
-            
-            data_curve = self.PGEORCE_Score_Data(left_image, right_image)
-            #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                    use_original_steps=False, return_intermediates=None,
-                                                    unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
-            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
-            
             
         self.sample_images(ldm, 
                            noisy_curve, 
@@ -543,7 +577,8 @@ class ContextManager:
                       n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
-        cur_step=140
+        cur_step = ddim_steps#140
+        
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
@@ -554,96 +589,31 @@ class ContextManager:
             cond_target  = ldm.get_learned_conditioning([prompt_target])
             cond_neutral = ldm.get_learned_conditioning([prompt_neutral])
             uncond_base  = ldm.get_learned_conditioning([n_prompt])
-
-        if self.inter_method == "ProbGEORCE_Noise":
+            
+        if self.inter_method == "ProbGEORCE":
             dimension = len(l1.reshape(-1))
-            df = torch.tensor(float(dimension), device="cuda")
-            S = Chi2(df=df)
+            latent_shape = l1.shape
+            ivp_method = self.get_reg_fun(dimension=dimension, 
+                                          latent_shape=latent_shape,
+                                          cur_step=cur_step, 
+                                          cond=cond, 
+                                          un_cond=un_cond,
+                                          guide_scale=guide_scale,
+                                          method = "ivp"
+                                          )
             
-            reg_fun = lambda x: self.noise_space_grad(
-                x,
-                cur_step,          # IMPORTANT: index in ddim_timesteps
-                cond,
-                score_corrector=None,
-                corrector_kwargs=None,
-                unconditional_guidance_scale=1.0,
-                unconditional_conditioning=None,
-                use_original_steps=False,
-                lambda_score=1.0,
-                lambda_prior=1e-4,
-                lambda_stable=0.1,
-                )
-            
-            reg_fun = lambda x: self.noise_space_grad(
-                x,
-                cur_step,          # IMPORTANT: index in ddim_timesteps
-                cond,
-                score_corrector=None,
-                corrector_kwargs=None,
-                unconditional_guidance_scale=1.0,
-                unconditional_conditioning=None,
-                use_original_steps=False,
-                lambda_score=1.0,
-                lambda_prior=1e-4,
-                lambda_stable=0.1,
-                )
-
-            M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, gradS=lambda x: reg_fun(x.reshape(-1,dimension)), S=None, lam=self.lam)
-            #Mlambda = LambdaManifold(M=M, S=lambda x: reg_fun(x.reshape(-1,dimension)), gradS=None, lam=self.lam)
-            # Compute gradient using autograd
-            #v0 = grad(reg_fun)(l1.reshape(1,-1)).reshape(1,-1)
-            v0 = torch.randn_like(l1)
-            noisy_curve = Mlambda.Exp_ode_Euclidean(l1.reshape(1,-1), v0.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
-        elif self.inter_method == "ProbGEORCE_Score_Noise":
-            
-            score_fun = lambda x: self.ddim_sampler.score_fun(x,
-                                                              cond,
-                                                              cur_step,
-                                                              score_corrector=None,
-                                                              corrector_kwargs=None,
-                                                              unconditional_guidance_scale=1.0,
-                                                              unconditional_conditioning=un_cond,
-                                                              )
-            
-            dimension = len(l1.reshape(-1))
-            M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
-            #v0 = score_fun(left_image)
-            v0 = torch.randn_like(left_image)
-            with torch.no_grad():
-                noisy_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,*latent_shape)
-            
-        elif self.inter_method == "ProbGEORCE_Data":
-            
-            reg_fun = lambda x: self.data_space_loss(
-                                                    x,
-                                                    cur_step,          # IMPORTANT: index in ddim_timesteps
-                                                    cond,
-                                                    score_corrector=None,
-                                                    corrector_kwargs=None,
-                                                    unconditional_guidance_scale=1.0,
-                                                    unconditional_conditioning=None,
-                                                    use_original_steps=False,
-                                                    lambda_score=1.0,
-                                                    lambda_prior=1e-4,
-                                                    lambda_stable=0.1,
-                                                    )
-            
-            Mlambda = LambdaManifold(M=M, S=None, gradS=lambda x: reg_fun(x.reshape(-1,dimension)).squeeze(), lam=self.lam)
-            #v0 = score_fun(left_image)
-            v0 = torch.randn_like(left_image)
-            with torch.no_grad():
-                data_curve = Mlambda.Exp_ode_Euclidean(left_image, v0, T=self.N).reshape(-1,*latent_shape)
-            #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            noisy_curve = []
-            for i, data_img in enumerate(data_curve):
-                noisy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                            use_original_steps=False, return_intermediates=None,
-                                                            unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0])
-                
-            noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
-            
+            if self.interpolation_space == "noise":
+                v0 = torch.randn_like(l1)
+                noisy_curve = ivp_method(l1, v0)
+            elif self.interpolation_space == "data":
+                v0 = torch.randn_like(left_image)
+                data_curve = ivp_method(left_image, v0)
+                noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                        use_original_steps=False, return_intermediates=None,
+                                                        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
+            else:
+                raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
             
         self.sample_images(ldm, 
                            noisy_curve, 
@@ -656,23 +626,6 @@ class ContextManager:
                            )
             
         return
-
-    def images_to_tensors_raw(self,
-                              imgs, 
-                              base_dir:str,
-                              device='cuda',
-                              ):
-        tensors = []
-        
-        for img in imgs:
-            img.save(f'{base_dir}/{0:03d}.png')
-            if img.mode == 'RGBA':#
-                    img = img.convert('RGB')
-            img = torch.tensor(np.array(img)).permute(2,0,1).unsqueeze(0).cuda()
-            tensors.append(img)
-        
-        return tensors
-
     
     def mean(self, 
              imgs, 
@@ -715,7 +668,7 @@ class ContextManager:
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
-        cur_step=140
+        cur_step = ddim_steps#140
         
         img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
                                                                   cond, 
@@ -724,90 +677,36 @@ class ContextManager:
                                                                   return_intermediates=None,
                                                                   unconditional_guidance_scale=1, 
                                                                   unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
-
-        if self.inter_method == "ProbGEORCE_Noise":
+        
+        if self.inter_method == "ProbGEORCE":
             dimension = len(img_encoded[0].reshape(-1))
-            df = torch.tensor(float(dimension), device="cuda")
-            S = Chi2(df=df)
+            latent_shape = img_encoded[0].shape
+            mean_method = self.get_reg_fun(dimension=dimension, 
+                                          latent_shape=latent_shape,
+                                          cur_step=cur_step, 
+                                          cond=cond, 
+                                          un_cond=un_cond,
+                                          guide_scale=guide_scale,
+                                          method = "mean"
+                                          )
             
-            reg_fun = lambda x: self.noise_space_grad(
-                x,
-                cur_step,          # IMPORTANT: index in ddim_timesteps
-                cond,
-                score_corrector=None,
-                corrector_kwargs=None,
-                unconditional_guidance_scale=1.0,
-                unconditional_conditioning=None,
-                use_original_steps=False,
-                lambda_score=1.0,
-                lambda_prior=1e-4,
-                lambda_stable=0.1,
-                )
-            
-            self.PGEORCE = ProbScoreGEORCEFM_Euclidean(score_fun = reg_fun,
-                                                  init_fun=None,
-                                                  lam = self.lam,
-                                                  N_grid=self.N,
-                                                  tol=1e-4,
-                                                  max_iter=self.max_iter,
-                                                  lr_rate=0.001,
-                                                  beta1=0.5,
-                                                  beta2=0.5,
-                                                  eps=1e-8,
-                                                  device="cuda:0",)
-
-            #self.PGEORCE = ProbGEORCEFM_Euclidean(reg_fun = reg_fun,
-            #                                      init_fun=None,
-            #                                      lam = self.lam,
-            #                                      N_grid=self.N,
-            #                                      tol=1e-4,
-            #                                      max_iter=self.max_iter,
-            #                                      line_search_params = {'rho': 0.5},
-            #                                      device="cuda:0",
-            #                                      )
-            
-            noisy_mean, noisy_curve = self.PGEORCE(img_encoded)
-            noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,*latent_shape)
-        elif self.inter_method == "ProbGEORCE_Data":
-            
-            reg_fun = lambda x: self.data_space_loss(
-                                                    x,
-                                                    cur_step,          # IMPORTANT: index in ddim_timesteps
-                                                    cond,
-                                                    score_corrector=None,
-                                                    corrector_kwargs=None,
-                                                    unconditional_guidance_scale=1.0,
-                                                    unconditional_conditioning=None,
-                                                    use_original_steps=False,
-                                                    lambda_score=1.0,
-                                                    lambda_prior=1e-4,
-                                                    lambda_stable=0.1,
-                                                    )
-
-            self.PGEORCE_Score_Data = ProbScoreGEORCEFM_Euclidean(score_fun = reg_fun,
-                                                                  init_fun= None,
-                                                                  lam=self.lam,
-                                                                  N=self.N,
-                                                                  tol=1e-4,
-                                                                  max_iter=self.max_iter,
-                                                                  lr_rate=0.001,
-                                                                  beta1=0.5,
-                                                                  beta2=0.5,
-                                                                  eps=1e-8,
-                                                                  device="cuda:0",
-                                                                  )
-            
-            data_mean, data_curve = self.PGEORCE_Score_Data(img_first_stage_encodings)
-            #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-            noisy_curve = []
-            for d in data_curve:
-                dummy_curve = []
-                for data_img in d:
-                    dummy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                                use_original_steps=False, return_intermediates=None,
-                                                                unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
-                dummy_curve = torch.concatenate(dummy_curve, axis=0)
-            noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,*latent_shape)
+            if self.interpolation_space == "noise":
+                noisy_mean, noisy_curve = mean_method(img_encoded)
+                noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,*latent_shape)
+            elif self.interpolation_space == "data":
+                data_mean, data_curve = mean_method(img_first_stage_encodings)
+                #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                noisy_curve = []
+                for d in data_curve:
+                    dummy_curve = []
+                    for data_img in d:
+                        dummy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                                    use_original_steps=False, return_intermediates=None,
+                                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
+                    dummy_curve = torch.concatenate(dummy_curve, axis=0)
+                noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,*latent_shape)
+            else:
+                raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
             
         self.sample_multi_images(ldm, 
                                  noisy_curve, 

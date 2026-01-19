@@ -24,7 +24,7 @@ def submit_job():
 
 #%% Generate jobs
 
-def generate_job(model, computation_method, method, lam, clip, N, max_iter=100):
+def generate_job(model, computation_method, method, lam, clip, N, reg_type="score", interpolation_space="noise", max_iter=100):
 
     with open ('submit_interpolation.sh', 'w') as rsh:
         rsh.write(f'''\
@@ -60,6 +60,8 @@ def generate_job(model, computation_method, method, lam, clip, N, max_iter=100):
         --N {N} \\
         --max_iter {max_iter} \\
         --num_images 10 \\
+        --reg_type {reg_type} \\
+        --interpolation_space {interpolation_space} \\
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \\
     ''')
     
@@ -80,7 +82,9 @@ def loop_jobs(wait_time = 1.0):
     
     N = 100
     max_iter = 1000
-    method = ['ProbGEORCE_Score_Noise']
+    method = ['ProbGEORCE']
+    reg_types = ['score']
+    interpolation_space=['noise']
     clip = [0]#[0,1]
     lam = [1.0, 10.0]#[0.1, 0.5, 1.0, 10.0]
 
@@ -92,30 +96,32 @@ def loop_jobs(wait_time = 1.0):
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
                             
-def run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time):
+def run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time):
     
     for com_meth in computation_methods:
         for mod in model:
             for meth in method:
                 time.sleep(wait_time+np.abs(np.random.normal(0.0,1.,1)[0]))
                 if "ProbGEORCE" in meth or "test" in meth:
-                    for cl in clip:
-                        for l in lam:
-                            generate_job(model=mod, computation_method=com_meth, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter)
-                            try:
-                                submit_job()
-                            except:
-                                time.sleep(100.0+np.abs(np.random.normal(0.0,1.,1)))
-                                try:
-                                    submit_job()
-                                except:
-                                    print(f"Job script with {mod}, {meth} failed!")
+                    for reg_type in reg_types:
+                        for interpolation_sp in interpolation_space:
+                            for cl in clip:
+                                for l in lam:
+                                    generate_job(model=mod, computation_method=com_meth, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter, reg_type=reg_type, interpolation_space=interpolation_sp)
+                                    try:
+                                        submit_job()
+                                    except:
+                                        time.sleep(100.0+np.abs(np.random.normal(0.0,1.,1)))
+                                        try:
+                                            submit_job()
+                                        except:
+                                            print(f"Job script with {mod}, {meth} failed!")
                 else:
-                    generate_job(model=mod, computation_method=com_meth, method=meth, lam=1.0, clip=0, N=N, max_iter=max_iter)
+                    generate_job(model=mod, computation_method=com_meth, method=meth, lam=1.0, clip=0, N=N, max_iter=max_iter, reg_type="score", interpolation_space="noise")
                     try:
                         submit_job()
                     except:
