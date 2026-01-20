@@ -597,7 +597,7 @@ class ContextManager:
             
         if self.inter_method == "ProbGEORCE":
             dimension = len(l1.reshape(-1))
-            latent_shape = l1.shape
+            latent_shape = l1.shape[1:]
             ivp_method = self.get_reg_fun(dimension=dimension, 
                                           latent_shape=latent_shape,
                                           cur_step=cur_step, 
