@@ -98,7 +98,7 @@ def loop_jobs(wait_time = 1.0):
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     reg_types = ['score', 'score_naive']
     interpolation_space=['data']
