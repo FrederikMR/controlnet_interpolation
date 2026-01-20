@@ -700,7 +700,8 @@ class ContextManager:
                 noisy_mean, noisy_curve = mean_method(img_encoded)
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             elif self.interpolation_space == "data":
-                data_mean, data_curve = mean_method(torch.tensor(img_first_stage_encodings))
+                img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
+                data_mean, data_curve = mean_method(img_data_space)
                 #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                 noisy_curve = []
                 with torch.no_grad():
