@@ -509,7 +509,8 @@ class ContextManager:
             if self.interpolation_space == "noise":
                 noisy_curve = bvp_method(l1, l2)
             elif self.interpolation_space == "data":
-                data_curve = bvp_method(left_image, right_image)
+                print(left_image.shape)
+                data_curve = bvp_method(left_image.squeeze(), right_image.squeeze())
                 #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                 with torch.no_grad():
                     noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
