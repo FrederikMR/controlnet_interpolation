@@ -108,7 +108,7 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space=['data']
     computation_methods = ['bvp'] #['ivp', 'bvp']
     N = 10
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
                             
