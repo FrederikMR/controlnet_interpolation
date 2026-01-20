@@ -102,7 +102,7 @@ class ContextManager:
                                                               corrector_kwargs=None,
                                                               unconditional_guidance_scale=guide_scale,
                                                               unconditional_conditioning=un_cond,
-                                                              )
+                                                              ).reshape(*x.shape)
         elif self.reg_type == "score_naive":
             score_fun = lambda x: self.ddim_sampler.score_fun_naive(x.reshape(-1,*latent_shape),
                                                                     cond,
@@ -111,7 +111,7 @@ class ContextManager:
                                                                     corrector_kwargs=None,
                                                                     unconditional_guidance_scale=guide_scale,
                                                                     unconditional_conditioning=un_cond,
-                                                                    )
+                                                                    ).reshape(*x.shape)
         elif self.reg_type == "prior":
             S = Chi2(df=float(dimension))
             
@@ -131,7 +131,7 @@ class ContextManager:
         if method == "ivp":
             M = nEuclidean(dim=dimension)
             Mlambda = LambdaManifold(M=M, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), S=None, lam=self.lam)
-            return lambda x,v: Mlambda.Exp_ode_Euclidean(x.reshape(1,-1), v.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
+            return lambda x,v: Mlambda.Exp_ode_Euclidean(x.reshape(1,-1), v.reshape(1,-1), T=self.N).reshape(-1,1,*latent_shape)
         elif method == "bvp":
             return ProbScoreGEORCE_Euclidean(score_fun = score_fun,
                                              init_fun=None,
@@ -700,7 +700,7 @@ class ContextManager:
                 noisy_mean, noisy_curve = mean_method(img_encoded)
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             elif self.interpolation_space == "data":
-                data_mean, data_curve = mean_method(img_first_stage_encodings)
+                data_mean, data_curve = mean_method(torch.tensor(img_first_stage_encodings))
                 #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                 noisy_curve = []
                 with torch.no_grad():
