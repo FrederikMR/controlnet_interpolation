@@ -89,18 +89,20 @@ def loop_jobs(wait_time = 1.0):
     lam = [1.0, 10.0]#[0.1, 0.5, 1.0, 10.0]
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    #model = ['afhq-cat']
-    #computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, max_iter, wait_time)
+    model = ['afhq-cat']
+    computation_methods = ['mean']
+    reg_types = ['prior']
+    interpolation_space=['noise']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['bvp'] #['ivp', 'bvp']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
-    reg_types = ['score', 'score_naive', 'prior']
+    reg_types = ['score', 'score_naive']
     interpolation_space=['data']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
                             

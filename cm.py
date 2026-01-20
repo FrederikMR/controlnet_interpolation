@@ -511,9 +511,10 @@ class ContextManager:
             elif self.interpolation_space == "data":
                 data_curve = bvp_method(left_image, right_image)
                 #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-                noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                        use_original_steps=False, return_intermediates=None,
-                                                        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+                with torch.no_grad():
+                    noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                            use_original_steps=False, return_intermediates=None,
+                                                            unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
                 noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
@@ -608,9 +609,10 @@ class ContextManager:
             elif self.interpolation_space == "data":
                 v0 = torch.randn_like(left_image)
                 data_curve = ivp_method(left_image, v0)
-                noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                        use_original_steps=False, return_intermediates=None,
-                                                        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
+                with torch.no_grad():
+                    noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                            use_original_steps=False, return_intermediates=None,
+                                                            unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
                 noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
@@ -697,13 +699,14 @@ class ContextManager:
                 data_mean, data_curve = mean_method(img_first_stage_encodings)
                 #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                 noisy_curve = []
-                for d in data_curve:
-                    dummy_curve = []
-                    for data_img in d:
-                        dummy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                                    use_original_steps=False, return_intermediates=None,
-                                                                    unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
-                    dummy_curve = torch.concatenate(dummy_curve, axis=0)
+                with torch.no_grad():
+                    for d in data_curve:
+                        dummy_curve = []
+                        for data_img in d:
+                            dummy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
+                                                                        use_original_steps=False, return_intermediates=None,
+                                                                        unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
+                        dummy_curve = torch.concatenate(dummy_curve, axis=0)
                 noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,*latent_shape)
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
