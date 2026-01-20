@@ -711,6 +711,7 @@ class ContextManager:
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
             
+        print(noisy_curve.shape)
         self.sample_multi_images(ldm, 
                                  noisy_curve, 
                                  cond1, 
