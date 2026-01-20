@@ -115,7 +115,7 @@ class ContextManager:
         elif self.reg_type == "prior":
             S = Chi2(df=float(dimension))
             
-            reg_fun = lambda x: -S.log_prob(x).mean()
+            reg_fun = lambda x: -S.log_prob(torch.sum(x**2, axis=-1)).mean()
             
             score_fun = grad(reg_fun)
         else:
