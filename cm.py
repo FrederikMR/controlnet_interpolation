@@ -309,6 +309,7 @@ class ContextManager:
     def sample_data_images(self,
                            ldm,
                            data_curves,
+                           noise,
                            cond_neutral,
                            uncond_base,
                            cur_step,
@@ -319,8 +320,33 @@ class ContextManager:
         
         for i, data_latent in enumerate(data_curves, start=0):
             if (i % self.step_save == 0) or (i == 0) or (i==len(data_curves)-1):
+                
+                timesteps = self.ddim_sampler.ddim_timesteps
+                t = timesteps[cur_step]
+                noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                
+                if cond_target is not None:
+                    # ---- NEW: smooth prompt transition ----
+                    alpha = self.prompt_strength(i, data_curves)
+                
+                    cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
+                else:
+                    cond_blend = cond_neutral
+                
+                cond = {"c_crossattn": [cond_blend], 'c_concat': None}
+                un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
             
-                image = ldm.decode_first_stage(data_latent)
+                # ---- Your original decode ----
+                samples = self.ddim_sampler.decode(
+                    noisy_latent,
+                    cond,
+                    cur_step,
+                    unconditional_guidance_scale=guide_scale,
+                    unconditional_conditioning=un_cond,
+                    use_original_steps=False
+                )
+            
+                image = ldm.decode_first_stage(samples)
                 image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
                 Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
         
@@ -329,6 +355,7 @@ class ContextManager:
     def sample_data_multi_images(self,
                                  ldm,
                                  data_curves,
+                                 noise,
                                  cond_neutral,
                                  uncond_base,
                                  cur_step,
@@ -340,8 +367,33 @@ class ContextManager:
         for j, data_curve in enumerate(data_curves, start=0):
             for i, data_latent in enumerate(data_curve, start=0):
                 if (i % self.step_save == 0) or (i == 0) or (i==len(data_curve)-1):
+                    
+                    timesteps = self.ddim_sampler.ddim_timesteps
+                    t = timesteps[cur_step]
+                    noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                    
+                    if cond_target is not None:
+                        # ---- NEW: smooth prompt transition ----
+                        alpha = self.prompt_strength(i, data_curve)
+                    
+                        cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
+                    else:
+                        cond_blend = cond_neutral
+                    
+                    cond = {"c_crossattn": [cond_blend], 'c_concat': None}
+                    un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
                 
-                    image = ldm.decode_first_stage(data_latent)
+                    # ---- Your original decode ----
+                    samples = self.ddim_sampler.decode(
+                        noisy_latent,
+                        cond,
+                        cur_step,
+                        unconditional_guidance_scale=guide_scale,
+                        unconditional_conditioning=un_cond,
+                        use_original_steps=False
+                    )
+                
+                    image = ldm.decode_first_stage(samples)
                     image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
                     Image.fromarray(image[0]).save(f'{out_dir}/{j}_{i}.png')
         
@@ -559,6 +611,7 @@ class ContextManager:
                                         cur_step, 
                                         guide_scale, 
                                         out_dir,
+                                        noise=torch.randn_like(left_image),
                                         )
                 
                 return
@@ -664,6 +717,7 @@ class ContextManager:
                                         guide_scale, 
                                         out_dir,
                                         cond_target,
+                                        noise=torch.randn_like(left_image),
                                         )
                 
                 return
@@ -761,6 +815,7 @@ class ContextManager:
                                               cur_step, 
                                               guide_scale, 
                                               out_dir,
+                                              noise=torch.randn_like(img_first_stage_encodings[0]),
                                               )
                 
                 return
