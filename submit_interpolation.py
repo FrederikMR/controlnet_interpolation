@@ -81,40 +81,28 @@ def loop_jobs(wait_time = 1.0):
     #Project score to sphere TM
     
     N = 10
-    max_iter = 1
-    
-    
-    
-    method = ['ProbGEORCE']
-    reg_types = ['score', 'score_naive', 'prior']
-    interpolation_space=['noise']
+    lam = [20.0]
+    max_iter = 1000
     clip = [0]#[0,1]
-    lam = [1.0, 10.0]#[0.1, 0.5, 1.0, 10.0]
+    method = ['ProbGEORCE']
+    
+    
+    ################################### Noise Space ################################
+    reg_types = ['score', 'score_naive', 'prior']
+    interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    N = 10
     model = ['afhq-cat']
     computation_methods = ['mean']
-    reg_types = ['score_naive']
-    interpolation_space=['data']#, 'noise']
-    lam =[20.0]
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    N = 100
-    #reg_types = ['score', 'score_naive', 'prior']
-    reg_types = ['score_naive']
-    interpolation_space=['data', 'noise']
-    lam =[20.0]
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
-    reg_types = ['score_naive']#, 'score_naive']
-    interpolation_space=['data', 'noise']
+    model = ['cat']
     computation_methods = ['bvp'] #['ivp', 'bvp']
-    N = 10
-    lam =[20.0]
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
