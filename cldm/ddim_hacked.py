@@ -472,7 +472,7 @@ class DDIMSampler(object):
         )
     
         # --- ε_uncond ---
-        with torch.autocast(device_type=x.device, dtype=torch.float16):
+        with torch.autocast("cuda", dtype=torch.float16):
             eps_uncond = self.model.apply_model(
                 x,
                 t_batch,
@@ -480,7 +480,7 @@ class DDIMSampler(object):
             )
     
         # --- ε_cond ---
-        with torch.autocast(device_type=x.device, dtype=torch.float16):
+        with torch.autocast("cuda", dtype=torch.float16):
             eps_cond = self.model.apply_model(
                 x,
                 t_batch,
@@ -560,7 +560,7 @@ class DDIMSampler(object):
                 raise ValueError("unconditional_conditioning must be provided for SDS-style score")
     
             # --- ε_uncond ---
-            with torch.autocast(device_type=x.device, dtype=torch.float16):
+            with torch.autocast("cuda", dtype=torch.float16):
                 eps_uncond = self.model.apply_model(
                     x_chunk,
                     t_chunk,
@@ -568,7 +568,7 @@ class DDIMSampler(object):
                 )
     
             # --- ε_cond ---
-            with torch.autocast(device_type=x.device, dtype=torch.float16):
+            with torch.autocast("cuda", dtype=torch.float16):
                 eps_cond = self.model.apply_model(
                     x_chunk,
                     t_chunk,
@@ -582,7 +582,7 @@ class DDIMSampler(object):
             # optional score corrector (rare in SDS)
             if score_corrector is not None:
                 assert self.model.parameterization == "eps", "Score corrector only supported for eps models"
-                with torch.autocast(device_type=x.device, dtype=torch.float16):
+                with torch.autocast("cuda", dtype=torch.float16):
                     grad = score_corrector.modify_score(
                         self.model,
                         grad,
@@ -645,7 +645,7 @@ class DDIMSampler(object):
             )
     
             # εθ(x_t, t)
-            with torch.autocast(device_type=x.device, dtype=torch.float16):
+            with torch.autocast("cuda", dtype=torch.float16):
                 eps = self.pred_eps(x_chunk, c, t_chunk,
                                     score_corrector=score_corrector, 
                                     corrector_kwargs=corrector_kwargs,
