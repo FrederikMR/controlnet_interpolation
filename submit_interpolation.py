@@ -84,7 +84,6 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 1000
     method = ['ProbGEORCE']
     reg_types = ['score', 'score_naive', 'prior']
-    reg_types = ['prior']
     interpolation_space=['noise']
     clip = [0]#[0,1]
     lam = [1.0, 10.0]#[0.1, 0.5, 1.0, 10.0]
@@ -100,7 +99,6 @@ def loop_jobs(wait_time = 1.0):
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     reg_types = ['score', 'score_naive', 'prior']
-    reg_types = ['prior']
     interpolation_space=['data']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
