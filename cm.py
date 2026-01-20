@@ -694,7 +694,7 @@ class ContextManager:
             
             if self.interpolation_space == "noise":
                 noisy_mean, noisy_curve = mean_method(img_encoded)
-                noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,*latent_shape)
+                noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             elif self.interpolation_space == "data":
                 data_mean, data_curve = mean_method(img_first_stage_encodings)
                 #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
