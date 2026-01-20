@@ -95,7 +95,7 @@ def loop_jobs(wait_time = 1.0):
     N = 10
     model = ['afhq-cat']
     computation_methods = ['mean']
-    reg_types = ['score']
+    reg_types = ['score_naive']
     interpolation_space=['data']#, 'noise']
     lam =[1.0]
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
@@ -105,12 +105,12 @@ def loop_jobs(wait_time = 1.0):
     computation_methods = ['ivp'] #['ivp', 'bvp']
     N = 100
     #reg_types = ['score', 'score_naive', 'prior']
-    reg_types = ['score']
+    reg_types = ['score_naive']
     interpolation_space=['data', 'noise']
     lam =[1.0]
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
-    reg_types = ['score']#, 'score_naive']
+    reg_types = ['score_naive']#, 'score_naive']
     interpolation_space=['data', 'noise']
     computation_methods = ['bvp'] #['ivp', 'bvp']
     N = 10
