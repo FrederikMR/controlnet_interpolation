@@ -149,7 +149,7 @@ class ContextManager:
             return ProbScoreGEORCEFM_Euclidean(score_fun = score_fun,
                                                init_fun= None,
                                                lam=self.lam,
-                                               N=self.N,
+                                               N_grid=self.N,
                                                tol=tol,
                                                max_iter=self.max_iter,
                                                lr_rate=lr_rate,
