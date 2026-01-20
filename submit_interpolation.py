@@ -81,7 +81,10 @@ def loop_jobs(wait_time = 1.0):
     #Project score to sphere TM
     
     N = 10
-    max_iter = 1000
+    max_iter = 1
+    
+    
+    
     method = ['ProbGEORCE']
     reg_types = ['score', 'score_naive', 'prior']
     interpolation_space=['noise']
@@ -95,7 +98,7 @@ def loop_jobs(wait_time = 1.0):
     reg_types = ['score']
     interpolation_space=['data', 'noise']
     lam =[1.0]
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
@@ -108,11 +111,11 @@ def loop_jobs(wait_time = 1.0):
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     reg_types = ['score']#, 'score_naive']
-    interpolation_space=['noise']
+    interpolation_space=['data', 'noise']
     computation_methods = ['bvp'] #['ivp', 'bvp']
     N = 10
     lam =[1.0]
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
                             

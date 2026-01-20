@@ -519,7 +519,7 @@ class ContextManager:
                     noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                             use_original_steps=False, return_intermediates=None,
                                                             unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
-                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
+                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,*latent_shape)
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
         elif self.inter_method == "ProbGEORCE_ND":
@@ -617,7 +617,7 @@ class ContextManager:
                     noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
                                                             use_original_steps=False, return_intermediates=None,
                                                             unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
-                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,*latent_shape)
+                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,*latent_shape)
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
             
