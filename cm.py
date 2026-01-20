@@ -95,7 +95,7 @@ class ContextManager:
             cur_step = 0
             
         if self.reg_type == "score":
-            score_fun = lambda x: self.ddim_sampler.score_fun(x,
+            score_fun = lambda x: self.ddim_sampler.score_fun(x.reshape(-1,*latent_shape),
                                                               cond,
                                                               cur_step,
                                                               score_corrector=None,
@@ -104,7 +104,7 @@ class ContextManager:
                                                               unconditional_conditioning=un_cond,
                                                               )
         elif self.reg_type == "score_naive":
-            score_fun = lambda x: self.ddim_sampler.score_fun_naive(x,
+            score_fun = lambda x: self.ddim_sampler.score_fun_naive(x.reshape(-1,*latent_shape),
                                                                     cond,
                                                                     cur_step,
                                                                     score_corrector=None,
@@ -115,7 +115,7 @@ class ContextManager:
         elif self.reg_type == "prior":
             S = Chi2(df=float(dimension))
             
-            reg_fun = lambda x: -S.log_prob(torch.sum(x**2, axis=-1)).mean()
+            reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
             
             score_fun = grad(reg_fun)
         else:
@@ -130,7 +130,7 @@ class ContextManager:
         device = "cuda:0"
         if method == "ivp":
             M = nEuclidean(dim=dimension)
-            Mlambda = LambdaManifold(M=M, gradS=lambda x: score_fun(x.reshape(-1,dimension)), S=None, lam=self.lam)
+            Mlambda = LambdaManifold(M=M, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), S=None, lam=self.lam)
             return lambda x,v: Mlambda.Exp_ode_Euclidean(x.reshape(1,-1), v.reshape(1,-1), T=self.N).reshape(-1,*latent_shape)
         elif method == "bvp":
             return ProbScoreGEORCE_Euclidean(score_fun = score_fun,
