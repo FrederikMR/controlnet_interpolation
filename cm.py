@@ -710,8 +710,7 @@ class ContextManager:
                 noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,*latent_shape)
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
-            
-        print(noisy_curve.shape)
+
         self.sample_multi_images(ldm, 
                                  noisy_curve, 
                                  cond1, 
