@@ -104,10 +104,11 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space=['noise']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
-    reg_types = ['score', 'score_naive']
+    reg_types = ['score']#, 'score_naive']
     interpolation_space=['data']
     computation_methods = ['bvp'] #['ivp', 'bvp']
     N = 10
+    lam =[1.0]
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
