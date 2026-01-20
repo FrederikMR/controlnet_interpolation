@@ -472,18 +472,20 @@ class DDIMSampler(object):
         )
     
         # --- ε_uncond ---
-        eps_uncond = self.model.apply_model(
-            x,
-            t_batch,
-            unconditional_conditioning
-        )
+        with torch.autocast(device_type=x.device, dtype=torch.float16):
+            eps_uncond = self.model.apply_model(
+                x,
+                t_batch,
+                unconditional_conditioning
+            )
     
         # --- ε_cond ---
-        eps_cond = self.model.apply_model(
-            x,
-            t_batch,
-            c
-        )
+        with torch.autocast(device_type=x.device, dtype=torch.float16):
+            eps_cond = self.model.apply_model(
+                x,
+                t_batch,
+                c
+            )
     
         # CFG-style SDS gradient
         grad = eps_uncond - eps_cond
@@ -558,18 +560,20 @@ class DDIMSampler(object):
                 raise ValueError("unconditional_conditioning must be provided for SDS-style score")
     
             # --- ε_uncond ---
-            eps_uncond = self.model.apply_model(
-                x_chunk,
-                t_chunk,
-                unconditional_conditioning
-            )
+            with torch.autocast(device_type=x.device, dtype=torch.float16):
+                eps_uncond = self.model.apply_model(
+                    x_chunk,
+                    t_chunk,
+                    unconditional_conditioning
+                )
     
             # --- ε_cond ---
-            eps_cond = self.model.apply_model(
-                x_chunk,
-                t_chunk,
-                c
-            )
+            with torch.autocast(device_type=x.device, dtype=torch.float16):
+                eps_cond = self.model.apply_model(
+                    x_chunk,
+                    t_chunk,
+                    c
+                )
     
             # CFG-style SDS gradient
             grad = eps_uncond - eps_cond
@@ -578,14 +582,15 @@ class DDIMSampler(object):
             # optional score corrector (rare in SDS)
             if score_corrector is not None:
                 assert self.model.parameterization == "eps", "Score corrector only supported for eps models"
-                grad = score_corrector.modify_score(
-                    self.model,
-                    grad,
-                    x_chunk,
-                    t_chunk,
-                    c,
-                    **(corrector_kwargs or {})
-                )
+                with torch.autocast(device_type=x.device, dtype=torch.float16):
+                    grad = score_corrector.modify_score(
+                        self.model,
+                        grad,
+                        x_chunk,
+                        t_chunk,
+                        c,
+                        **(corrector_kwargs or {})
+                    )
     
             grad = w * grad
             grad = grad.reshape(x_chunk.shape[0], -1)
@@ -640,12 +645,13 @@ class DDIMSampler(object):
             )
     
             # εθ(x_t, t)
-            eps = self.pred_eps(x_chunk, c, t_chunk,
-                                score_corrector=score_corrector, 
-                                corrector_kwargs=corrector_kwargs,
-                                unconditional_guidance_scale=unconditional_guidance_scale, 
-                                unconditional_conditioning=unconditional_conditioning,
-                                )
+            with torch.autocast(device_type=x.device, dtype=torch.float16):
+                eps = self.pred_eps(x_chunk, c, t_chunk,
+                                    score_corrector=score_corrector, 
+                                    corrector_kwargs=corrector_kwargs,
+                                    unconditional_guidance_scale=unconditional_guidance_scale, 
+                                    unconditional_conditioning=unconditional_conditioning,
+                                    )
 
             # score = -eps / sqrt(1 - alpha_bar_t)
             score = -eps / denom

@@ -80,7 +80,7 @@ def loop_jobs(wait_time = 1.0):
     
     #Project score to sphere TM
     
-    N = 100
+    N = 10
     max_iter = 1000
     method = ['ProbGEORCE']
     reg_types = ['score', 'score_naive', 'prior']
