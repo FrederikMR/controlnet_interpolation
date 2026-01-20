@@ -505,13 +505,15 @@ class ContextManager:
                                           guide_scale=guide_scale,
                                           method = "bvp"
                                           )
-            
+
             print(l1.shape)
             print(left_image.shape)
             
             if self.interpolation_space == "noise":
                 noisy_curve = bvp_method(l1, l2)
             elif self.interpolation_space == "data":
+                print(self.score_fun(l1).shape)
+                print(self.score_fun(left_image.shape))
                 print(left_image.shape)
                 data_curve = bvp_method(left_image, right_image)
                 #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
