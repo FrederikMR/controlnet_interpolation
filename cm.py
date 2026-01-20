@@ -305,6 +305,47 @@ class ContextManager:
                     Image.fromarray(image[0]).save(f'{out_dir}/{j}_{i}.png')
         
         return
+    
+    def sample_data_images(self,
+                           ldm,
+                           data_curves,
+                           cond_neutral,
+                           uncond_base,
+                           cur_step,
+                           guide_scale,
+                           out_dir,
+                           cond_target=None,
+                           ):
+        
+        for i, data_latent in enumerate(data_curves, start=0):
+            if (i % self.step_save == 0) or (i == 0) or (i==len(data_curves)-1):
+            
+                image = ldm.decode_first_stage(data_latent)
+                image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+                Image.fromarray(image[0]).save(f'{out_dir}/{i}.png')
+        
+        return
+    
+    def sample_data_multi_images(self,
+                                 ldm,
+                                 data_curves,
+                                 cond_neutral,
+                                 uncond_base,
+                                 cur_step,
+                                 guide_scale,
+                                 out_dir,
+                                 cond_target=None,
+                                 ):
+        
+        for j, data_curve in enumerate(data_curves, start=0):
+            for i, data_latent in enumerate(data_curve, start=0):
+                if (i % self.step_save == 0) or (i == 0) or (i==len(data_curve)-1):
+                
+                    image = ldm.decode_first_stage(data_latent)
+                    image = (image.permute(0, 2, 3, 1) * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)
+                    Image.fromarray(image[0]).save(f'{out_dir}/{j}_{i}.png')
+        
+        return
 
     def noise_diffusion(self,
                         l1, 
@@ -505,21 +546,22 @@ class ContextManager:
                                           guide_scale=guide_scale,
                                           method = "bvp"
                                           )
-
-            print(l1.shape)
-            print(left_image.shape)
             
             if self.interpolation_space == "noise":
                 noisy_curve = bvp_method(l1, l2)
             elif self.interpolation_space == "data":
-                print(left_image.shape)
                 data_curve = bvp_method(left_image, right_image)
-                #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-                with torch.no_grad():
-                    noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                            use_original_steps=False, return_intermediates=None,
-                                                            unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
-                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,*latent_shape)
+                
+                self.sample_data_images(ldm, 
+                                        data_curve, 
+                                        cond1, 
+                                        uncond_base, 
+                                        cur_step, 
+                                        guide_scale, 
+                                        out_dir,
+                                        )
+                
+                return
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
         elif self.inter_method == "ProbGEORCE_ND":
@@ -613,11 +655,19 @@ class ContextManager:
             elif self.interpolation_space == "data":
                 v0 = torch.randn_like(left_image)
                 data_curve = ivp_method(left_image, v0)
-                with torch.no_grad():
-                    noisy_curve = [self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                            use_original_steps=False, return_intermediates=None,
-                                                            unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)[0] for data_img in data_curve]
-                noisy_curve = torch.concatenate(noisy_curve, axis=0).reshape(-1,1,*latent_shape)
+                
+                self.sample_data_images(ldm, 
+                                        data_curve, 
+                                        cond_neutral, 
+                                        uncond_base, 
+                                        cur_step, 
+                                        guide_scale, 
+                                        out_dir,
+                                        cond_target,
+                                        )
+                
+                return
+                
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
             
@@ -700,19 +750,20 @@ class ContextManager:
                 noisy_mean, noisy_curve = mean_method(img_encoded)
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             elif self.interpolation_space == "data":
+                print(type(img_first_stage_encodings[0]))
                 img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
                 data_mean, data_curve = mean_method(img_data_space)
-                #noisy_curve = ldm.sqrt_alphas_cumprod[t] * data_curve + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
-                noisy_curve = []
-                with torch.no_grad():
-                    for d in data_curve:
-                        dummy_curve = []
-                        for data_img in d:
-                            dummy_curve.append(self.ddim_sampler.encode(data_img, cond, cur_step, 
-                                                                        use_original_steps=False, return_intermediates=None,
-                                                                        unconditional_guidance_scale=1, unconditional_conditioning=un_cond)[0])
-                        dummy_curve = torch.concatenate(dummy_curve, axis=0)
-                noisy_curve = torch.concatenate(dummy_curve, axis=0).reshape(len(imgs),-1,*latent_shape)
+                
+                self.sample_data_multi_images(ldm, 
+                                              data_curve, 
+                                              cond1, 
+                                              uncond_base, 
+                                              cur_step, 
+                                              guide_scale, 
+                                              out_dir,
+                                              )
+                
+                return
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
 
