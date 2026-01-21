@@ -625,12 +625,12 @@ class ContextManager:
                 
                 self.sample_data_images(ldm, 
                                         data_curve, 
+                                        torch.randn_like(left_image),
                                         cond1, 
                                         uncond_base, 
                                         cur_step, 
                                         guide_scale, 
                                         out_dir,
-                                        noise=torch.randn_like(left_image),
                                         )
                 
                 return
@@ -730,13 +730,13 @@ class ContextManager:
                 
                 self.sample_data_images(ldm, 
                                         data_curve, 
+                                        torch.randn_like(left_image),
                                         cond_neutral, 
                                         uncond_base, 
                                         cur_step, 
                                         guide_scale, 
                                         out_dir,
                                         cond_target,
-                                        noise=torch.randn_like(left_image),
                                         )
                 
                 return
@@ -829,12 +829,12 @@ class ContextManager:
                 
                 self.sample_data_multi_images(ldm, 
                                               data_curve, 
+                                              torch.randn_like(img_first_stage_encodings[0]),
                                               cond1, 
                                               uncond_base, 
                                               cur_step, 
                                               guide_scale, 
                                               out_dir,
-                                              noise=torch.randn_like(img_first_stage_encodings[0]),
                                               )
                 
                 return
