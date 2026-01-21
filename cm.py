@@ -229,8 +229,8 @@ class ContextManager:
                               ):
         tensors = []
         
-        for img in imgs:
-            img.save(f'{base_dir}/{0:03d}.png')
+        for counter, img in enumerate(imgs, start=0):
+            img.save(f'{base_dir}/{0:03d}_{counter}.png')
             if img.mode == 'RGBA':#
                     img = img.convert('RGB')
             img = torch.tensor(np.array(img)).permute(2,0,1).unsqueeze(0).cuda()

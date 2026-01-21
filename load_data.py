@@ -4,6 +4,20 @@ import random
 from PIL import Image
 from torchvision import transforms
 from torch.utils.data import Dataset
+import torch
+import numpy as np
+
+# ================================================================
+# 0. Global seed
+# ================================================================
+SEED = 2712
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+
+# Dedicated RNG for dataset sampling (deterministic)
+rng = random.Random(SEED)
 
 # ================================================================
 # 1. Transform helper
@@ -14,7 +28,6 @@ def get_transform(size=256):
         transforms.ToTensor(),
         transforms.Normalize([0.5]*3, [0.5]*3)
     ])
-
 
 # ================================================================
 # 2. Base class: always returns (PIL_image, Tensor)
@@ -32,23 +45,21 @@ class BaseImageDataset(Dataset):
         tensor_img = self.transform(pil_img)
         return pil_img, tensor_img
 
-
 # ================================================================
 # 3. ImageFolder loader
 # ================================================================
 class ImageFolderDataset(BaseImageDataset):
     def __init__(self, folder, n_images=None, transform=None):
-        img_paths = [
+        img_paths = sorted(
             os.path.join(folder, f)
             for f in os.listdir(folder)
             if f.lower().endswith(('.jpg', '.png', '.jpeg'))
-        ]
+        )
 
         if n_images is not None and n_images < len(img_paths):
-            img_paths = random.sample(img_paths, n_images)
+            img_paths = rng.sample(img_paths, n_images)
 
         super().__init__(img_paths, transform)
-
 
 # ================================================================
 # 4. ZIP-based loader (FFHQ, COCO, etc.)
@@ -65,18 +76,18 @@ class ZipImageDataset(BaseImageDataset):
 
         img_paths = []
         for root, _, files in os.walk(extract_dir):
-            for f in files:
+            for f in sorted(files):
                 if f.lower().endswith((".png", ".jpg", ".jpeg")):
                     img_paths.append(os.path.join(root, f))
+        img_paths = sorted(img_paths)
 
         if n_images is not None and n_images < len(img_paths):
-            img_paths = random.sample(img_paths, n_images)
+            img_paths = rng.sample(img_paths, n_images)
 
         if len(img_paths) == 0:
             print(f"WARNING: No images found in {extract_dir}")
 
         super().__init__(img_paths, transform)
-
 
 # ================================================================
 # 5. AFHQ subclass loader: cat, dog, wild
@@ -89,20 +100,19 @@ class AFHQClassDataset(BaseImageDataset):
         if not os.path.isdir(subclass_dir):
             raise ValueError(f"AFHQ subclass not found: {subclass_dir}")
 
-        img_paths = [
+        img_paths = sorted(
             os.path.join(subclass_dir, f)
             for f in os.listdir(subclass_dir)
             if f.lower().endswith((".png", ".jpg", ".jpeg"))
-        ]
+        )
 
         if n_images is not None and n_images < len(img_paths):
-            img_paths = random.sample(img_paths, n_images)
+            img_paths = rng.sample(img_paths, n_images)
 
         if len(img_paths) == 0:
             print(f"WARNING: No images found in {subclass_dir}")
 
         super().__init__(img_paths, transform)
-
 
 # ================================================================
 # 6. AFHQ generic (all subfolders)
@@ -110,15 +120,17 @@ class AFHQClassDataset(BaseImageDataset):
 class AFHQ(BaseImageDataset):
     def __init__(self, root_dir, n_images=None, transform=None):
         img_paths = []
-        for sub in os.listdir(root_dir):
+        for sub in sorted(os.listdir(root_dir)):
             sp = os.path.join(root_dir, sub)
             if os.path.isdir(sp):
-                for f in os.listdir(sp):
+                for f in sorted(os.listdir(sp)):
                     if f.lower().endswith(('.jpg', '.png', '.jpeg')):
                         img_paths.append(os.path.join(sp, f))
 
+        img_paths = sorted(img_paths)
+
         if n_images is not None and n_images < len(img_paths):
-            img_paths = random.sample(img_paths, n_images)
+            img_paths = rng.sample(img_paths, n_images)
 
         super().__init__(img_paths, transform)
 
