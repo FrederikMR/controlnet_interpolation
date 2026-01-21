@@ -341,7 +341,10 @@ class ContextManager:
             if (i % self.step_save == 0) or (i == 0) or (i==len(data_curves)-1):
                 
                 timesteps = self.ddim_sampler.ddim_timesteps
-                t = timesteps[cur_step]
+                if cur_step > len(timesteps):
+                    t = timesteps[cur_step-1]
+                else:
+                    t = timesteps[cur_step]
                 noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                 
                 if cond_target is not None:
@@ -388,7 +391,10 @@ class ContextManager:
                 if (i % self.step_save == 0) or (i == 0) or (i==len(data_curve)-1):
                     
                     timesteps = self.ddim_sampler.ddim_timesteps
-                    t = timesteps[cur_step]
+                    if cur_step > len(timesteps):
+                        t = timesteps[cur_step-1]
+                    else:
+                        t = timesteps[cur_step]
                     noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                     
                     if cond_target is not None:
