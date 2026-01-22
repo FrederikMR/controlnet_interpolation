@@ -88,7 +88,7 @@ def loop_jobs(wait_time = 1.0):
     
     
     ################################### Noise Space ################################
-    reg_types = ['score', 'score_naive', 'prior']
+    reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior']
     interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']

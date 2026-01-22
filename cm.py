@@ -261,7 +261,6 @@ class ContextManager:
                     cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
                 else:
                     cond_blend = cond_neutral
-                cond_blend = cond_neutral
                 
                 cond = {"c_crossattn": [cond_blend], 'c_concat': None}
                 un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
@@ -306,7 +305,6 @@ class ContextManager:
                         cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
                     else:
                         cond_blend = cond_neutral
-                    cond_blend = cond_neutral
                     
                     cond = {"c_crossattn": [cond_blend], 'c_concat': None}
                     un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
@@ -343,7 +341,7 @@ class ContextManager:
             if (i % self.step_save == 0) or (i == 0) or (i==len(data_curves)-1):
                 
                 timesteps = self.ddim_sampler.ddim_timesteps
-                if cur_step > len(timesteps):
+                if cur_step == len(timesteps):
                     t = timesteps[cur_step-1]
                 else:
                     t = timesteps[cur_step]
@@ -394,7 +392,7 @@ class ContextManager:
                 if (i % self.step_save == 0) or (i == 0) or (i==len(data_curve)-1):
                     
                     timesteps = self.ddim_sampler.ddim_timesteps
-                    if cur_step > len(timesteps):
+                    if cur_step == len(timesteps):
                         t = timesteps[cur_step-1]
                     else:
                         t = timesteps[cur_step]
