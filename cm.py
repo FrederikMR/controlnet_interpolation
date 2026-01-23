@@ -271,7 +271,7 @@ class ContextManager:
         
         l1, _ = self.ddim_sampler.encode(img, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
-        unconditional_guidance_scale=1, unconditional_conditioning=uncond_base)
+        unconditional_guidance_scale=guide_scale, unconditional_conditioning=uncond_base)
         
         cond = {"c_crossattn": [cond], 'c_concat': None}
         un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
@@ -643,10 +643,10 @@ class ContextManager:
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
-        unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
+        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
         l2, _ = self.ddim_sampler.encode(right_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
-        unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
+        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
         latent_shape = l1.shape
         
         noise = torch.randn_like(left_image)
@@ -760,7 +760,7 @@ class ContextManager:
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
-        unconditional_guidance_scale=1, unconditional_conditioning=un_cond)
+        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
         latent_shape = l1.shape
         
         # Precompute conditioning
@@ -867,7 +867,7 @@ class ContextManager:
                                                                   cur_step, 
                                                                   use_original_steps=False, 
                                                                   return_intermediates=None,
-                                                                  unconditional_guidance_scale=1, 
+                                                                  unconditional_guidance_scale=guide_scale, 
                                                                   unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
         
         if self.inter_method == "ProbGEORCE":
