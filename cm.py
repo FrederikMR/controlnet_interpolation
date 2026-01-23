@@ -115,9 +115,9 @@ class ContextManager:
         elif self.reg_type == "prior":
             S = Chi2(df=float(dimension))
             
-            reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
+            prior_reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
             
-            score_fun = grad(reg_fun)
+            score_fun = grad(prior_reg_fun)
         elif self.reg_type == "score_naive_with_prior":
             score_fun1 = lambda x: self.ddim_sampler.score_fun_naive(x.reshape(-1,*latent_shape),
                                                                     cond,
@@ -152,35 +152,57 @@ class ContextManager:
             Mlambda = LambdaManifold(M=M, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), S=None, lam=self.lam)
             return lambda x,v: Mlambda.Exp_ode_Euclidean(x.reshape(1,-1), v.reshape(1,-1), T=self.N).reshape(-1,1,*latent_shape)
         elif method == "bvp":
-            return ProbScoreGEORCE_Euclidean(score_fun = score_fun,
-                                             init_fun=None,
-                                             lam = self.lam,
-                                             N=self.N,
-                                             tol=tol,
-                                             max_iter=self.max_iter,
-                                             lr_rate=lr_rate,
-                                             beta1=beta1,
-                                             beta2=beta2,
-                                             eps=eps,
-                                             device=device,
-                                             )
+            if self.reg_type == "prior":
+                return ProbGEORCE_Euclidean(reg_fun = prior_reg_fun,
+                                            init_fun=None,
+                                            lam=self.lam,
+                                            N=self.N,
+                                            tol=tol,
+                                            max_iter=self.max_iter,
+                                            line_search_params={'rho': 0.5},
+                                            device=device,
+                                            )
+            else:
+                return ProbScoreGEORCE_Euclidean(score_fun = score_fun,
+                                                 init_fun=None,
+                                                 lam = self.lam,
+                                                 N=self.N,
+                                                 tol=tol,
+                                                 max_iter=self.max_iter,
+                                                 lr_rate=lr_rate,
+                                                 beta1=beta1,
+                                                 beta2=beta2,
+                                                 eps=eps,
+                                                 device=device,
+                                                 )
         elif method == "mean":
-            return ProbScoreGEORCEFM_Euclidean(score_fun = score_fun,
-                                               init_fun= None,
-                                               lam=self.lam,
-                                               N_grid=self.N,
-                                               tol=tol,
-                                               max_iter=self.max_iter,
-                                               lr_rate=lr_rate,
-                                               beta1=beta1,
-                                               beta2=beta2,
-                                               eps=eps,
-                                               device="cuda:0",
-                                               )
+            if self.reg_type == "prior":
+                return ProbGEORCEFM_Euclidean(reg_fun=prior_reg_fun,
+                                              init_fun=None,
+                                              lam=self.lam,
+                                              N_grid = self.N,
+                                              tol=tol,
+                                              max_iter=self.max_iter,
+                                              line_search_params={'rho': 0.5},
+                                              device=device,
+                                              )
+            else:
+                return ProbScoreGEORCEFM_Euclidean(score_fun = score_fun,
+                                                   init_fun= None,
+                                                   lam=self.lam,
+                                                   N_grid=self.N,
+                                                   tol=tol,
+                                                   max_iter=self.max_iter,
+                                                   lr_rate=lr_rate,
+                                                   beta1=beta1,
+                                                   beta2=beta2,
+                                                   eps=eps,
+                                                   device=device,
+                                                   )
         else:
             raise ValueError(f"Invalid method: {method}")
         
-        return score_fun
+        return 
         
     def prompt_strength(self,
                         t, 
@@ -354,7 +376,6 @@ class ContextManager:
                     cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
                 else:
                     cond_blend = cond_neutral
-                cond_blend = cond_neutral
                 
                 cond = {"c_crossattn": [cond_blend], 'c_concat': None}
                 un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
@@ -405,7 +426,6 @@ class ContextManager:
                         cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
                     else:
                         cond_blend = cond_neutral
-                    cond_blend = cond_neutral
                     
                     cond = {"c_crossattn": [cond_blend], 'c_concat': None}
                     un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
