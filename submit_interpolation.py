@@ -24,7 +24,7 @@ def submit_job():
 
 #%% Generate jobs
 
-def generate_job(model, computation_method, method, lam, clip, N, reg_type="score", interpolation_space="noise", max_iter=100):
+def generate_job(model, computation_method, method, lam, clip, N, reg_type="score", interpolation_space="noise", max_iter=100, n_images=10):
 
     with open ('submit_interpolation.sh', 'w') as rsh:
         rsh.write(f'''\
@@ -49,7 +49,7 @@ def generate_job(model, computation_method, method, lam, clip, N, reg_type="scor
     python3 run_interpolation.py \\
         --img_types {model} \\
         --computation_method {computation_method} \\
-        --n_images 10 \\
+        --n_images {n_images} \\
         --image_size 768 \\
         --target_prompt 1 \\
         --method {method} \\
@@ -84,6 +84,7 @@ def loop_jobs(wait_time = 1.0):
     lam = [20.0]
     max_iter = 1000
     clip = [0]#[0,1]
+    n_images = 10
     
     ################################### Noise Space ################################
     method = ['ProbGEORCE']
@@ -94,7 +95,7 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     
     ################################### Noise Space ################################
@@ -106,18 +107,18 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     model = ['cat']
     method = ['Linear', 'Spherical', 'NoiseDiffusion', 'ProbGEORCE_NoiseDiffusion']
     reg_types = ['score']
     computation_methods = ['bvp'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     ################################### Data Space ################################
     method = ['ProbGEORCE']
@@ -128,16 +129,16 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     model = ['cat']
     computation_methods = ['bvp'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     
     ################################### Metrics ################################
@@ -147,11 +148,12 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space = ['noise']
     model = ['afhq-cat']
     computation_methods = ['metrics']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    n_images = 10
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     return
                             
-def run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time):
+def run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time):
     
     for com_meth in computation_methods:
         for mod in model:
@@ -162,7 +164,17 @@ def run_model(computation_methods, model, method, clip, lam, N, reg_types, inter
                         for interpolation_sp in interpolation_space:
                             for cl in clip:
                                 for l in lam:
-                                    generate_job(model=mod, computation_method=com_meth, method=meth, lam=l, clip=cl, N=N, max_iter=max_iter, reg_type=reg_type, interpolation_space=interpolation_sp)
+                                    generate_job(model=mod, 
+                                                 computation_method=com_meth, 
+                                                 method=meth, 
+                                                 lam=l, 
+                                                 clip=cl, 
+                                                 N=N, 
+                                                 max_iter=max_iter, 
+                                                 reg_type=reg_type, 
+                                                 interpolation_space=interpolation_sp,
+                                                 n_images=n_images,
+                                                 )
                                     try:
                                         submit_job()
                                     except:
@@ -172,7 +184,17 @@ def run_model(computation_methods, model, method, clip, lam, N, reg_types, inter
                                         except:
                                             print(f"Job script with {mod}, {meth} failed!")
                 else:
-                    generate_job(model=mod, computation_method=com_meth, method=meth, lam=1.0, clip=0, N=N, max_iter=max_iter, reg_type="score", interpolation_space="noise")
+                    generate_job(model=mod, 
+                                 computation_method=com_meth, 
+                                 method=meth, 
+                                 lam=1.0, 
+                                 clip=0, 
+                                 N=N, 
+                                 max_iter=max_iter, 
+                                 reg_type="score", 
+                                 interpolation_space="noise",
+                                 n_images=n_images,
+                                 )
                     try:
                         submit_job()
                     except:
