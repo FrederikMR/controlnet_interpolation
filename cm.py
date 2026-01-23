@@ -39,6 +39,9 @@ from torch_geometry.manifolds import (
     LambdaManifold,
     )
 
+from torchmetrics.image.fid import FrechetInceptionDistance
+from torchmetrics.image.kid import KernelInceptionDistance
+
 class ContextManager:
     def __init__(self, 
                  N:int=10,
@@ -269,12 +272,12 @@ class ContextManager:
                              guide_scale,
                              ):
         
+        cond = {"c_crossattn": [cond], 'c_concat': None}
+        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        
         l1, _ = self.ddim_sampler.encode(img, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
         unconditional_guidance_scale=guide_scale, unconditional_conditioning=uncond_base)
-        
-        cond = {"c_crossattn": [cond], 'c_concat': None}
-        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
     
         # ---- Your original decode ----
         img_data = self.ddim_sampler.decode(
@@ -543,6 +546,7 @@ class ContextManager:
                    noise,
                    ldm,
                    t,
+                   bvp_method,
                    ):
         
         coef=2.0
@@ -559,8 +563,8 @@ class ContextManager:
         l1=torch.clip(l1,-coef,coef)
         l2=torch.clip(l2,-coef,coef)
         
-        noise_curve = self.PGEORCE(l1,l2)[1:-1]
-        data_curve = self.PGEORCE(left_image, right_image)[1:-1]
+        noise_curve = bvp_method(l1,l2)[1:-1]
+        data_curve = bvp_method(left_image, right_image)[1:-1]
 
         #alpha=math.cos(math.radians(s*90))
         #beta=math.sin(math.radians(s*90))
@@ -661,7 +665,10 @@ class ContextManager:
         noise = torch.randn_like(left_image)
         if self.inter_method=="Noise":
             timesteps = self.ddim_sampler.ddim_timesteps
-            t = timesteps[cur_step]
+            if len(timesteps) == cur_step:
+                t = timesteps[cur_step-1]
+            else:
+                t = timesteps[cur_step]
             l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             l2 = ldm.sqrt_alphas_cumprod[t] * right_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
             noisy_curve = self.SInt(l1, l2)
@@ -705,8 +712,18 @@ class ContextManager:
                 return
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
-        elif self.inter_method == "ProbGEORCE_ND":
-            noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t)
+        elif self.inter_method == "ProbGEORCE_NoiseDiffusion":
+            dimension = len(l1.reshape(-1))
+            latent_shape = l1.shape[1:]
+            bvp_method = self.get_reg_fun(dimension=dimension, 
+                                          latent_shape=latent_shape,
+                                          cur_step=cur_step, 
+                                          cond=cond, 
+                                          un_cond=un_cond,
+                                          guide_scale=guide_scale,
+                                          method = "bvp"
+                                          )
+            noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t, bvp_method)
             
         self.sample_images(ldm, 
                            noisy_curve, 
@@ -922,4 +939,210 @@ class ContextManager:
                                  guide_scale, 
                                  out_dir,
                                  )
+        
+    def decode_images(self,
+                      ldm,
+                      noisy_curve,
+                      cond_neutral,
+                      uncond_base,
+                      cur_step,
+                      guide_scale,
+                      cond_target=None,
+                      ):
+        
+        if self.clip:
+            noisy_curve = torch.clip(noisy_curve, min=-2.0, max=2.0)
+        
+        imgs = []
+        for i, noisy_latent in enumerate(noisy_curve, start=0):
+            if (i % self.step_save == 0) or (i == 0) or (i==len(noisy_curve)-1):
+                if cond_target is not None:
+                    # ---- NEW: smooth prompt transition ----
+                    alpha = self.prompt_strength(i, noisy_curve)
+                
+                    cond_blend = cond_neutral * (1 - alpha) + cond_target * alpha
+                else:
+                    cond_blend = cond_neutral
+                
+                cond = {"c_crossattn": [cond_blend], 'c_concat': None}
+                un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+            
+                # ---- Your original decode ----
+                samples = self.ddim_sampler.decode(
+                    noisy_latent,
+                    cond,
+                    cur_step,
+                    unconditional_guidance_scale=guide_scale,
+                    unconditional_conditioning=un_cond,
+                    use_original_steps=False
+                )
+            
+                image = ldm.decode_first_stage(samples)
+                
+                imgs.append(image)
+        
+        return torch.tensor(imgs)
+        
+    def compute_metrics(self, 
+                        imgs, 
+                        real_dataloader,
+                        scale_control=1.5,
+                        prompt=None, 
+                        n_prompt=None, 
+                        min_steps=.3,
+                        max_steps=.55, 
+                        ddim_steps=250,  
+                        guide_scale=7.5,  
+                        optimize_cond=0,  
+                        cond_lr=1e-4, 
+                        bias=0, 
+                        ddim_eta=0, 
+                        out_dir='blend',
+                        ):
+        
+        torch.manual_seed(self.seed)
+        if min_steps < 1:
+            min_steps = int(ddim_steps * min_steps)
+        if max_steps < 1:
+            max_steps = int(ddim_steps * max_steps)
+        base_dir, out_dir = self.create_out_dir(out_dir, "metrics")
+        
+        imgs = self.images_to_tensors_raw(imgs, base_dir, "cuda")
+        
+        ldm = self.model
+        ldm.control_scales = [1] * 13
+
+        with torch.no_grad():
+            cond1 = ldm.get_learned_conditioning([prompt])
+            uncond_base = ldm.get_learned_conditioning([n_prompt])
+            cond = {"c_crossattn": [cond1], 'c_concat': None}
+            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        
+        self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
+        
+        img_first_stage_encodings = [ldm.get_first_stage_encoding(ldm.encode_first_stage(img.float() / 127.5 - 1.0)) for img in imgs]
+        latent_shape = img_first_stage_encodings[0].shape
+
+        kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
+        yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
+        
+        cur_step = ddim_steps#140
+        
+        img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
+                                                                  cond, 
+                                                                  cur_step, 
+                                                                  use_original_steps=False, 
+                                                                  return_intermediates=None,
+                                                                  unconditional_guidance_scale=guide_scale, 
+                                                                  unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
+        
+        
+        half = img_encoded.shape[0] // 2
+        
+        start_images = img_encoded[:half]
+        end_images   = img_encoded[-1:half-1:-1]
+        left_images = img_first_stage_encodings[:half]
+        right_images = img_first_stage_encodings[-1:half-1:-1]
+        
+        noise = torch.randn_like(img_encoded[0])
+        
+        fid = FrechetInceptionDistance(feature=2048).to(img_encoded.device)
+        kid = KernelInceptionDistance(subset_size=50).to(img_encoded.device)
+        
+        with torch.no_grad():
+            for real_imgs in real_dataloader:
+                real_imgs = real_imgs.to(img_encoded.device)
+                real_imgs = ((real_imgs + 1) / 2 * 255).clamp(0, 255).byte()
+        
+                fid.update(real_imgs, real=True)
+                kid.update(real_imgs, real=True)
+        
+        
+        for l1, l2, left_image, right_image in zip(start_images, end_images, left_images, right_images):
+            if self.inter_method=="Noise":
+                timesteps = self.ddim_sampler.ddim_timesteps
+                if len(timesteps) == cur_step:
+                    t = timesteps[cur_step-1]
+                else:
+                    t = timesteps[cur_step]
+                l1 = ldm.sqrt_alphas_cumprod[t] * left_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                l2 = ldm.sqrt_alphas_cumprod[t] * right_image + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                noisy_curve = self.SInt(l1, l2)
+            elif self.inter_method == "Linear":
+                noisy_curve = self.LInt(l1,l2)
+            elif self.inter_method == "Spherical":
+                noisy_curve = self.SInt(l1,l2)
+            elif self.inter_method == "NoiseDiffusion":
+                noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
+            elif self.inter_method == "ProbGEORCE":
+                dimension = len(l1.reshape(-1))
+                latent_shape = l1.shape[1:]
+                bvp_method = self.get_reg_fun(dimension=dimension, 
+                                              latent_shape=latent_shape,
+                                              cur_step=cur_step, 
+                                              cond=cond, 
+                                              un_cond=un_cond,
+                                              guide_scale=guide_scale,
+                                              method = "bvp"
+                                              )
+                
+                if self.interpolation_space == "noise":
+                    noisy_curve = bvp_method(l1, l2)
+                elif self.interpolation_space == "data":
+                    
+                    left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
+                    right_image = self.encode_decode_images(ldm, right_image, cond, uncond_base, cur_step, guide_scale)
+                    
+                    data_curve = bvp_method(left_image, right_image)
+                    
+                    self.sample_data_images(ldm, 
+                                            data_curve, 
+                                            torch.randn_like(left_image),
+                                            cond1, 
+                                            uncond_base, 
+                                            cur_step, 
+                                            guide_scale, 
+                                            out_dir,
+                                            )
+                    
+                    return
+                else:
+                    raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
+            elif self.inter_method == "ProbGEORCE_NoiseDiffusion":
+                dimension = len(l1.reshape(-1))
+                latent_shape = l1.shape[1:]
+                bvp_method = self.get_reg_fun(dimension=dimension, 
+                                              latent_shape=latent_shape,
+                                              cur_step=cur_step, 
+                                              cond=cond, 
+                                              un_cond=un_cond,
+                                              guide_scale=guide_scale,
+                                              method = "bvp"
+                                              )
+                noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t, bvp_method)
+                
+            imgs = self.decode_images(ldm, 
+                                      noisy_curve, 
+                                      cond1, 
+                                      uncond_base, 
+                                      cur_step, 
+                                      guide_scale, 
+                                      )[1:-1]
+            # imgs: (N, 3, H, W), typically in [-1, 1]
+            imgs = ((imgs + 1) / 2 * 255).clamp(0, 255).byte()
+            fid.update(imgs, real=False)
+            kid.update(imgs, real=False)
+            
+            
+        fid_score = fid.compute().item()
+        kid_mean, kid_std = kid.compute()
+        out_file=f"{out_dir}/metrics.txt"
+        with open(out_file, "w") as f:
+            f.write(f"FID: {fid_score:.4f}\n")
+            f.write(f"KID: {kid_mean.item():.6f} ± {kid_std.item():.6f}\n")
+            f.write(f"Method: {self.inter_method}\n")
+            f.write(f"Timestep: {cur_step}\n")
+            f.write(f"Shared noise: True\n")
+        
+        return
 

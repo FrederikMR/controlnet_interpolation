@@ -302,12 +302,14 @@ def load_dataset(name, n_images=None, image_size=768):
         target_prompt = TARGET_MAP[name]
         n_prompt = GENERIC_N_PROMPT
         
+        ds = None
+        
     # ---- Load dataset images ----
     if 'ds' in locals():
         for pil, _ in ds:
             imgs.append(pil)
     
-    return imgs, prompt, target_prompt, n_prompt
+    return imgs, prompt, target_prompt, n_prompt, ds
 
 
 

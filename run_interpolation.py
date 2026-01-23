@@ -70,10 +70,10 @@ def run_interpolation()->None:
     
     args = parse_args()
     
-    imgs, prompt, target_prompt, n_prompt = load_dataset(name = args.img_types,
-                                                         n_images=args.n_images, 
-                                                         image_size=args.image_size,
-                                                         )
+    imgs, prompt, target_prompt, n_prompt, ds = load_dataset(name = args.img_types,
+                                                             n_images=args.n_images, 
+                                                             image_size=args.image_size,
+                                                             )
     
     #osp = os.path
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -105,6 +105,8 @@ def run_interpolation()->None:
         CM.bvp(imgs[0], imgs[1], prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "mean":
         CM.mean(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
+    elif args.computation_method == "metrics":
+        CM.compute_metrics(imgs, ds, n_prompt=n_prompt, ddim_steps=200,  guide_scale=10,  out_dir=f'../figures/{args.img_types}/')
         
     return
 
