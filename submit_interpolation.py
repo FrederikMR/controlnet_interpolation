@@ -84,7 +84,17 @@ def loop_jobs(wait_time = 1.0):
     lam = [20.0]
     max_iter = 1000
     clip = [0]#[0,1]
+    
+    ################################### Noise Space ################################
     method = ['ProbGEORCE']
+    
+    reg_types = ['prior']
+    interpolation_space = ['noise']
+
+    #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
+    model = ['afhq-cat']
+    computation_methods = ['mean']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     
     ################################### Noise Space ################################
@@ -96,18 +106,18 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     model = ['cat']
     method = ['Linear', 'Spherical', 'NoiseDiffusion', 'ProbGEORCE_NoiseDiffusion']
     reg_types = ['score']
     computation_methods = ['bvp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     ################################### Data Space ################################
     method = ['ProbGEORCE']
@@ -118,16 +128,16 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     model = ['cat']
     computation_methods = ['bvp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
                             
