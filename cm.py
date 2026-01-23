@@ -260,6 +260,34 @@ class ContextManager:
         
         return tensors
     
+    def encode_decode_images(self,
+                             ldm,
+                             img,
+                             cond,
+                             uncond_base,
+                             cur_step,
+                             guide_scale,
+                             ):
+        
+        l1, _ = self.ddim_sampler.encode(img, cond, cur_step, 
+        use_original_steps=False, return_intermediates=None,
+        unconditional_guidance_scale=1, unconditional_conditioning=uncond_base)
+        
+        cond = {"c_crossattn": [cond], 'c_concat': None}
+        un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+    
+        # ---- Your original decode ----
+        img_data = self.ddim_sampler.decode(
+            l1,
+            cond,
+            cur_step,
+            unconditional_guidance_scale=guide_scale,
+            unconditional_conditioning=un_cond,
+            use_original_steps=False
+        )
+        
+        return img_data
+    
     def sample_images(self,
                       ldm,
                       noisy_curve,
@@ -649,6 +677,10 @@ class ContextManager:
             if self.interpolation_space == "noise":
                 noisy_curve = bvp_method(l1, l2)
             elif self.interpolation_space == "data":
+                
+                left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
+                right_image = self.encode_decode_images(ldm, right_image, cond, uncond_base, cur_step, guide_scale)
+                
                 data_curve = bvp_method(left_image, right_image)
                 
                 self.sample_data_images(ldm, 
@@ -753,6 +785,9 @@ class ContextManager:
                 v0 = torch.randn_like(l1)
                 noisy_curve = ivp_method(l1, v0)
             elif self.interpolation_space == "data":
+                
+                left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
+
                 v0 = torch.randn_like(left_image)
                 data_curve = ivp_method(left_image, v0)
                 
@@ -852,7 +887,8 @@ class ContextManager:
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             elif self.interpolation_space == "data":
                 print(type(img_first_stage_encodings[0]))
-                img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
+                img_data_space = torch.stack([self.encode_decode_images(ldm, img, cond, uncond_base, cur_step, guide_scale) for img in img_first_stage_encodings])
+                #img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
                 data_mean, data_curve = mean_method(img_data_space)
                 
                 self.sample_data_multi_images(ldm, 
