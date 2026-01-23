@@ -395,7 +395,6 @@ class ContextManager:
                     t = timesteps[cur_step-1]
                 else:
                     t = timesteps[cur_step]
-                noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                 
                 if cond_target is not None:
                     # ---- NEW: smooth prompt transition ----
@@ -407,6 +406,11 @@ class ContextManager:
                 
                 cond = {"c_crossattn": [cond_blend], 'c_concat': None}
                 un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+                
+                #´noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                noisy_latent, _ = self.ddim_sampler.encode(data_latent, cond, cur_step, 
+                                                           use_original_steps=False, return_intermediates=None,
+                                                           unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
             
                 # ---- Your original decode ----
                 samples = self.ddim_sampler.decode(
@@ -445,7 +449,6 @@ class ContextManager:
                         t = timesteps[cur_step-1]
                     else:
                         t = timesteps[cur_step]
-                    noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                     
                     if cond_target is not None:
                         # ---- NEW: smooth prompt transition ----
@@ -457,6 +460,12 @@ class ContextManager:
                     
                     cond = {"c_crossattn": [cond_blend], 'c_concat': None}
                     un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+                    
+                    
+                    #noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
+                    noisy_latent, _ = self.ddim_sampler.encode(data_latent, cond, cur_step, 
+                                                               use_original_steps=False, return_intermediates=None,
+                                                               unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
                 
                     # ---- Your original decode ----
                     samples = self.ddim_sampler.decode(
