@@ -94,7 +94,7 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     
     ################################### Noise Space ################################
@@ -138,6 +138,16 @@ def loop_jobs(wait_time = 1.0):
     model = ['cat']
     computation_methods = ['bvp'] #['ivp', 'bvp']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
+    
+    
+    ################################### Metrics ################################
+    #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
+    method = ['ProbGEORCE']
+    reg_types = ['prior']
+    interpolation_space = ['noise']
+    model = ['afhq-cat']
+    computation_methods = ['metrics']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     return
                             
