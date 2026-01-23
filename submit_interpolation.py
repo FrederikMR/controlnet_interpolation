@@ -88,7 +88,9 @@ def loop_jobs(wait_time = 1.0):
     
     
     ################################### Noise Space ################################
-    reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior']
+    method = ['ProbGEORCE']
+    
+    reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
     interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
@@ -102,10 +104,14 @@ def loop_jobs(wait_time = 1.0):
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     model = ['cat']
+    method = ['Linear', 'Spherical', 'NoiseDiffusion', 'ProbGEORCE_NoiseDiffusion']
+    reg_types = ['score']
     computation_methods = ['bvp'] #['ivp', 'bvp']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, wait_time)
     
     ################################### Data Space ################################
+    method = ['ProbGEORCE']
+    
     reg_types = ['score', 'score_naive']
     interpolation_space = ['data']
 

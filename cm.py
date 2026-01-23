@@ -139,6 +139,24 @@ class ContextManager:
             
             score_fun = lambda x: score_fun1(x) + score_fun2(x)
             
+        elif self.reg_type == "score_with_prior":
+            score_fun1 = lambda x: self.ddim_sampler.score_fun(x.reshape(-1,*latent_shape),
+                                                              cond,
+                                                              cur_step,
+                                                              score_corrector=None,
+                                                              corrector_kwargs=None,
+                                                              unconditional_guidance_scale=guide_scale,
+                                                              unconditional_conditioning=un_cond,
+                                                              ).reshape(*x.shape)
+            
+            S = Chi2(df=float(dimension))
+            
+            reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
+            
+            score_fun2 = grad(reg_fun)
+            
+            score_fun = lambda x: score_fun1(x) + score_fun2(x)
+            
             
         else:
             raise ValueError(f"Invalid reg_type: {self.reg_type}")
