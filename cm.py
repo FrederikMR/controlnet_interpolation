@@ -1107,20 +1107,21 @@ class ContextManager:
         fid = FrechetInceptionDistance(feature=2048).to(img_encoded.device)
         kid = KernelInceptionDistance(subset_size=50).to(img_encoded.device)
         
-        counter = 0
+        real_count = 0
         with torch.no_grad():
             for _, real_imgs in real_dataloader:
-                counter += 1
+                real_count += 1
                 real_imgs = real_imgs.to(img_encoded.device).unsqueeze(0)
                 real_imgs = ((real_imgs + 1) / 2 * 255).clamp(0, 255).byte()
                 
                 fid.update(real_imgs, real=True)
                 kid.update(real_imgs, real=True)
-        print(counter)
+        print(real_count)
         
         
-        for counter, (l1, l2, left_image, right_image) in enumerate(zip(start_images, end_images, left_images, right_images), start=1):
-            print(f"Computing {counter}/{len(start_images)}")
+        fake_count = 0
+        for l1, l2, left_image, right_image in zip(start_images, end_images, left_images, right_images):
+            print(f"Computing {fake_count+1}/{len(start_images)}")
             if self.inter_method=="Noise":
                 timesteps = self.ddim_sampler.ddim_timesteps
                 if len(timesteps) == cur_step:
@@ -1210,6 +1211,11 @@ class ContextManager:
             imgs = ((imgs + 1) / 2 * 255).clamp(0, 255).byte()
             fid.update(imgs, real=False)
             kid.update(imgs, real=False)
+            
+            fake_count += 1
+            
+        safe_subset_size = min(kid.subset_size, real_count, fake_count)
+        kid.subset_size = safe_subset_size
             
             
         fid_score = fid.compute().item()
