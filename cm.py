@@ -865,25 +865,24 @@ class ContextManager:
                                         )
                 
                 return
-            elif self.inter_method == "Linear":
-                dimension = len(l1.reshape(-1))
-                latent_shape = l1.shape[1:]
-                
-                M = Linear()
-                
-                v0 = torch.randn_like(l1)
-                noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
-            elif self.inter_method == "Spherical":
-                dimension = len(l1.reshape(-1))
-                latent_shape = l1.shape[1:]
-                
-                M = Spherical(eps=1e-8)
-                
-                v0 = torch.randn_like(l1)
-                noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
-                
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
+        elif self.inter_method == "Linear":
+            dimension = len(l1.reshape(-1))
+            latent_shape = l1.shape[1:]
+            
+            M = Linear()
+            
+            v0 = torch.randn_like(l1)
+            noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
+        elif self.inter_method == "Spherical":
+            dimension = len(l1.reshape(-1))
+            latent_shape = l1.shape[1:]
+            
+            M = Spherical(eps=1e-8)
+            
+            v0 = torch.randn_like(l1)
+            noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
             
         self.sample_images(ldm, 
                            noisy_curve, 
@@ -1035,7 +1034,7 @@ class ContextManager:
                 
                 imgs.append(image)
         
-        return torch.tensor(imgs)
+        return torch.stack(imgs)
         
     def compute_metrics(self, 
                         imgs, 
