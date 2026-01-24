@@ -308,6 +308,8 @@ def load_dataset(name, n_images=None, image_size=768):
             imgs.append(pil)
     else:
         ds = None
+        
+    print(ds)
     
     return imgs, prompt, target_prompt, n_prompt, ds
 

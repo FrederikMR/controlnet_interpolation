@@ -698,6 +698,10 @@ class ContextManager:
         elif self.inter_method == "Spherical":
             noisy_curve = self.SInt(l1,l2)
         elif self.inter_method == "NoiseDiffusion":
+            if len(timesteps) == cur_step:
+                t = timesteps[cur_step-1]
+            else:
+                t = timesteps[cur_step]
             noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
         elif self.inter_method == "ProbGEORCE":
             dimension = len(l1.reshape(-1))
