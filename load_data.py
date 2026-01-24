@@ -309,9 +309,6 @@ def load_dataset(name, n_images=None, image_size=768):
     else:
         ds = None
     
-    print("Hallo")
-    print(ds)
-    
     return imgs, prompt, target_prompt, n_prompt, ds
 
 
