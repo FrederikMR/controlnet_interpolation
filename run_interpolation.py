@@ -114,7 +114,7 @@ def run_interpolation()->None:
     elif args.computation_method == "metrics":
         
         ds = load_dataset(name = args.img_types,
-                          n_images=None, 
+                          n_images=10, #None
                           image_size=args.image_size,
                           )[-1]
         

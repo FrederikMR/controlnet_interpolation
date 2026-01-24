@@ -1050,6 +1050,7 @@ class ContextManager:
         ldm.control_scales = [1] * 13
 
         with torch.no_grad():
+            print(prompt)
             cond1 = ldm.get_learned_conditioning([prompt])
             uncond_base = ldm.get_learned_conditioning([n_prompt])
             cond = {"c_crossattn": [cond1], 'c_concat': None}
