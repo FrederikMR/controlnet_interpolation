@@ -825,6 +825,8 @@ class ContextManager:
         latent_shape = l1.shape
         
         # Precompute conditioning
+        v0 = torch.randn_like(l1)
+        v0 = v0 / v0.norm()
         with torch.no_grad():
             cond_target  = ldm.get_learned_conditioning([prompt_target])
             cond_neutral = ldm.get_learned_conditioning([prompt_neutral])
@@ -843,13 +845,14 @@ class ContextManager:
                                           )
             
             if self.interpolation_space == "noise":
-                v0 = torch.randn_like(l1)
                 noisy_curve = ivp_method(l1, v0)
             elif self.interpolation_space == "data":
                 
                 left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
+                
+                #v0 = torch.randn_like(left_image)
+                #v0 = v0 / v0.norm()
 
-                v0 = torch.randn_like(left_image)
                 data_curve = ivp_method(left_image, v0)
                 
                 self.sample_data_images(ldm, 
@@ -872,16 +875,14 @@ class ContextManager:
             latent_shape = l1.shape[1:]
             
             M = Linear()
-            
-            v0 = torch.randn_like(l1)
+
             noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
         elif self.inter_method == "Spherical":
             dimension = len(l1.reshape(-1))
             latent_shape = l1.shape[1:]
             
             M = Spherical(eps=1e-8)
-            
-            v0 = torch.randn_like(l1)
+
             noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
             
         self.sample_images(ldm, 
