@@ -93,15 +93,14 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    method = ['ProbGEORCE']
+    method = ['Linear', 'Spherical']
     model = ['afhq-cat']
-    computation_methods = ['ivp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    computation_methods = ['mean']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     method = ['NoiseDiffusion']
     computation_methods = ['metrics']
-    n_images = 4
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     
     ################################### Noise Space ################################

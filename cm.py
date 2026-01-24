@@ -984,6 +984,25 @@ class ContextManager:
                 return
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
+        elif self.inter_method == "Linear":
+            
+            dimension = len(img_encoded[0].reshape(-1))
+            latent_shape = img_encoded[0].shape
+            
+            M = Linear()
+            
+            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), self.N)
+            noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
+            
+        elif self.inter_method == "Spherical":
+            
+            dimension = len(img_encoded[0].reshape(-1))
+            latent_shape = img_encoded[0].shape
+            
+            M = Spherical(eps=1e-8)
+            
+            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), self.N)
+            noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
 
         self.sample_multi_images(ldm, 
                                  noisy_curve, 
