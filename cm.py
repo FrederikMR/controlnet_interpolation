@@ -1097,7 +1097,8 @@ class ContextManager:
                 kid.update(real_imgs, real=True)
         
         
-        for l1, l2, left_image, right_image in zip(start_images, end_images, left_images, right_images):
+        for counter, (l1, l2, left_image, right_image) in enumerate(zip(start_images, end_images, left_images, right_images), start=1):
+            print(f"Computing {counter}/{len(start_images)}")
             if self.inter_method=="Noise":
                 timesteps = self.ddim_sampler.ddim_timesteps
                 if len(timesteps) == cur_step:
