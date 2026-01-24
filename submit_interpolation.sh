@@ -1,6 +1,6 @@
     #! /bin/bash
-    #BSUB -q gpua100
-    #BSUB -J lion_tiger_ProbGEORCE_Noise_bvp
+    #BSUB -q gpuv100
+    #BSUB -J cat_ProbGEORCE_bvp
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
     #BSUB -W 24:00
@@ -17,18 +17,20 @@
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
     
     python3 run_interpolation.py \
-        --img_types lion_tiger \
+        --img_types cat \
         --computation_method bvp \
         --n_images 10 \
         --image_size 768 \
         --target_prompt 1 \
-        --method ProbGEORCE_Noise \
-        --lam 100.0 \
+        --method ProbGEORCE \
+        --lam 20.0 \
         --clip 0 \
         --mu -1.0 \
         --nu -1.0 \
-        --N 100 \
-        --max_iter 100 \
+        --N 10 \
+        --max_iter 1000 \
         --num_images 10 \
+        --reg_type prior \
+        --interpolation_space noise \
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \
     
