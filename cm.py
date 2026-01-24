@@ -1091,8 +1091,10 @@ class ContextManager:
         with torch.no_grad():
             for _, real_imgs in real_dataloader:
                 real_imgs = real_imgs.to(img_encoded.device)
+                print(real_imgs.shape)
                 real_imgs = ((real_imgs + 1) / 2 * 255).clamp(0, 255).byte()
-        
+                print(real_imgs.shape)
+                
                 fid.update(real_imgs, real=True)
                 kid.update(real_imgs, real=True)
         
@@ -1113,6 +1115,11 @@ class ContextManager:
             elif self.inter_method == "Spherical":
                 noisy_curve = self.SInt(l1,l2)
             elif self.inter_method == "NoiseDiffusion":
+                timesteps = self.ddim_sampler.ddim_timesteps
+                if len(timesteps) == cur_step:
+                    t = timesteps[cur_step-1]
+                else:
+                    t = timesteps[cur_step]
                 noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
             elif self.inter_method == "ProbGEORCE":
                 dimension = len(l1.reshape(-1))
@@ -1150,6 +1157,11 @@ class ContextManager:
                 else:
                     raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
             elif self.inter_method == "ProbGEORCE_NoiseDiffusion":
+                timesteps = self.ddim_sampler.ddim_timesteps
+                if len(timesteps) == cur_step:
+                    t = timesteps[cur_step-1]
+                else:
+                    t = timesteps[cur_step]
                 dimension = len(l1.reshape(-1))
                 latent_shape = l1.shape[1:]
                 bvp_method = self.get_reg_fun(dimension=dimension, 
