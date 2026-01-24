@@ -37,6 +37,8 @@ from torch_geometry.prob_means import (
 from torch_geometry.manifolds import (
     nEuclidean, 
     LambdaManifold,
+    Spherical,
+    Linear
     )
 
 from torchmetrics.image.fid import FrechetInceptionDistance
@@ -863,6 +865,22 @@ class ContextManager:
                                         )
                 
                 return
+            elif self.inter_method == "Linear":
+                dimension = len(l1.reshape(-1))
+                latent_shape = l1.shape[1:]
+                
+                M = Linear()
+                
+                v0 = torch.randn_like(l1)
+                noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
+            elif self.inter_method == "Spherical":
+                dimension = len(l1.reshape(-1))
+                latent_shape = l1.shape[1:]
+                
+                M = Spherical(eps=1e-8)
+                
+                v0 = torch.randn_like(l1)
+                noisy_curve = M.ivp_geodesic(l1.reshape(1,-1),v0.reshape(1,-1),self.N).reshape(-1,1,*latent_shape)
                 
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")

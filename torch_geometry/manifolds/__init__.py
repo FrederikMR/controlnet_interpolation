@@ -8,6 +8,8 @@ Created on Tue Jan 28 02:22:06 2025
 
 #%% Modules
 
+from .spherical import Spherical
+from .linear import Linear
 from .manifold import RiemannianManifold, LambdaManifold
 from .fisher_rao import FisherRao
 from .nSphere import nSphere

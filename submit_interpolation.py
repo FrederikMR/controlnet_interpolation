@@ -93,12 +93,14 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
+    method = ['Linear', 'Spherical']
     model = ['afhq-cat']
-    computation_methods = ['bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
-    
-    computation_methods = ['metrics']
+    computation_methods = ['ivp']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    
+    method = ['NoiseDiffusion']
+    computation_methods = ['metrics']
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     
     ################################### Noise Space ################################
