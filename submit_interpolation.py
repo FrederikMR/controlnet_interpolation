@@ -94,7 +94,7 @@ def loop_jobs(wait_time = 1.0):
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['cat']
-    computation_methods = ['ivp']
+    computation_methods = ['bvp']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     
