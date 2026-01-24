@@ -1205,7 +1205,7 @@ class ContextManager:
                                       uncond_base, 
                                       cur_step, 
                                       guide_scale, 
-                                      )[1:-1]
+                                      )[1:-1].squeeze()
             # imgs: (N, 3, H, W), typically in [-1, 1]
             imgs = ((imgs + 1) / 2 * 255).clamp(0, 255).byte()
             fid.update(imgs, real=False)
