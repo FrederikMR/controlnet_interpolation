@@ -991,7 +991,7 @@ class ContextManager:
             
             M = Linear()
             
-            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), self.N)
+            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), N_grid=self.N)
             noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             
             print(noisy_curve.shape)
@@ -1003,7 +1003,7 @@ class ContextManager:
             
             M = Spherical(eps=1e-8)
             
-            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), self.N)
+            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), N_grid=self.N)
             noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             
             print(noisy_curve.shape)
