@@ -698,6 +698,7 @@ class ContextManager:
         elif self.inter_method == "Spherical":
             noisy_curve = self.SInt(l1,l2)
         elif self.inter_method == "NoiseDiffusion":
+            timesteps = self.ddim_sampler.ddim_timesteps
             if len(timesteps) == cur_step:
                 t = timesteps[cur_step-1]
             else:
@@ -739,6 +740,11 @@ class ContextManager:
             else:
                 raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
         elif self.inter_method == "ProbGEORCE_NoiseDiffusion":
+            timesteps = self.ddim_sampler.ddim_timesteps
+            if len(timesteps) == cur_step:
+                t = timesteps[cur_step-1]
+            else:
+                t = timesteps[cur_step]
             dimension = len(l1.reshape(-1))
             latent_shape = l1.shape[1:]
             bvp_method = self.get_reg_fun(dimension=dimension, 

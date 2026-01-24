@@ -97,6 +97,9 @@ def loop_jobs(wait_time = 1.0):
     computation_methods = ['bvp']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
+    computation_methods = ['metrics']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    
     
     ################################### Noise Space ################################
     method = ['ProbGEORCE']
