@@ -1090,7 +1090,7 @@ class ContextManager:
         
         with torch.no_grad():
             for _, real_imgs in real_dataloader:
-                real_imgs = real_imgs.to(img_encoded.device)
+                real_imgs = real_imgs.to(img_encoded.device).unsqueeze(0)
                 print(real_imgs.shape)
                 real_imgs = ((real_imgs + 1) / 2 * 255).clamp(0, 255).byte()
                 print(real_imgs.shape)

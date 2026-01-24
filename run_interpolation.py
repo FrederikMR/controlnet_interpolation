@@ -112,6 +112,12 @@ def run_interpolation()->None:
         CM.mean(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale, 
                 encoded_guide_scale=encoded_guide_scale, out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "metrics":
+        
+        ds = load_dataset(name = args.img_types,
+                          n_images=None, 
+                          image_size=args.image_size,
+                          )[-1]
+        
         CM.compute_metrics(imgs, real_dataloader=ds, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale, 
                            encoded_guide_scale=encoded_guide_scale, out_dir=f'../figures/{args.img_types}/')
         
