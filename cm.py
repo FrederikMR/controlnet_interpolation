@@ -404,6 +404,7 @@ class ContextManager:
                            uncond_base,
                            cur_step,
                            guide_scale,
+                           encoded_guide_scale,
                            out_dir,
                            cond_target=None,
                            ):
@@ -431,7 +432,7 @@ class ContextManager:
                 #´noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                 noisy_latent, _ = self.ddim_sampler.encode(data_latent, cond, cur_step, 
                                                            use_original_steps=False, return_intermediates=None,
-                                                           unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
+                                                           unconditional_guidance_scale=encoded_guide_scale, unconditional_conditioning=un_cond)
             
                 # ---- Your original decode ----
                 samples = self.ddim_sampler.decode(
@@ -457,6 +458,7 @@ class ContextManager:
                                  uncond_base,
                                  cur_step,
                                  guide_scale,
+                                 encoded_guide_scale,
                                  out_dir,
                                  cond_target=None,
                                  ):
@@ -486,7 +488,7 @@ class ContextManager:
                     #noisy_latent = ldm.sqrt_alphas_cumprod[t] * data_latent + ldm.sqrt_one_minus_alphas_cumprod[t] * noise
                     noisy_latent, _ = self.ddim_sampler.encode(data_latent, cond, cur_step, 
                                                                use_original_steps=False, return_intermediates=None,
-                                                               unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
+                                                               unconditional_guidance_scale=encoded_guide_scale, unconditional_conditioning=un_cond)
                 
                     # ---- Your original decode ----
                     samples = self.ddim_sampler.decode(
@@ -628,6 +630,7 @@ class ContextManager:
             max_steps=.55, 
             ddim_steps=250,  
             guide_scale=7.5,  
+            encoded_guide_scale=1.0,
             optimize_cond=0,  
             cond_lr=1e-4, 
             bias=0, 
@@ -674,10 +677,10 @@ class ContextManager:
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
-        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
+        unconditional_guidance_scale=encoded_guide_scale, unconditional_conditioning=un_cond)
         l2, _ = self.ddim_sampler.encode(right_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
-        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
+        unconditional_guidance_scale=encoded_guide_scale, unconditional_conditioning=un_cond)
         latent_shape = l1.shape
         
         noise = torch.randn_like(left_image)
@@ -724,6 +727,7 @@ class ContextManager:
                                         uncond_base, 
                                         cur_step, 
                                         guide_scale, 
+                                        encoded_guide_scale,
                                         out_dir,
                                         )
                 
@@ -762,6 +766,7 @@ class ContextManager:
             max_steps=.55, 
             ddim_steps=250,  
             guide_scale=7.5,  
+            encoded_guide_scale=1.0,
             optimize_cond=0,  
             cond_lr=1e-4, 
             bias=0, 
@@ -804,7 +809,7 @@ class ContextManager:
         
         l1, _ = self.ddim_sampler.encode(left_image, cond, cur_step, 
         use_original_steps=False, return_intermediates=None,
-        unconditional_guidance_scale=guide_scale, unconditional_conditioning=un_cond)
+        unconditional_guidance_scale=encoded_guide_scale, unconditional_conditioning=un_cond)
         latent_shape = l1.shape
         
         # Precompute conditioning
@@ -842,6 +847,7 @@ class ContextManager:
                                         uncond_base, 
                                         cur_step, 
                                         guide_scale, 
+                                        encoded_guide_scale,
                                         out_dir,
                                         cond_target,
                                         )
@@ -872,6 +878,7 @@ class ContextManager:
              max_steps=.55, 
              ddim_steps=250,  
              guide_scale=7.5,  
+             encoded_guide_scale=1.0,
              optimize_cond=0,  
              cond_lr=1e-4, 
              bias=0, 
@@ -911,7 +918,7 @@ class ContextManager:
                                                                   cur_step, 
                                                                   use_original_steps=False, 
                                                                   return_intermediates=None,
-                                                                  unconditional_guidance_scale=guide_scale, 
+                                                                  unconditional_guidance_scale=encoded_guide_scale, 
                                                                   unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
         
         if self.inter_method == "ProbGEORCE":
@@ -942,6 +949,7 @@ class ContextManager:
                                               uncond_base, 
                                               cur_step, 
                                               guide_scale, 
+                                              encoded_guide_scale,
                                               out_dir,
                                               )
                 
@@ -1011,6 +1019,7 @@ class ContextManager:
                         max_steps=.55, 
                         ddim_steps=250,  
                         guide_scale=7.5,  
+                        encoded_guide_scale=1.0,
                         optimize_cond=0,  
                         cond_lr=1e-4, 
                         bias=0, 
@@ -1051,7 +1060,7 @@ class ContextManager:
                                                                   cur_step, 
                                                                   use_original_steps=False, 
                                                                   return_intermediates=None,
-                                                                  unconditional_guidance_scale=guide_scale, 
+                                                                  unconditional_guidance_scale=encoded_guide_scale, 
                                                                   unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
         
         
@@ -1120,6 +1129,7 @@ class ContextManager:
                                             uncond_base, 
                                             cur_step, 
                                             guide_scale, 
+                                            encoded_guide_scale,
                                             out_dir,
                                             )
                     
