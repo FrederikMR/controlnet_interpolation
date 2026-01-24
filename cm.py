@@ -1081,7 +1081,7 @@ class ContextManager:
         end_images   = img_encoded[-half:].flip(0)
         
         left_images  = img_first_stage_encodings[:half]
-        right_images = img_first_stage_encodings[-half:].flip(0)
+        right_images = img_first_stage_encodings[-half:][::-1]
         
         noise = torch.randn_like(img_encoded[0])
         
