@@ -86,23 +86,6 @@ def loop_jobs(wait_time = 1.0):
     clip = [0]#[0,1]
     n_images = 10
     
-    ################################### Testing ################################
-    method = ['NoiseDiffusion']
-    
-    reg_types = ['prior']
-    interpolation_space = ['noise']
-
-    #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    method = ['Linear', 'Spherical']
-    model = ['afhq-cat']
-    computation_methods = ['mean']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
-    
-    method = ['NoiseDiffusion']
-    computation_methods = ['metrics']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
-    
-    
     ################################### Noise Space ################################
     method = ['ProbGEORCE']
     
@@ -110,9 +93,10 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    model = ['afhq-cat']
+    model = ['afhq']
     computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    reg_types = ['prior']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
@@ -147,6 +131,7 @@ def loop_jobs(wait_time = 1.0):
     
     ################################### Metrics ################################
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
+    n_images = 10
     method = ['ProbGEORCE']
     reg_types = ['prior']
     interpolation_space = ['noise']
