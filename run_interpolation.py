@@ -98,7 +98,7 @@ def run_interpolation()->None:
                            interpolation_space=args.interpolation_space,
                            )
     
-    guide_scale = 10.0 #guide_scale
+    guide_scale = 5.0 #guide_scale
     if args.computation_method == "ivp":
         if args.target_prompt:
             CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = target_prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale,  out_dir=f'../figures/{args.img_types}/')

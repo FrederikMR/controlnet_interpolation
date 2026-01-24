@@ -29,7 +29,7 @@ def generate_job(model, computation_method, method, lam, clip, N, reg_type="scor
     with open ('submit_interpolation.sh', 'w') as rsh:
         rsh.write(f'''\
     #! /bin/bash
-    #BSUB -q gpuv100
+    #BSUB -q gpua100
     #BSUB -J {model}_{method}_{computation_method}
     #BSUB -n 4
     #BSUB -gpu "num=1:mode=exclusive_process"
