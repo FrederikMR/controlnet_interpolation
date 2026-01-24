@@ -1176,6 +1176,9 @@ class ContextManager:
                                               )
                 noisy_curve = self.pgeorce_nd(l1, l2, left_image, right_image, noise, ldm, t, bvp_method)
                 
+            if noisy_curve.ndim <= 4:
+                noisy_curve = noisy_curve.unsqueeze(1)
+                
             print("Hallo")
             print(noisy_curve.shape)
             imgs = self.decode_images(ldm, 
