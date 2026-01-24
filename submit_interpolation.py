@@ -87,14 +87,14 @@ def loop_jobs(wait_time = 1.0):
     n_images = 10
     
     ################################### Testing ################################
-    method = ['prior']
+    method = ['NoiseDiffusion']
     
     reg_types = ['prior']
     interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
-    computation_methods = ['metrics']
+    computation_methods = ['bvp']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     
