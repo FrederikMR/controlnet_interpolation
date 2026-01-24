@@ -1088,15 +1088,16 @@ class ContextManager:
         fid = FrechetInceptionDistance(feature=2048).to(img_encoded.device)
         kid = KernelInceptionDistance(subset_size=50).to(img_encoded.device)
         
+        counter = 0
         with torch.no_grad():
             for _, real_imgs in real_dataloader:
+                counter += 1
                 real_imgs = real_imgs.to(img_encoded.device).unsqueeze(0)
-                print(real_imgs.shape)
                 real_imgs = ((real_imgs + 1) / 2 * 255).clamp(0, 255).byte()
-                print(real_imgs.shape)
                 
                 fid.update(real_imgs, real=True)
                 kid.update(real_imgs, real=True)
+        print(counter)
         
         
         for counter, (l1, l2, left_image, right_image) in enumerate(zip(start_images, end_images, left_images, right_images), start=1):
