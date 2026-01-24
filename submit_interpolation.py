@@ -87,7 +87,7 @@ def loop_jobs(wait_time = 1.0):
     n_images = 10
     
     ################################### Testing ################################
-    method = ['ProbGEORCE']
+    method = ['Linear']
     
     reg_types = ['prior']
     interpolation_space = ['noise']
