@@ -994,6 +994,8 @@ class ContextManager:
             noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), self.N)
             noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             
+            print(noisy_curve.shape)
+            
         elif self.inter_method == "Spherical":
             
             dimension = len(img_encoded[0].reshape(-1))
@@ -1003,6 +1005,8 @@ class ContextManager:
             
             noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), self.N)
             noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
+            
+            print(noisy_curve.shape)
 
         self.sample_multi_images(ldm, 
                                  noisy_curve, 
