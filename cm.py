@@ -1074,12 +1074,14 @@ class ContextManager:
                                                                   unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
         
         
-        half = img_encoded.shape[0] // 2
+        N = img_encoded.shape[0]
+        half = N // 2
         
         start_images = img_encoded[:half]
-        end_images   = img_encoded[-1:half-1:-1]
-        left_images = img_first_stage_encodings[:half]
-        right_images = img_first_stage_encodings[-1:half-1:-1]
+        end_images   = img_encoded[-half:].flip(0)
+        
+        left_images  = img_first_stage_encodings[:half]
+        right_images = img_first_stage_encodings[-half:].flip(0)
         
         noise = torch.randn_like(img_encoded[0])
         
