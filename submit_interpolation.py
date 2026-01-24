@@ -87,15 +87,15 @@ def loop_jobs(wait_time = 1.0):
     n_images = 10
     
     ################################### Testing ################################
-    #method = ['ProbGEORCE']
+    method = ['ProbGEORCE']
     
-    #reg_types = ['prior']
-    #interpolation_space = ['noise']
+    reg_types = ['prior']
+    interpolation_space = ['noise']
 
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    #model = ['afhq-cat']
-    #computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    model = ['cat']
+    computation_methods = ['bvp']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     
     ################################### Noise Space ################################
@@ -107,18 +107,18 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     model = ['cat']
     method = ['Linear', 'Spherical', 'NoiseDiffusion', 'ProbGEORCE_NoiseDiffusion']
     reg_types = ['score']
     computation_methods = ['bvp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     ################################### Data Space ################################
     method = ['ProbGEORCE']
@@ -129,17 +129,16 @@ def loop_jobs(wait_time = 1.0):
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
     model = ['afhq-cat']
     computation_methods = ['mean']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
     model = ['cat']
     computation_methods = ['ivp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     model = ['cat']
     computation_methods = ['bvp'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
-    
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     ################################### Metrics ################################
     #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
@@ -149,7 +148,7 @@ def loop_jobs(wait_time = 1.0):
     model = ['afhq-cat']
     computation_methods = ['metrics']
     n_images = 10
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     return
                             

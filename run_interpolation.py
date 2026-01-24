@@ -74,6 +74,8 @@ def run_interpolation()->None:
                                                              n_images=args.n_images, 
                                                              image_size=args.image_size,
                                                              )
+    print(ds)
+    print(n_prompt)
     
     #osp = os.path
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -96,17 +98,18 @@ def run_interpolation()->None:
                            interpolation_space=args.interpolation_space,
                            )
     
+    guide_scale = 10.0 #guide_scale
     if args.computation_method == "ivp":
         if args.target_prompt:
-            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = target_prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=1.0,  out_dir=f'../figures/{args.img_types}/')
+            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = target_prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale,  out_dir=f'../figures/{args.img_types}/')
         else:
-            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=1.0,  out_dir=f'../figures/{args.img_types}/')
+            CM.ivp(imgs[0], prompt_neutral=prompt, prompt_target = prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "bvp":
-        CM.bvp(imgs[0], imgs[1], prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=1.0,  out_dir=f'../figures/{args.img_types}/')
+        CM.bvp(imgs[0], imgs[1], prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "mean":
-        CM.mean(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=1.0,  out_dir=f'../figures/{args.img_types}/') #guide_scale = 10.0
+        CM.mean(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale,  out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "metrics":
-        CM.compute_metrics(imgs, ds, n_prompt=n_prompt, ddim_steps=200,  guide_scale=1.0,  out_dir=f'../figures/{args.img_types}/')
+        CM.compute_metrics(imgs, ds, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale,  out_dir=f'../figures/{args.img_types}/')
         
     return
 
