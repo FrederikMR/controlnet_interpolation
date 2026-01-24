@@ -1089,7 +1089,7 @@ class ContextManager:
         kid = KernelInceptionDistance(subset_size=50).to(img_encoded.device)
         
         with torch.no_grad():
-            for real_imgs in real_dataloader:
+            for real_imgs, _ in real_dataloader:
                 real_imgs = real_imgs.to(img_encoded.device)
                 real_imgs = ((real_imgs + 1) / 2 * 255).clamp(0, 255).byte()
         

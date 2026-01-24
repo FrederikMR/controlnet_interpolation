@@ -74,8 +74,6 @@ def run_interpolation()->None:
                                                              n_images=args.n_images, 
                                                              image_size=args.image_size,
                                                              )
-    print(ds)
-    print(n_prompt)
     
     #osp = os.path
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
