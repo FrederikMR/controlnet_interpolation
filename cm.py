@@ -164,7 +164,8 @@ class ContextManager:
                                                                  ).reshape(*x.shape)
             if self.project_to_sphere:
                 R = math.sqrt(dimension)
-                score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                #score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun = score_method
             
@@ -180,7 +181,8 @@ class ContextManager:
             
             if self.project_to_sphere:
                 R = math.sqrt(dimension)
-                score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                #score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun = score_method
             
@@ -225,7 +227,7 @@ class ContextManager:
                                                                  ).reshape(*x.shape)
             
             if self.project_to_sphere:
-                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
+                score_fun1 = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
             else:
                 score_fun1 = score_method
             
