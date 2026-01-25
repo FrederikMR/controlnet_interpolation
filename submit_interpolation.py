@@ -82,7 +82,7 @@ def loop_jobs(wait_time = 1.0):
     #Project score to sphere TM
     
     N = 10
-    lam = [10.0]
+    lam = [1.0]
     max_iter = 1000
     clip = [0]#[0,1]
     n_images = 10
@@ -105,13 +105,13 @@ def loop_jobs(wait_time = 1.0):
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
     reg_types = ['score', 'score_naive']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
     reg_types = ['prior']
     method = ['Linear', 'Spherical']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Data Space ################################
     model = ['cat', 'mountain', 'house']
@@ -124,7 +124,7 @@ def loop_jobs(wait_time = 1.0):
     
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Metrics ################################
     model = ['afhq', 'ffhq', 'coco']
@@ -134,7 +134,7 @@ def loop_jobs(wait_time = 1.0):
     reg_types = ['prior']
     interpolation_space = ['noise']
     computation_methods = ['metrics']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     return
                             
