@@ -82,26 +82,11 @@ def loop_jobs(wait_time = 1.0):
     #Project score to sphere TM
     
     N = 10
-    lam = [20.0]
+    lam = [10.0]
     max_iter = 1000
     clip = [0]#[0,1]
     n_images = 10
     project_to_sphere = 1
-    
-    
-    ##### Testing
-    model = ['house'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
-    computation_methods = ['bvp']
-    interpolation_space = ['noise']
-    
-    method = ['ProbGEORCE']
-    #reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
-    reg_types = ['score', 'score_naive', 'score_naive_with_prior', 'score_with_prior']
-    reg_types = ['score', 'score_naive']#, 'score_naive_with_prior', 'score_with_prior']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
-    
-    interpolation_space = ['data']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Noise Space ################################
     model = ['cat', 'mountain', 'house'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
@@ -110,16 +95,23 @@ def loop_jobs(wait_time = 1.0):
     
     method = ['ProbGEORCE']
     #reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
-    reg_types = ['score', 'score_naive', 'score_naive_with_prior', 'score_with_prior']
+    reg_types = ['score', 'score_naive']#, 'score_naive_with_prior', 'score_with_prior']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
 
-    method = ['Linear', 'Spherical', 'NoiseDiffusion']
-    reg_types = ['prior']
+    #method = ['Linear', 'Spherical', 'NoiseDiffusion']
+    #reg_types = ['prior']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
 
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    reg_types = ['score', 'score_naive']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    
+    model = ['afhq', 'ffhq', 'coco']
+    computation_methods = ['mean'] #['ivp', 'bvp']
+    reg_types = ['prior']
+    method = ['Linear', 'Spherical']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Data Space ################################
     model = ['cat', 'mountain', 'house']
@@ -132,16 +124,17 @@ def loop_jobs(wait_time = 1.0):
     
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Metrics ################################
     model = ['afhq', 'ffhq', 'coco']
     n_images = 10
-    method = ['Linear', 'Spherical', 'NoiseDiffusion']
+    lam = [20.0]
+    method = ['Linear', 'Spherical', 'NoiseDiffusion', 'ProbGEORCE']
     reg_types = ['prior']
     interpolation_space = ['noise']
     computation_methods = ['metrics']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     return
                             
