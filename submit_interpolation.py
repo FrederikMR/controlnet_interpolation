@@ -96,7 +96,7 @@ def loop_jobs(wait_time = 1.0):
     method = ['ProbGEORCE']
     #reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
     reg_types = ['score', 'score_naive']#, 'score_naive_with_prior', 'score_with_prior']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
 
     #method = ['Linear', 'Spherical', 'NoiseDiffusion']
     #reg_types = ['prior']
