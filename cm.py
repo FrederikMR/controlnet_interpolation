@@ -58,6 +58,7 @@ class ContextManager:
                  seed:int=2712,
                  reg_type:str="score",
                  interpolation_space:str="noise",
+                 project_to_sphere:bool=True,
                  ):
                  
         self.inter_method = inter_method
@@ -85,6 +86,15 @@ class ContextManager:
         
         self.reg_type = reg_type
         self.interpolation_space = interpolation_space
+        self.project_to_sphere = project_to_sphere
+        
+    def project_to_sphere(self, y, r=1.0, eps=1e-8):
+        norm = y.norm(dim=-1, keepdim=True)
+        return r * y / (norm + eps)
+        
+    def project_to_TM_sphere(self, x, v, eps=1e-8):
+        r2 = (x * x).sum(dim=-1, keepdim=True)
+        return v - (v * x).sum(dim=-1, keepdim=True) / (r2 + eps) * x
         
     def get_reg_fun(self,
                     dimension,
@@ -100,23 +110,34 @@ class ContextManager:
             cur_step = 0
             
         if self.reg_type == "score":
-            score_fun = lambda x: self.ddim_sampler.score_fun(x.reshape(-1,*latent_shape),
-                                                              cond,
-                                                              cur_step,
-                                                              score_corrector=None,
-                                                              corrector_kwargs=None,
-                                                              unconditional_guidance_scale=guide_scale,
-                                                              unconditional_conditioning=un_cond,
-                                                              ).reshape(*x.shape)
+            score_method = lambda x: self.ddim_sampler.score_fun(x.reshape(-1,*latent_shape),
+                                                                 cond,
+                                                                 cur_step,
+                                                                 score_corrector=None,
+                                                                 corrector_kwargs=None,
+                                                                 unconditional_guidance_scale=guide_scale,
+                                                                 unconditional_conditioning=un_cond,
+                                                                 ).reshape(*x.shape)
+            if self.project_to_sphere:
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+            else:
+                score_fun = score_method
+            
         elif self.reg_type == "score_naive":
-            score_fun = lambda x: self.ddim_sampler.score_fun_naive(x.reshape(-1,*latent_shape),
-                                                                    cond,
-                                                                    cur_step,
-                                                                    score_corrector=None,
-                                                                    corrector_kwargs=None,
-                                                                    unconditional_guidance_scale=guide_scale,
-                                                                    unconditional_conditioning=un_cond,
-                                                                    ).reshape(*x.shape)
+            score_method = lambda x: self.ddim_sampler.score_fun_naive(x.reshape(-1,*latent_shape),
+                                                                       cond,
+                                                                       cur_step,
+                                                                       score_corrector=None,
+                                                                       corrector_kwargs=None,
+                                                                       unconditional_guidance_scale=guide_scale,
+                                                                       unconditional_conditioning=un_cond,
+                                                                       ).reshape(*x.shape)
+            
+            if self.project_to_sphere:
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+            else:
+                score_fun = score_method
+            
         elif self.reg_type == "prior":
             S = Chi2(df=float(dimension))
             
@@ -124,14 +145,20 @@ class ContextManager:
             
             score_fun = grad(prior_reg_fun)
         elif self.reg_type == "score_naive_with_prior":
-            score_fun1 = lambda x: self.ddim_sampler.score_fun_naive(x.reshape(-1,*latent_shape),
-                                                                    cond,
-                                                                    cur_step,
-                                                                    score_corrector=None,
-                                                                    corrector_kwargs=None,
-                                                                    unconditional_guidance_scale=guide_scale,
-                                                                    unconditional_conditioning=un_cond,
-                                                                    ).reshape(*x.shape)
+            score_method = lambda x: self.ddim_sampler.score_fun_naive(x.reshape(-1,*latent_shape),
+                                                                       cond,
+                                                                       cur_step,
+                                                                       score_corrector=None,
+                                                                       corrector_kwargs=None,
+                                                                       unconditional_guidance_scale=guide_scale,
+                                                                       unconditional_conditioning=un_cond,
+                                                                       ).reshape(*x.shape)
+            
+            if self.project_to_sphere:
+                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+            else:
+                score_fun1 = score_method
+            
             
             S = Chi2(df=float(dimension))
             
@@ -142,14 +169,20 @@ class ContextManager:
             score_fun = lambda x: score_fun1(x) + score_fun2(x)
             
         elif self.reg_type == "score_with_prior":
-            score_fun1 = lambda x: self.ddim_sampler.score_fun(x.reshape(-1,*latent_shape),
-                                                              cond,
-                                                              cur_step,
-                                                              score_corrector=None,
-                                                              corrector_kwargs=None,
-                                                              unconditional_guidance_scale=guide_scale,
-                                                              unconditional_conditioning=un_cond,
-                                                              ).reshape(*x.shape)
+            score_method = lambda x: self.ddim_sampler.score_fun(x.reshape(-1,*latent_shape),
+                                                                 cond,
+                                                                 cur_step,
+                                                                 score_corrector=None,
+                                                                 corrector_kwargs=None,
+                                                                 unconditional_guidance_scale=guide_scale,
+                                                                 unconditional_conditioning=un_cond,
+                                                                 ).reshape(*x.shape)
+            
+            if self.project_to_sphere:
+                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+            else:
+                score_fun1 = score_method
+            
             
             S = Chi2(df=float(dimension))
             

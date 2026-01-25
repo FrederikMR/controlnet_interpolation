@@ -97,7 +97,7 @@ def loop_jobs(wait_time = 1.0):
 
     method = ['Linear', 'Spherical', 'NoiseDiffusion']
     reg_types = ['prior']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
 
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
