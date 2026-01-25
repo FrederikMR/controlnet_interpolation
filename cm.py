@@ -88,13 +88,57 @@ class ContextManager:
         self.interpolation_space = interpolation_space
         self.project_to_sphere = project_to_sphere
         
+    def grad_chain_sphere(self, x, grad_S, r=1.0, eps=1e-8):
+        assert x.shape == grad_S.shape
+    
+        B = x.shape[0]
+        orig_shape = x.shape
+    
+        x = x.reshape(B, -1)
+        grad_S = grad_S.reshape(B, -1)
+    
+        inv_norm = 1.0 / (x.norm(dim=-1, keepdim=True) + eps)
+        u = x * inv_norm
+    
+        out = r * inv_norm * (grad_S - (grad_S * u).sum(dim=-1, keepdim=True) * u)
+        return out.reshape(*orig_shape)
+        
     def project_to_M_sphere(self, y, r=1.0, eps=1e-8):
+        B = y.shape[0]
+        orig_shape = y.shape
+    
+        y = y.reshape(B, -1)
         norm = y.norm(dim=-1, keepdim=True)
-        return r * y / (norm + eps)
+    
+        return (r * y / (norm + eps)).reshape(*orig_shape)
         
     def project_to_TM_sphere(self, x, v, eps=1e-8):
+        assert x.shape == v.shape
+    
+        B = x.shape[0]
+        orig_shape = x.shape
+    
+        x = x.reshape(B, -1)
+        v = v.reshape(B, -1)
+    
         r2 = (x * x).sum(dim=-1, keepdim=True)
-        return v - (v * x).sum(dim=-1, keepdim=True) / (r2 + eps) * x
+        out = v - (v * x).sum(dim=-1, keepdim=True) / (r2 + eps) * x
+    
+        return out.reshape(*orig_shape)
+    
+    def radial_force_quadratic(self, x, R, eps=1e-8):
+        """
+        x: (B, N1, N2, N3)
+        returns: same shape as x
+        """
+        shape = x.shape
+        B = x.shape[0]
+        x_flat = x.reshape(B, -1)
+    
+        r2 = (x_flat * x_flat).sum(dim=-1, keepdim=True)
+        force = (r2 - R * R) * x_flat
+    
+        return force.reshape(*shape)
         
     def get_reg_fun(self,
                     dimension,
@@ -119,7 +163,8 @@ class ContextManager:
                                                                  unconditional_conditioning=un_cond,
                                                                  ).reshape(*x.shape)
             if self.project_to_sphere:
-                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
+                R = math.sqrt(dimension)
+                score_fun = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun = score_method
             
@@ -134,7 +179,8 @@ class ContextManager:
                                                                        ).reshape(*x.shape)
             
             if self.project_to_sphere:
-                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
+                R = math.sqrt(dimension)
+                score_fun = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun = score_method
             
@@ -154,17 +200,13 @@ class ContextManager:
                                                                        unconditional_conditioning=un_cond,
                                                                        ).reshape(*x.shape)
             
+            R = math.sqrt(dimension)
             if self.project_to_sphere:
-                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
+                score_fun1 = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun1 = score_method
             
-            
-            S = Chi2(df=float(dimension))
-            
-            reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
-            
-            score_fun2 = grad(reg_fun)
+            score_fun2 = lambda x: self.radial_force_quadratic(x, R=R)
             
             score_fun = lambda x: score_fun1(x) + score_fun2(x)
             
@@ -178,20 +220,15 @@ class ContextManager:
                                                                  unconditional_conditioning=un_cond,
                                                                  ).reshape(*x.shape)
             
+            R = math.sqrt(dimension)
             if self.project_to_sphere:
-                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
+                score_fun1 = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun1 = score_method
             
-            
-            S = Chi2(df=float(dimension))
-            
-            reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
-            
-            score_fun2 = grad(reg_fun)
+            score_fun2 = lambda x: self.radial_force_quadratic(x, R=R)
             
             score_fun = lambda x: score_fun1(x) + score_fun2(x)
-            
             
         else:
             raise ValueError(f"Invalid reg_type: {self.reg_type}")
