@@ -88,7 +88,7 @@ class ContextManager:
         self.interpolation_space = interpolation_space
         self.project_to_sphere = project_to_sphere
         
-    def project_to_sphere(self, y, r=1.0, eps=1e-8):
+    def project_to_M_sphere(self, y, r=1.0, eps=1e-8):
         norm = y.norm(dim=-1, keepdim=True)
         return r * y / (norm + eps)
         
@@ -119,7 +119,7 @@ class ContextManager:
                                                                  unconditional_conditioning=un_cond,
                                                                  ).reshape(*x.shape)
             if self.project_to_sphere:
-                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
             else:
                 score_fun = score_method
             
@@ -134,7 +134,7 @@ class ContextManager:
                                                                        ).reshape(*x.shape)
             
             if self.project_to_sphere:
-                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
             else:
                 score_fun = score_method
             
@@ -155,7 +155,7 @@ class ContextManager:
                                                                        ).reshape(*x.shape)
             
             if self.project_to_sphere:
-                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
             else:
                 score_fun1 = score_method
             
@@ -179,7 +179,7 @@ class ContextManager:
                                                                  ).reshape(*x.shape)
             
             if self.project_to_sphere:
-                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_sphere(x, r=math.sqrt(dimension))))
+                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
             else:
                 score_fun1 = score_method
             
