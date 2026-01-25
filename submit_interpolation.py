@@ -24,7 +24,7 @@ def submit_job():
 
 #%% Generate jobs
 
-def generate_job(model, computation_method, method, lam, clip, N, reg_type="score", interpolation_space="noise", max_iter=100, n_images=10):
+def generate_job(model, computation_method, method, lam, clip, N, reg_type="score", interpolation_space="noise", max_iter=100, n_images=10, project_to_sphere=1):
 
     with open ('submit_interpolation.sh', 'w') as rsh:
         rsh.write(f'''\
@@ -62,6 +62,7 @@ def generate_job(model, computation_method, method, lam, clip, N, reg_type="scor
         --num_images 10 \\
         --reg_type {reg_type} \\
         --interpolation_space {interpolation_space} \\
+        --project_to_sphere {project_to_sphere} \\
         --ckpt_path /work3/fmry/models/controlnet/control_v11p_sd21_openpose.ckpt \\
     ''')
     
@@ -85,6 +86,7 @@ def loop_jobs(wait_time = 1.0):
     max_iter = 1000
     clip = [0]#[0,1]
     n_images = 10
+    project_to_sphere = 1
     
     ################################### Noise Space ################################
     model = ['cat', 'mountain', 'house'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
@@ -92,16 +94,17 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space = ['noise']
     
     method = ['ProbGEORCE']
-    reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
+    reg_types = ['score', 'score_naive', 'score_naive_with_prior', 'score_with_prior']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
 
     method = ['Linear', 'Spherical', 'NoiseDiffusion']
     reg_types = ['prior']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
 
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Data Space ################################
     model = ['cat', 'mountain', 'house']
@@ -110,11 +113,11 @@ def loop_jobs(wait_time = 1.0):
     reg_types = ['score', 'score_naive']
     computation_methods = ['ivp', 'bvp']
 
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Metrics ################################
     model = ['afhq', 'ffhq', 'coco']
@@ -123,11 +126,11 @@ def loop_jobs(wait_time = 1.0):
     reg_types = ['prior']
     interpolation_space = ['noise']
     computation_methods = ['metrics']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     return
                             
-def run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time):
+def run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time):
     
     for com_meth in computation_methods:
         for mod in model:
@@ -148,6 +151,7 @@ def run_model(computation_methods, model, method, clip, lam, N, reg_types, inter
                                                  reg_type=reg_type, 
                                                  interpolation_space=interpolation_sp,
                                                  n_images=n_images,
+                                                 project_to_sphere=project_to_sphere,
                                                  )
                                     try:
                                         submit_job()
@@ -168,6 +172,7 @@ def run_model(computation_methods, model, method, clip, lam, N, reg_types, inter
                                  reg_type="score", 
                                  interpolation_space="noise",
                                  n_images=n_images,
+                                 project_to_sphere=project_to_sphere,
                                  )
                     try:
                         submit_job()

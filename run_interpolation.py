@@ -56,6 +56,8 @@ def parse_args():
                         type=str)
     parser.add_argument('--interpolation_space', default="noise",
                         type=str)
+    parser.add_argument('--project_to_sphere', default=1,
+                        type=int)
     parser.add_argument('--seed', default=2712,
                         type=int)
     parser.add_argument('--ckpt_path', default="models/control_v11p_sd21_openpose.ckpt",
@@ -94,6 +96,7 @@ def run_interpolation()->None:
                            ckpt_path=args.ckpt_path, num_images=args.num_images, seed=args.seed,
                            reg_type=args.reg_type,
                            interpolation_space=args.interpolation_space,
+                           project_to_sphere = args.project_to_sphere,
                            )
     
     guide_scale = 10.0 #guide_scale
