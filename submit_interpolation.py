@@ -87,58 +87,43 @@ def loop_jobs(wait_time = 1.0):
     n_images = 10
     
     ################################### Noise Space ################################
-    method = ['ProbGEORCE']
-    
-    reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
+    model = ['cat', 'mountain', 'house'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
+    computation_methods = ['ivp', 'bvp']
     interpolation_space = ['noise']
+    
+    method = ['ProbGEORCE']
+    reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
 
-    #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    model = ['afhq']
-    computation_methods = ['bvp']
+    method = ['Linear', 'Spherical', 'NoiseDiffusion']
     reg_types = ['prior']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
-    
-    #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
-    model = ['cat']
-    computation_methods = ['ivp'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
-    
-    model = ['cat']
-    method = ['Linear', 'Spherical', 'NoiseDiffusion', 'ProbGEORCE_NoiseDiffusion']
-    reg_types = ['score']
-    computation_methods = ['bvp'] #['ivp', 'bvp']
+
+    model = ['afhq', 'ffhq', 'coco']
+    computation_methods = ['mean'] #['ivp', 'bvp']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     ################################### Data Space ################################
+    model = ['cat', 'mountain', 'house']
     method = ['ProbGEORCE']
-    
-    reg_types = ['score', 'score_naive']
     interpolation_space = ['data']
+    reg_types = ['score', 'score_naive']
+    computation_methods = ['ivp', 'bvp']
 
-    #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
-    model = ['afhq-cat']
-    computation_methods = ['mean']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
-    #model = ['house', 'mountain', 'aircraft', "lion_tiger"]
-    model = ['cat']
-    computation_methods = ['ivp'] #['ivp', 'bvp']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
-    
-    model = ['cat']
-    computation_methods = ['bvp'] #['ivp', 'bvp']
+    model = ['afhq', 'ffhq', 'coco']
+    computation_methods = ['mean'] #['ivp', 'bvp']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     ################################### Metrics ################################
-    #model = ['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco']
+    model = ['afhq', 'ffhq', 'coco']
     n_images = 10
-    method = ['ProbGEORCE']
+    method = ['Linear', 'Spherical', 'NoiseDiffusion']
     reg_types = ['prior']
     interpolation_space = ['noise']
-    model = ['afhq-cat']
     computation_methods = ['metrics']
-    n_images = 10
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, wait_time)
     
     return
                             
