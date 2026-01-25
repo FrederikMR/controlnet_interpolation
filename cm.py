@@ -164,7 +164,7 @@ class ContextManager:
                                                                  ).reshape(*x.shape)
             if self.project_to_sphere:
                 R = math.sqrt(dimension)
-                score_fun = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun = score_method
             
@@ -180,7 +180,7 @@ class ContextManager:
             
             if self.project_to_sphere:
                 R = math.sqrt(dimension)
-                score_fun = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun = score_method
             
@@ -202,11 +202,15 @@ class ContextManager:
             
             R = math.sqrt(dimension)
             if self.project_to_sphere:
-                score_fun1 = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun1 = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
             else:
                 score_fun1 = score_method
             
-            score_fun2 = lambda x: self.radial_force_quadratic(x, R=R)
+            S = Chi2(df=float(dimension))
+            
+            reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
+            
+            score_fun2 = grad(reg_fun)
             
             score_fun = lambda x: score_fun1(x) + score_fun2(x)
             
@@ -220,15 +224,20 @@ class ContextManager:
                                                                  unconditional_conditioning=un_cond,
                                                                  ).reshape(*x.shape)
             
-            R = math.sqrt(dimension)
             if self.project_to_sphere:
-                score_fun1 = lambda x: self.grad_chain_sphere(x, score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun1 = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=math.sqrt(dimension)), score_method(self.project_to_M_sphere(x, r=math.sqrt(dimension))))
             else:
                 score_fun1 = score_method
             
-            score_fun2 = lambda x: self.radial_force_quadratic(x, R=R)
+            
+            S = Chi2(df=float(dimension))
+            
+            reg_fun = lambda x: -S.log_prob(torch.sum(x.reshape(-1,dimension)**2, axis=-1)).sum()
+            
+            score_fun2 = grad(reg_fun)
             
             score_fun = lambda x: score_fun1(x) + score_fun2(x)
+            
             
         else:
             raise ValueError(f"Invalid reg_type: {self.reg_type}")
@@ -792,8 +801,8 @@ class ContextManager:
                 noisy_curve = bvp_method(l1, l2)
             elif self.interpolation_space == "data":
                 
-                left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
-                right_image = self.encode_decode_images(ldm, right_image, cond, uncond_base, cur_step, guide_scale)
+                #left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
+                #right_image = self.encode_decode_images(ldm, right_image, cond, uncond_base, cur_step, guide_scale)
                 
                 data_curve = bvp_method(left_image, right_image)
                 
@@ -918,7 +927,7 @@ class ContextManager:
                 noisy_curve = ivp_method(l1, v0)
             elif self.interpolation_space == "data":
                 
-                left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
+                #left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
                 
                 #v0 = torch.randn_like(left_image)
                 #v0 = v0 / v0.norm()
@@ -1036,8 +1045,8 @@ class ContextManager:
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
             elif self.interpolation_space == "data":
                 print(type(img_first_stage_encodings[0]))
-                img_data_space = torch.stack([self.encode_decode_images(ldm, img, cond, uncond_base, cur_step, guide_scale) for img in img_first_stage_encodings])
-                #img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
+                #img_data_space = torch.stack([self.encode_decode_images(ldm, img, cond, uncond_base, cur_step, guide_scale) for img in img_first_stage_encodings])
+                img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
                 data_mean, data_curve = mean_method(img_data_space)
                 
                 self.sample_data_multi_images(ldm, 
@@ -1251,8 +1260,8 @@ class ContextManager:
                     noisy_curve = bvp_method(l1, l2)
                 elif self.interpolation_space == "data":
                     
-                    left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
-                    right_image = self.encode_decode_images(ldm, right_image, cond, uncond_base, cur_step, guide_scale)
+                    #left_image = self.encode_decode_images(ldm, left_image, cond, uncond_base, cur_step, guide_scale)
+                    #right_image = self.encode_decode_images(ldm, right_image, cond, uncond_base, cur_step, guide_scale)
                     
                     data_curve = bvp_method(left_image, right_image)
                     
