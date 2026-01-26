@@ -47,7 +47,6 @@ class BaseImageDataset(Dataset):
         tensor_img = self.tensor_transform(pil_img)    # tensor from resized PIL
         return pil_img, tensor_img
 
-
 # ================================================================
 # 3. ImageFolder loader
 # ================================================================
@@ -216,7 +215,7 @@ COCO_N_PROMPT = GENERIC_N_PROMPT + ", distorted objects, inconsistent perspectiv
 # 9. Unified loader
 # ================================================================
 def load_dataset(name, n_images=None, image_size=768):
-    transform = get_transform(image_size)
+    transform = get_tensor_transform(image_size)
     name = name.lower()
     imgs = []
     
