@@ -164,8 +164,8 @@ class ContextManager:
                                                                  ).reshape(*x.shape)
             if self.project_to_sphere:
                 R = math.sqrt(dimension)
-                score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
-                #score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)))
+                #score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)))
             else:
                 score_fun = score_method
             
@@ -181,8 +181,8 @@ class ContextManager:
             
             if self.project_to_sphere:
                 R = math.sqrt(dimension)
-                score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
-                #score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)))
+                #score_fun = lambda x: self.grad_chain_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)), r=R)
+                score_fun = lambda x: self.project_to_TM_sphere(self.project_to_M_sphere(x, r=R), score_method(self.project_to_M_sphere(x, r=R)))
             else:
                 score_fun = score_method
             
@@ -256,9 +256,16 @@ class ContextManager:
             Mlambda = LambdaManifold(M=M, gradS=lambda x: score_fun(x.reshape(-1,dimension)).squeeze(), S=None, lam=self.lam)
             return lambda x,v: Mlambda.Exp_ode_Euclidean(x.reshape(1,-1), v.reshape(1,-1), T=self.N).reshape(-1,1,*latent_shape)
         elif method == "bvp":
+            if self.interpolation_space == "noise":
+                if self.project_to_sphere:
+                    init_fun = lambda x,y,*args: self.SInt(x,y)[1:-1]
+                else:
+                    init_fun = None
+            else:
+                init_fun = None
             if self.reg_type == "prior":
                 return ProbGEORCE_Euclidean(reg_fun = prior_reg_fun,
-                                            init_fun=None,
+                                            init_fun=init_fun,
                                             lam=self.lam,
                                             N=self.N,
                                             tol=tol,
@@ -268,7 +275,7 @@ class ContextManager:
                                             )
             else:
                 return ProbScoreGEORCE_Euclidean(score_fun = score_fun,
-                                                 init_fun=None,
+                                                 init_fun=init_fun,
                                                  lam = self.lam,
                                                  N=self.N,
                                                  tol=tol,
