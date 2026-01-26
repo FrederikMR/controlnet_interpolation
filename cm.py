@@ -1108,8 +1108,7 @@ class ContextManager:
         
         
     def compute_pga(self, u0):
-        
-        shape = u0.shape
+
         u0 = u0.reshape(len(u0), -1)
         
         U, S, Wt = torch.linalg.svd(u0, full_matrices=False)
@@ -1122,7 +1121,7 @@ class ContextManager:
         
         explained_variance_ratio = eigenvalues / eigenvalues.sum()
         
-        return principal_components.reshape(*shape), explained_variance_ratio
+        return principal_components, explained_variance_ratio
         
     def pga(self, 
             imgs, 
@@ -1203,13 +1202,21 @@ class ContextManager:
                 
                 u0 = len(noisy_curve)*(noisy_curve[:,1]-noisy_curve[:,0])
                 
-                pca_vectors, var_explained = self.compute_pga(u0)
+                shape = u0.shape
+                pca_vectors, eigenvalues, var_explained = self.compute_pga(u0)
                 
-                pca_vectors = pca_vectors[:3]
+                n_pca = 3
+                pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
+                eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
                 
-                pga_curves = [ivp_method(noisy_mean, v) for v in pca_vectors]
+                pga_curves = [ivp_method(noisy_mean, v) for v in pca_vectors.T]  # note: iterate over columns
+                
+                # Sample coefficients along PCs
                 samples = 3
-                
+                z = torch.randn(samples, n_pca) * torch.sqrt(eigenvalues)  # (samples, n_pca)
+                sample_directions = z @ pca_vectors.T                      # (samples, d)
+                sample_directions = sample_directions.reshape(samples, *shape[1:])
+
                 
             elif self.interpolation_space == "data":
                 print(type(img_first_stage_encodings[0]))
@@ -1256,7 +1263,7 @@ class ContextManager:
             print(noisy_curve.shape)
 
         self.sample_multi_images(ldm, 
-                                 noisy_curve, 
+                                 pga_curves, 
                                  cond1, 
                                  uncond_base, 
                                  cur_step, 
