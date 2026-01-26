@@ -1213,7 +1213,8 @@ class ContextManager:
                 
                 # Sample coefficients along PCs
                 samples = 3
-                z = torch.randn(samples, n_pca) * torch.sqrt(eigenvalues)  # (samples, n_pca)
+                device = eigenvalues.device  # cuda:0
+                z = torch.randn(samples, n_pca, device=device) * torch.sqrt(eigenvalues)
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
 
