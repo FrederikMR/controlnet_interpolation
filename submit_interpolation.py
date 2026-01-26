@@ -88,14 +88,33 @@ def loop_jobs(wait_time = 1.0):
     n_images = 10
     project_to_sphere = 1
     
+    ################################### Testing ################################
+    model = ['house']
+    n_images = 10
+    lam = [20.0]
+    method = ['ProbGEORCE']
+    reg_types = ['score']
+    interpolation_space = ['data']
+    computation_methods = ['ivp']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    
+    
+    model = ['ffhq', 'coco']
+    n_images = 10
+    lam = [20.0]
+    method = ['Linear']
+    reg_types = ['prior']
+    interpolation_space = ['noise']
+    computation_methods = ['metrics']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    
     ################################### Noise Space ################################
     model = ['cat', 'mountain', 'house'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
-    computation_methods = ['ivp', 'bvp']
     interpolation_space = ['noise']
+    computation_methods = ['ivp', 'bvp']
     
     method = ['ProbGEORCE']
-    #reg_types = ['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
-    reg_types = ['prior', 'score']#['score', 'score_naive']#, 'score_naive_with_prior', 'score_with_prior']
+    reg_types = ['prior', 'score'] #['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
 
     #method = ['Linear', 'Spherical', 'NoiseDiffusion']
@@ -107,10 +126,11 @@ def loop_jobs(wait_time = 1.0):
     reg_types = ['score', 'score_naive']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
+    method = ['ProbGEORCE']
     model = ['afhq', 'ffhq', 'coco']
     computation_methods = ['mean'] #['ivp', 'bvp']
-    reg_types = ['prior']
-    method = ['ProbGEORCE']#['Linear', 'Spherical', 'ProbGEORCE']
+    reg_types = ['prior' 'score']
+    #['Linear', 'Spherical', 'ProbGEORCE']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Data Space ################################
