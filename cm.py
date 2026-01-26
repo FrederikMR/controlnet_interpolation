@@ -1209,7 +1209,8 @@ class ContextManager:
                 pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
                 eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
                 
-                pga_curves = [ivp_method(noisy_mean, v) for v in pca_vectors.T]  # note: iterate over columns
+                pga_curves = torch.concatenate([ivp_method(noisy_mean, v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                print(pga_curves.shape)
                 
                 # Sample coefficients along PCs
                 samples = 3
