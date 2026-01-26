@@ -23,9 +23,11 @@ rng = random.Random(SEED)
 # 1. Transform helper
 # ================================================================
 def get_pil_transform(size=256):
+
     return transforms.Resize((size, size))
 
 def get_tensor_transform(size=256):
+
     return transforms.Compose([ 
         transforms.Resize((size, size)), 
         transforms.ToTensor(), 
@@ -34,10 +36,10 @@ def get_tensor_transform(size=256):
 
 
 class BaseImageDataset(Dataset):
-    def __init__(self, img_paths, size=256):
+    def __init__(self, img_paths, transform=None):
         self.img_paths = img_paths
-        self.pil_transform = get_pil_transform(size)
-        self.tensor_transform = get_tensor_transform(size)
+        self.pil_transform = transform or get_pil_transform()
+        self.tensor_transform = transform or get_tensor_transform()
 
     def __len__(self):
         return len(self.img_paths)
