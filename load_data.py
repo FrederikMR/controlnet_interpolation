@@ -44,8 +44,8 @@ class BaseImageDataset(Dataset):
 
     def __getitem__(self, idx):
         pil_img = Image.open(self.img_paths[idx]).convert("RGB")
-        pil_img = self.pil_transform(pil_img)          # resized PIL
         tensor_img = self.tensor_transform(pil_img)    # tensor from resized PIL
+        pil_img = self.pil_transform(pil_img)          # resized PIL
         return pil_img, tensor_img
 
 # ================================================================
