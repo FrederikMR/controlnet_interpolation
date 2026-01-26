@@ -22,32 +22,27 @@ rng = random.Random(SEED)
 # ================================================================
 # 1. Transform helper
 # ================================================================
-def get_pil_transform(size=256):
+def get_transform(size=256):
+    return transforms.Compose([
+        transforms.Resize((size, size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5]*3, [0.5]*3)
+    ])
 
-    return transforms.Resize((size, size))
-
-def get_tensor_transform(size=256):
-
-    return transforms.Compose([ 
-        transforms.Resize((size, size)), 
-        transforms.ToTensor(), 
-        transforms.Normalize([0.5]*3, [0.5]*3) ]
-        )
-
-
+# ================================================================
+# 2. Base class: always returns (PIL_image, Tensor)
+# ================================================================
 class BaseImageDataset(Dataset):
     def __init__(self, img_paths, transform=None):
         self.img_paths = img_paths
-        self.pil_transform = transform or get_pil_transform()
-        self.tensor_transform = transform or get_tensor_transform()
+        self.transform = transform or get_transform()
 
     def __len__(self):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
         pil_img = Image.open(self.img_paths[idx]).convert("RGB")
-        tensor_img = self.tensor_transform(pil_img)    # tensor from resized PIL
-        pil_img = self.pil_transform(pil_img)          # resized PIL
+        tensor_img = self.transform(pil_img)
         return pil_img, tensor_img
 
 # ================================================================
@@ -218,7 +213,7 @@ COCO_N_PROMPT = GENERIC_N_PROMPT + ", distorted objects, inconsistent perspectiv
 # 9. Unified loader
 # ================================================================
 def load_dataset(name, n_images=None, image_size=768):
-    transform = get_tensor_transform(image_size)
+    transform = get_transform(image_size)
     name = name.lower()
     imgs = []
     
@@ -310,7 +305,7 @@ def load_dataset(name, n_images=None, image_size=768):
     # ---- Load dataset images ----
     if 'ds' in locals():
         for pil, _ in ds:
-            imgs.append(pil)
+            imgs.append(pil.resize((image_size, image_size)))
     else:
         ds = None
     
