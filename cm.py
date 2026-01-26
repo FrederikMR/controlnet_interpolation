@@ -1027,9 +1027,6 @@ class ContextManager:
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
-        for img in img_first_stage_encodings:
-            print(img.shape)
-        
         cur_step = ddim_steps#140
         
         with torch.no_grad():
@@ -1109,6 +1106,24 @@ class ContextManager:
                                  out_dir,
                                  )
         
+        
+    def compute_pga(self, u0):
+        
+        shape = u0.shape
+        u0 = u0.reshape(len(u0), -1)
+        
+        U, S, Wt = torch.linalg.svd(u0, full_matrices=False)
+        
+        # Principal directions (eigenvectors of M)
+        principal_components = Wt.T   # shape: (d, n)
+        
+        # Eigenvalues
+        eigenvalues = S**2
+        
+        explained_variance_ratio = eigenvalues / eigenvalues.sum()
+        
+        return principal_components.reshape(*shape), explained_variance_ratio
+        
     def pga(self, 
             imgs, 
             scale_control=1.5,
@@ -1130,7 +1145,7 @@ class ContextManager:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
-        base_dir, out_dir = self.create_out_dir(out_dir, "mean")
+        base_dir, out_dir = self.create_out_dir(out_dir, "pga")
         
         imgs = self.images_to_tensors_raw(imgs, base_dir, "cuda")
         
@@ -1150,9 +1165,6 @@ class ContextManager:
 
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
-        
-        for img in img_first_stage_encodings:
-            print(img.shape)
         
         cur_step = ddim_steps#140
         
@@ -1176,10 +1188,29 @@ class ContextManager:
                                           guide_scale=guide_scale,
                                           method = "mean"
                                           )
+            ivp_method = self.get_reg_fun(dimension=dimension, 
+                                          latent_shape=latent_shape,
+                                          cur_step=cur_step, 
+                                          cond=cond, 
+                                          un_cond=un_cond,
+                                          guide_scale=guide_scale,
+                                          method = "mean"
+                                          )
             
             if self.interpolation_space == "noise":
                 noisy_mean, noisy_curve = mean_method(img_encoded)
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
+                
+                u0 = len(noisy_curve)*(noisy_curve[:,1]-noisy_curve[:,0])
+                
+                pca_vectors, var_explained = self.compute_pga(u0)
+                
+                pca_vectors = pca_vectors[:3]
+                
+                pga_curves = [ivp_method(noisy_mean, v) for v in pca_vectors]
+                samples = 3
+                
+                
             elif self.interpolation_space == "data":
                 print(type(img_first_stage_encodings[0]))
                 #img_data_space = torch.stack([self.encode_decode_images(ldm, img, cond, uncond_base, cur_step, guide_scale) for img in img_first_stage_encodings])

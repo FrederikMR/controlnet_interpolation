@@ -114,6 +114,9 @@ def run_interpolation()->None:
     elif args.computation_method == "mean":
         CM.mean(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale, 
                 encoded_guide_scale=encoded_guide_scale, out_dir=f'../figures/{args.img_types}/')
+    elif args.computation_method == "pga":
+        CM.pga(imgs, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale, 
+                encoded_guide_scale=encoded_guide_scale, out_dir=f'../figures/{args.img_types}/')
     elif args.computation_method == "metrics":
         
         ds = load_dataset(name = args.img_types,

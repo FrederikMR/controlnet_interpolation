@@ -144,7 +144,7 @@ AFHQ_PROMPTS = {
     "wild": "A photo of a wild animal",
 }
 
-AFHQ_GENERIC_PROMPT = "A photo of an animal"
+AFHQ_GENERIC_PROMPT = "A photo of a cat or dog"
 
 FFHQ_PROMPT = "A photo of a person"
 
