@@ -1008,6 +1008,8 @@ class ContextManager:
             max_steps = int(ddim_steps * max_steps)
         base_dir, out_dir = self.create_out_dir(out_dir, "mean")
         
+        print(type(img[0]))
+        
         imgs = self.images_to_tensors_raw(imgs, base_dir, "cuda")
         
         ldm = self.model
