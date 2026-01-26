@@ -1027,6 +1027,9 @@ class ContextManager:
         kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
         yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
         
+        for img in img_first_stage_encodings:
+            print(img.shape)
+        
         cur_step = ddim_steps#140
         
         with torch.no_grad():
