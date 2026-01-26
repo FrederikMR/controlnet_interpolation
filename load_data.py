@@ -144,9 +144,9 @@ AFHQ_PROMPTS = {
     "wild": "A photo of a wild animal",
 }
 
-AFHQ_GENERIC_PROMPT = "A photo of a cat"
+AFHQ_GENERIC_PROMPT = "A photo of an animal"
 
-FFHQ_PROMPT = "A photo of a person from the ffhq dataset"
+FFHQ_PROMPT = "A photo of a person"
 
 COCO_PROMPT = "A photo of a real-world scene"
 
@@ -154,14 +154,14 @@ COCO_PROMPT = "A photo of a real-world scene"
 # Target prompts (identity preserving)
 # ---------------------------
 AFHQ_TARGET_PROMPTS = {
-    "cat":  "A photo of a cat wearing sunglasses",
-    "dog":  "A photo of a dog wearing sunglasses",
-    "wild": "A photo of a wild animal wearing sunglasses",
+    "cat":  "A photo of a lion",
+    "dog":  "A photo of a wolf",
+    "wild": "A photo of a tiger",
 }
 
-AFHQ_GENERIC_TARGET = "A photo of an animal wearing sunglasses"
+AFHQ_GENERIC_TARGET = "A photo of a lion"
 
-FFHQ_TARGET_PROMPT = "A photo of a man with sunglasses"
+FFHQ_TARGET_PROMPT = "A photo of a man"
 
 COCO_TARGET_PROMPT = "A photo of a real-world scene in the desert"
 
