@@ -146,7 +146,7 @@ AFHQ_PROMPTS = {
 
 AFHQ_GENERIC_PROMPT = "A photo of a cat"
 
-FFHQ_PROMPT = "A photo of a face"
+FFHQ_PROMPT = "A photo of a person"
 
 COCO_PROMPT = "A photo of a real-world scene"
 
@@ -161,7 +161,7 @@ AFHQ_TARGET_PROMPTS = {
 
 AFHQ_GENERIC_TARGET = "A photo of an animal wearing sunglasses"
 
-FFHQ_TARGET_PROMPT = "A photo of a face wearing sunglasses"
+FFHQ_TARGET_PROMPT = "A photo of a person wearing sunglasses"
 
 COCO_TARGET_PROMPT = "A photo of a real-world scene in the desert"
 
