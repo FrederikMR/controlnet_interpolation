@@ -1109,6 +1109,130 @@ class ContextManager:
                                  out_dir,
                                  )
         
+    def pga(self, 
+            imgs, 
+            scale_control=1.5,
+            prompt=None, 
+            n_prompt=None, 
+            min_steps=.3,
+            max_steps=.55, 
+            ddim_steps=250,  
+            guide_scale=7.5,  
+            encoded_guide_scale=1.0,
+            optimize_cond=0,  
+            cond_lr=1e-4, 
+            bias=0, 
+            ddim_eta=0, 
+            out_dir='blend',
+            ):
+        torch.manual_seed(self.seed)
+        if min_steps < 1:
+            min_steps = int(ddim_steps * min_steps)
+        if max_steps < 1:
+            max_steps = int(ddim_steps * max_steps)
+        base_dir, out_dir = self.create_out_dir(out_dir, "mean")
+        
+        imgs = self.images_to_tensors_raw(imgs, base_dir, "cuda")
+        
+        ldm = self.model
+        ldm.control_scales = [1] * 13
+
+        with torch.no_grad():
+            cond1 = ldm.get_learned_conditioning([prompt])
+            uncond_base = ldm.get_learned_conditioning([n_prompt])
+            cond = {"c_crossattn": [cond1], 'c_concat': None}
+            un_cond = {"c_crossattn": [uncond_base], 'c_concat': None}
+        
+        self.ddim_sampler.make_schedule(ddim_steps, ddim_eta=ddim_eta, verbose=False)#构造ddim_timesteps,赋值给timesteps
+        
+        img_first_stage_encodings = [ldm.get_first_stage_encoding(ldm.encode_first_stage(img.float() / 127.5 - 1.0)) for img in imgs]
+        latent_shape = img_first_stage_encodings[0].shape
+
+        kwargs = dict(cond_lr=cond_lr, cond_steps=optimize_cond, prompt=prompt, n_prompt=n_prompt, ddim_steps=ddim_steps, guide_scale=guide_scale, bias=bias, ddim_eta=ddim_eta, scale_control=scale_control)
+        yaml.dump(kwargs, open(f'{out_dir}/args.yaml', 'w'))
+        
+        for img in img_first_stage_encodings:
+            print(img.shape)
+        
+        cur_step = ddim_steps#140
+        
+        with torch.no_grad():
+            img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
+                                                                      cond, 
+                                                                      cur_step, 
+                                                                      use_original_steps=False, 
+                                                                      return_intermediates=None,
+                                                                      unconditional_guidance_scale=encoded_guide_scale, 
+                                                                      unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
+        
+        if self.inter_method == "ProbGEORCE":
+            dimension = len(img_encoded[0].reshape(-1))
+            latent_shape = img_encoded[0].shape
+            mean_method = self.get_reg_fun(dimension=dimension, 
+                                          latent_shape=latent_shape,
+                                          cur_step=cur_step, 
+                                          cond=cond, 
+                                          un_cond=un_cond,
+                                          guide_scale=guide_scale,
+                                          method = "mean"
+                                          )
+            
+            if self.interpolation_space == "noise":
+                noisy_mean, noisy_curve = mean_method(img_encoded)
+                noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
+            elif self.interpolation_space == "data":
+                print(type(img_first_stage_encodings[0]))
+                #img_data_space = torch.stack([self.encode_decode_images(ldm, img, cond, uncond_base, cur_step, guide_scale) for img in img_first_stage_encodings])
+                img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
+                data_mean, data_curve = mean_method(img_data_space)
+                
+                self.sample_data_multi_images(ldm, 
+                                              data_curve, 
+                                              torch.randn_like(img_first_stage_encodings[0]),
+                                              cond1, 
+                                              uncond_base, 
+                                              cur_step, 
+                                              guide_scale, 
+                                              encoded_guide_scale,
+                                              out_dir,
+                                              )
+                
+                return
+            else:
+                raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
+        elif self.inter_method == "Linear":
+            
+            dimension = len(img_encoded[0].reshape(-1))
+            latent_shape = img_encoded[0].shape
+            
+            M = Linear()
+            
+            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), N_grid=self.N)
+            noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
+            
+            print(noisy_curve.shape)
+            
+        elif self.inter_method == "Spherical":
+            
+            dimension = len(img_encoded[0].reshape(-1))
+            latent_shape = img_encoded[0].shape
+            
+            M = Spherical(eps=1e-8)
+            
+            noisy_mean, noisy_curve = M.mean_com(img_encoded.reshape(len(img_encoded), -1), N_grid=self.N)
+            noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
+            
+            print(noisy_curve.shape)
+
+        self.sample_multi_images(ldm, 
+                                 noisy_curve, 
+                                 cond1, 
+                                 uncond_base, 
+                                 cur_step, 
+                                 guide_scale, 
+                                 out_dir,
+                                 )
+        
     def decode_images(self,
                       ldm,
                       noisy_curve,
