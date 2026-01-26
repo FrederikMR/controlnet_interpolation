@@ -113,7 +113,7 @@ def loop_jobs(wait_time = 1.0):
     method = ['ProbGEORCE']
     reg_types = ['prior']
     interpolation_space = ['noise']
-    computation_methods = ['mean']
+    computation_methods = ['metrics']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     
