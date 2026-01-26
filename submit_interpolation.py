@@ -107,7 +107,7 @@ def loop_jobs(wait_time = 1.0):
     computation_methods = ['mean']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
-    model = ['ffhq']
+    model = ['afhq-dog']
     n_images = 10
     lam = [20.0]
     method = ['ProbGEORCE']
