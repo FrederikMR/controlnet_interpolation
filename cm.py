@@ -1029,13 +1029,14 @@ class ContextManager:
         
         cur_step = ddim_steps#140
         
-        img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
-                                                                  cond, 
-                                                                  cur_step, 
-                                                                  use_original_steps=False, 
-                                                                  return_intermediates=None,
-                                                                  unconditional_guidance_scale=encoded_guide_scale, 
-                                                                  unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
+        with torch.no_grad():
+            img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
+                                                                      cond, 
+                                                                      cur_step, 
+                                                                      use_original_steps=False, 
+                                                                      return_intermediates=None,
+                                                                      unconditional_guidance_scale=encoded_guide_scale, 
+                                                                      unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
         
         if self.inter_method == "ProbGEORCE":
             dimension = len(img_encoded[0].reshape(-1))
@@ -1195,14 +1196,14 @@ class ContextManager:
         
         cur_step = ddim_steps#140
         
-        img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
-                                                                  cond, 
-                                                                  cur_step, 
-                                                                  use_original_steps=False, 
-                                                                  return_intermediates=None,
-                                                                  unconditional_guidance_scale=encoded_guide_scale, 
-                                                                  unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
-        
+        with torch.no_grad():
+            img_encoded = torch.concatenate([self.ddim_sampler.encode(img, 
+                                                                      cond, 
+                                                                      cur_step, 
+                                                                      use_original_steps=False, 
+                                                                      return_intermediates=None,
+                                                                      unconditional_guidance_scale=encoded_guide_scale, 
+                                                                      unconditional_conditioning=un_cond)[0] for img in img_first_stage_encodings], axis=0)
         
         N = img_encoded.shape[0]
         half = N // 2
