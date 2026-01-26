@@ -1121,7 +1121,7 @@ class ContextManager:
         
         explained_variance_ratio = eigenvalues / eigenvalues.sum()
         
-        return principal_components, explained_variance_ratio
+        return principal_components, eigenvalues, explained_variance_ratio
         
     def pga(self, 
             imgs, 
