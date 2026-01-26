@@ -146,7 +146,7 @@ AFHQ_PROMPTS = {
 
 AFHQ_GENERIC_PROMPT = "A photo of a cat"
 
-FFHQ_PROMPT = ""#"A photo of a man with a beard"
+FFHQ_PROMPT = "A close up photo of a man"
 
 COCO_PROMPT = "A photo of a real-world scene"
 
