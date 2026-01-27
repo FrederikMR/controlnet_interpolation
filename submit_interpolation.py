@@ -95,7 +95,7 @@ def loop_jobs(wait_time = 1.0):
     
     method = ['ProbGEORCE_NoiseDiffusion']
     reg_types = ['prior'] #['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     method = ['NoiseDiffusion']
     reg_types = ['prior'] #['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
@@ -150,6 +150,12 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space = ['data']
     computation_methods = ['metrics']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    
+    method = ['ProbGEORCE']
+    reg_types = ['prior']
+    interpolation_space = ['noise']
+    computation_methods = ['pga']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     return
                             
