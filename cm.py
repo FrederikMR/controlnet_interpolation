@@ -1218,6 +1218,8 @@ class ContextManager:
                 z = torch.randn(samples, n_pca, device=device) * torch.sqrt(eigenvalues)
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
+                
+                sample_curves = torch.stack([ivp_method(noisy_mean, 50.0*v) for v in sample_directions], dim=0)  # note: iterate over columns
 
                 
             elif self.interpolation_space == "data":
@@ -1243,10 +1245,23 @@ class ContextManager:
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
                 
+                sample_curves = torch.stack([ivp_method(data_mean, 50.0*v) for v in sample_directions], dim=0)  # note: iterate over columns
+                
                 for counter, pga_curve in enumerate(pga_curves, start=0):
                     base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
                     self.sample_data_images(ldm, 
                                             pga_curve, 
+                                            cond1, 
+                                            uncond_base, 
+                                            cur_step, 
+                                            guide_scale, 
+                                            new_dir,
+                                            )
+                    
+                for counter, sample_curve in enumerate(sample_curves, start=0):
+                    base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/samples{counter}/")
+                    self.sample_data_images(ldm, 
+                                            sample_curve, 
                                             cond1, 
                                             uncond_base, 
                                             cur_step, 
@@ -1285,6 +1300,17 @@ class ContextManager:
             base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
             self.sample_images(ldm, 
                                pga_curve, 
+                               cond1, 
+                               uncond_base, 
+                               cur_step, 
+                               guide_scale, 
+                               new_dir,
+                               )
+            
+        for counter, sample_curve in enumerate(sample_curves, start=0):
+            base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/samples{counter}/")
+            self.sample_images(ldm, 
+                               sample_curve, 
                                cond1, 
                                uncond_base, 
                                cur_step, 

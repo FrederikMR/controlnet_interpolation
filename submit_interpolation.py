@@ -155,7 +155,7 @@ def loop_jobs(wait_time = 1.0):
     reg_types = ['prior']
     interpolation_space = ['noise']
     computation_methods = ['pga']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     method = ['ProbGEORCE']
     reg_types = ['score']
