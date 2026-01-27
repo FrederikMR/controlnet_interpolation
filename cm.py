@@ -1207,6 +1207,7 @@ class ContextManager:
                 shape = u0.shape
                 pca_vectors, eigenvalues, var_explained = self.compute_pga(u0)
                 n_pca = 3
+                print(var_explained)
                 pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
                 eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
 
