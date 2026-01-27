@@ -1200,6 +1200,8 @@ class ContextManager:
                 noisy_mean, noisy_curve = mean_method(img_encoded)
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
                 
+                print(noisy_curve.shape)
+                
                 u0 = len(noisy_curve)*(noisy_curve[:,1]-noisy_curve[:,0])
                 
                 shape = u0.shape
