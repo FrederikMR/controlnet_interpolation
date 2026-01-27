@@ -305,7 +305,7 @@ def load_dataset(name, n_images=None, image_size=768):
     # ---- Load dataset images ----
     if 'ds' in locals():
         for pil, _ in ds:
-            imgs.append(pil.resize((image_size, image_size)))
+            imgs.append(pil)
     else:
         ds = None
     
