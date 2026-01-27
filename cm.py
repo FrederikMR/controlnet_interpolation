@@ -1442,17 +1442,14 @@ class ContextManager:
                     
                     data_curve = bvp_method(left_image, right_image)
                     
-                    self.sample_data_images(ldm, 
-                                            data_curve, 
-                                            torch.randn_like(left_image),
-                                            cond1, 
-                                            uncond_base, 
-                                            cur_step, 
-                                            guide_scale, 
-                                            encoded_guide_scale,
-                                            out_dir,
-                                            )
-                    
+                    noisy_curve = []
+                    for data_latent in data_curve:
+                        noisy_latent = self.ddim_sampler.encode(data_latent, cond, cur_step, 
+                                                                use_original_steps=False, return_intermediates=None,
+                                                                unconditional_guidance_scale=encoded_guide_scale, unconditional_conditioning=un_cond)[0]
+                        noisy_curve.append(noisy_latent)
+                    noisy_curve = torch.cat(noisy_curve)
+                        
                     return
                 else:
                     raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
