@@ -1201,18 +1201,14 @@ class ContextManager:
                 noisy_mean, noisy_curve = mean_method(img_encoded)
                 noisy_curve = noisy_curve.reshape(len(noisy_curve),-1,1,*latent_shape)
                 
-                print(noisy_curve.shape)
-                
                 u0 = len(noisy_curve)*(noisy_curve[:,1]-noisy_curve[:,0])
                 
                 shape = u0.shape
                 pca_vectors, eigenvalues, var_explained = self.compute_pga(u0)
-                n_pca = 3
                 print(var_explained)
+                n_pca = 3
                 pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
                 eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
-                
-                print(torch.linalg.norm(pca_vectors, dim=0))
 
                 pga_curves = torch.stack([ivp_method(noisy_mean, 50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
                 
@@ -1222,27 +1218,41 @@ class ContextManager:
                 z = torch.randn(samples, n_pca, device=device) * torch.sqrt(eigenvalues)
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
-                
-                print(pga_curves.shape)
-                print(sample_directions.shape)
 
                 
             elif self.interpolation_space == "data":
-                print(type(img_first_stage_encodings[0]))
                 #img_data_space = torch.stack([self.encode_decode_images(ldm, img, cond, uncond_base, cur_step, guide_scale) for img in img_first_stage_encodings])
                 img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
                 data_mean, data_curve = mean_method(img_data_space)
                 
-                self.sample_data_multi_images(ldm, 
-                                              data_curve, 
-                                              torch.randn_like(img_first_stage_encodings[0]),
-                                              cond1, 
-                                              uncond_base, 
-                                              cur_step, 
-                                              guide_scale, 
-                                              encoded_guide_scale,
-                                              out_dir,
-                                              )
+                u0 = len(noisy_curve)*(data_curve[:,1]-data_curve[:,0])
+                
+                shape = u0.shape
+                pca_vectors, eigenvalues, var_explained = self.compute_pga(u0)
+                print(var_explained)
+                n_pca = 3
+                pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
+                eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
+
+                pga_curves = torch.stack([ivp_method(data_mean, 50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                
+                # Sample coefficients along PCs
+                samples = 3
+                device = eigenvalues.device  # cuda:0
+                z = torch.randn(samples, n_pca, device=device) * torch.sqrt(eigenvalues)
+                sample_directions = z @ pca_vectors.T                      # (samples, d)
+                sample_directions = sample_directions.reshape(samples, *shape[1:])
+                
+                for counter, pga_curve in enumerate(pga_curves, start=0):
+                    base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
+                    self.sample_data_images(ldm, 
+                                            pga_curve, 
+                                            cond1, 
+                                            uncond_base, 
+                                            cur_step, 
+                                            guide_scale, 
+                                            new_dir,
+                                            )
                 
                 return
             else:
