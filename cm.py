@@ -1144,6 +1144,7 @@ class ContextManager:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
+        original_out_dir = out_dir
         base_dir, out_dir = self.create_out_dir(out_dir, "pga")
         
         imgs = self.images_to_tensors_raw(imgs, base_dir, "cuda")
@@ -1213,7 +1214,7 @@ class ContextManager:
                 
                 print(torch.linalg.norm(pca_vectors, dim=0))
 
-                pga_curves = torch.stack([ivp_method(noisy_mean, 10.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                pga_curves = torch.stack([ivp_method(noisy_mean, 100.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
                 
                 # Sample coefficients along PCs
                 samples = 3
@@ -1271,7 +1272,7 @@ class ContextManager:
             print(noisy_curve.shape)
 
         for counter, pga_curve in enumerate(pga_curves, start=0):
-            base_dir, new_dir = self.create_out_dir(out_dir, f"pga/pga{counter}/")
+            base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
             self.sample_images(ldm, 
                                pga_curve, 
                                cond1, 
