@@ -1214,7 +1214,7 @@ class ContextManager:
                 
                 print(torch.linalg.norm(pca_vectors, dim=0))
 
-                pga_curves = torch.stack([ivp_method(noisy_mean, 100.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                pga_curves = torch.stack([ivp_method(noisy_mean, 20.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
                 
                 # Sample coefficients along PCs
                 samples = 3
