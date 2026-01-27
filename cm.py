@@ -1210,6 +1210,8 @@ class ContextManager:
                 print(var_explained)
                 pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
                 eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
+                
+                print(torch.linalg.norm(pca_vectors, dim=0))
 
                 pga_curves = torch.stack([ivp_method(noisy_mean, v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
                 
