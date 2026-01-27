@@ -1210,7 +1210,7 @@ class ContextManager:
                 pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
                 eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
 
-                pga_curves = torch.cat([ivp_method(noisy_mean, v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                pga_curves = torch.stack([ivp_method(noisy_mean, v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
                 
                 # Sample coefficients along PCs
                 samples = 3
@@ -1267,14 +1267,16 @@ class ContextManager:
             
             print(noisy_curve.shape)
 
-        self.sample_images(ldm, 
-                           pga_curves, 
-                           cond1, 
-                           uncond_base, 
-                           cur_step, 
-                           guide_scale, 
-                           out_dir,
-                           )
+        for counter, pga_curve in enumerate(pga_curves, start=0):
+            base_dir, out_dir = self.create_out_dir(out_dir, f"pga/pga{counter}/")
+            self.sample_images(ldm, 
+                               pga_curve, 
+                               cond1, 
+                               uncond_base, 
+                               cur_step, 
+                               guide_scale, 
+                               out_dir,
+                               )
         
     def decode_images(self,
                       ldm,
