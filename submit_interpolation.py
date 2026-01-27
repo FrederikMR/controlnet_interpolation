@@ -161,7 +161,7 @@ def loop_jobs(wait_time = 1.0):
     
     model = ['afhq']
     computation_methods = ['mean'] #['ivp', 'bvp']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     ################################### Metrics ################################
     model = ['afhq']#['afhq', 'ffhq', 'coco']
