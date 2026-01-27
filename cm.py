@@ -1265,14 +1265,14 @@ class ContextManager:
             
             print(noisy_curve.shape)
 
-        self.sample_multi_images(ldm, 
-                                 pga_curves, 
-                                 cond1, 
-                                 uncond_base, 
-                                 cur_step, 
-                                 guide_scale, 
-                                 out_dir,
-                                 )
+        self.sample_images(ldm, 
+                           pga_curves, 
+                           cond1, 
+                           uncond_base, 
+                           cur_step, 
+                           guide_scale, 
+                           out_dir,
+                           )
         
     def decode_images(self,
                       ldm,
