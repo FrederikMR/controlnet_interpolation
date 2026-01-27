@@ -89,13 +89,17 @@ def loop_jobs(wait_time = 1.0):
     project_to_sphere = 1
     
     ################################### Noise Space ################################
-    model = ['cat', 'mountain', 'house'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
+    model = ['eagle'] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
     interpolation_space = ['noise']
-    computation_methods = ['ivp', 'bvp']
+    computation_methods = ['bvp'] #['ivp', 'bvp']
     
-    method = ['ProbGEORCE']
-    reg_types = ['prior', 'score'] #['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
-    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    method = ['ProbGEORCE_NoiseDiffusion']
+    reg_types = ['prior'] #['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    
+    method = ['NoiseDiffusion']
+    reg_types = ['prior'] #['score', 'score_naive', 'prior', 'score_naive_with_prior', 'score_with_prior']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
 
     method = ['Linear', 'Spherical', 'NoiseDiffusion']
     reg_types = ['prior']
@@ -136,7 +140,7 @@ def loop_jobs(wait_time = 1.0):
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     method = ['ProbGEORCE']
-    reg_types = ['score']#['prior', 'score']
+    reg_types = ['prior']
     interpolation_space = ['noise']
     computation_methods = ['metrics']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
@@ -145,7 +149,7 @@ def loop_jobs(wait_time = 1.0):
     reg_types = ['score']
     interpolation_space = ['data']
     computation_methods = ['metrics']
-    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     return
                             
