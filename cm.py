@@ -1449,8 +1449,6 @@ class ContextManager:
                                                                 unconditional_guidance_scale=encoded_guide_scale, unconditional_conditioning=un_cond)[0]
                         noisy_curve.append(noisy_latent)
                     noisy_curve = torch.cat(noisy_curve)
-                        
-                    return
                 else:
                     raise ValueError(f"Invalid interpolation space: {self.interpolation_space}")
             elif self.inter_method == "ProbGEORCE_NoiseDiffusion":
