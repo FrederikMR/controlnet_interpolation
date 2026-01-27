@@ -1216,6 +1216,9 @@ class ContextManager:
                 z = torch.randn(samples, n_pca, device=device) * torch.sqrt(eigenvalues)
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
+                
+                print(pga_curves.shape)
+                print(sample_directions.shape)
 
                 
             elif self.interpolation_space == "data":
