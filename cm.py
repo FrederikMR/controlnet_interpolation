@@ -1423,7 +1423,7 @@ class ContextManager:
                 noisy_curve = self.noise_diffusion(l1, l2, left_image, right_image, noise, ldm, t)
             elif self.inter_method == "ProbGEORCE":
                 dimension = len(l1.reshape(-1))
-                latent_shape = l1.shape[1:]
+                latent_shape = l1#.shape[1:]
                 bvp_method = self.get_reg_fun(dimension=dimension, 
                                               latent_shape=latent_shape,
                                               cur_step=cur_step, 
