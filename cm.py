@@ -1219,7 +1219,7 @@ class ContextManager:
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
                 
-                sample_curves = torch.stack([ivp_method(noisy_mean, 1.0*v) for v in sample_directions], dim=0)  # note: iterate over columns
+                sample_curves = torch.stack([ivp_method(noisy_mean, 0.1*v) for v in sample_directions], dim=0)  # note: iterate over columns
 
                 
             elif self.interpolation_space == "data":
@@ -1227,7 +1227,7 @@ class ContextManager:
                 img_data_space = torch.stack([torch.tensor(img) for img in img_first_stage_encodings])
                 data_mean, data_curve = mean_method(img_data_space)
                 
-                u0 = len(noisy_curve)*(data_curve[:,1]-data_curve[:,0])
+                u0 = len(data_curve)*(data_curve[:,1]-data_curve[:,0])
                 
                 shape = u0.shape
                 pca_vectors, eigenvalues, var_explained = self.compute_pga(u0)
@@ -1245,7 +1245,7 @@ class ContextManager:
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
                 
-                sample_curves = torch.stack([ivp_method(data_mean, 0.1*v) for v in sample_directions], dim=0)  # note: iterate over columns
+                sample_curves = torch.stack([ivp_method(data_mean, 1.0*v) for v in sample_directions], dim=0)  # note: iterate over columns
                 
                 for counter, pga_curve in enumerate(pga_curves, start=0):
                     base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
