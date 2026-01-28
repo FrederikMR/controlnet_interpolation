@@ -1245,7 +1245,7 @@ class ContextManager:
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
                 sample_directions = sample_directions.reshape(samples, *shape[1:])
                 
-                sample_curves = torch.stack([ivp_method(data_mean, 1.0*v) for v in sample_directions], dim=0)  # note: iterate over columns
+                sample_curves = torch.stack([ivp_method(data_mean, 0.1*v) for v in sample_directions], dim=0)  # note: iterate over columns
                 
                 for counter, pga_curve in enumerate(pga_curves, start=0):
                     base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
