@@ -1251,22 +1251,28 @@ class ContextManager:
                     base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
                     self.sample_data_images(ldm, 
                                             pga_curve, 
+                                            torch.randn_like(pga_curve),
                                             cond1, 
                                             uncond_base, 
                                             cur_step, 
                                             guide_scale, 
-                                            new_dir,
+                                            encoded_guide_scale,
+                                            out_dir,
+                                            cond_target=None,
                                             )
                     
                 for counter, sample_curve in enumerate(sample_curves, start=0):
                     base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/samples{counter}/")
                     self.sample_data_images(ldm, 
                                             sample_curve, 
+                                            torch.randn_like(pga_curve),
                                             cond1, 
                                             uncond_base, 
                                             cur_step, 
                                             guide_scale, 
-                                            new_dir,
+                                            encoded_guide_scale,
+                                            out_dir,
+                                            cond_target=None,
                                             )
                 
                 return
