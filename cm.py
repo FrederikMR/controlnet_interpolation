@@ -1257,7 +1257,7 @@ class ContextManager:
                                             cur_step, 
                                             guide_scale, 
                                             encoded_guide_scale,
-                                            out_dir,
+                                            new_dir,
                                             cond_target=None,
                                             )
                     
@@ -1271,7 +1271,7 @@ class ContextManager:
                                             cur_step, 
                                             guide_scale, 
                                             encoded_guide_scale,
-                                            out_dir,
+                                            new_dir,
                                             cond_target=None,
                                             )
                 
