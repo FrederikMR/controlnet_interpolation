@@ -1,4 +1,4 @@
-# # A Likely Geometry of Generative Models -- Application to ControlNet
+# A Likely Geometry of Generative Models -- Application to ControlNet
 
 Experimential results on ControlNet for method described in https://github.com/FrederikMR/likely_geometry. Please se that GitHub for details.
 
