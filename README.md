@@ -3,8 +3,9 @@
 Experimential results on ControlNet for method described in https://github.com/FrederikMR/likely_geometry. Please se that GitHub for details.
 
 <p align="center">
-  <img src="[[https://github.com/user-attachments/files/25181487/pga_mod2_wide.pdf](https://github.com/user-attachments/files/25181940/pgeorce_noise_mean_grid_left_mod.pdf)](https://github.com/user-attachments/files/25181940/pgeorce_noise_mean_grid_left_mod.pdf)" width="800" />
+  <img src="https://github.com/user-attachments/files/25181960/pgeorce_noise_mean_grid_left_mod.pdf" width="700" />
 </p>
+
 
 
 ## Installation and Requirements
