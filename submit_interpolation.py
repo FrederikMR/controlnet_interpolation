@@ -60,7 +60,7 @@ def generate_job(model, computation_method, method, lam, clip, N, reg_type="scor
         --nu -1.0 \\
         --N {N} \\
         --max_iter {max_iter} \\
-        --num_images 10 \\
+        --num_images 1 \\
         --reg_type {reg_type} \\
         --interpolation_space {interpolation_space} \\
         --project_to_sphere {project_to_sphere} \\
@@ -86,7 +86,7 @@ def loop_jobs(wait_time = 1.0):
     lam = [20.0]
     max_iter = 1000
     clip = [0]#[0,1]
-    n_images = 100
+    n_images = 10
     project_to_sphere = 1
     
     ################################### Noise Space ################################
