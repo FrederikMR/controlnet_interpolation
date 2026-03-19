@@ -42,9 +42,10 @@ def generate_job(model, computation_method, method, lam, clip, N, reg_type="scor
     #BSUB -o ../output_folder/output_%J.out 
     #BSUB -e ../error_folder/error_%J.err 
     
-    module swap python3/3.10.12
     module swap cuda/12.0
     module swap cudnn/v8.9.1.23-prod-cuda-12.X
+    source /work3/fmry/miniconda3/bin/activate
+    conda activate section_talk_03_03_26
     
     python3 run_interpolation.py \\
         --img_types {model} \\
