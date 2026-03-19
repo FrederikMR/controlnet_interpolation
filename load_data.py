@@ -170,7 +170,7 @@ COCO_TARGET_PROMPT = "A photo of a real-world scene in the desert"
 # -------------------------------------------------------------
 TARGET_MAP = {
     "cat":        "A photo of a tiger",
-    "aircraft":   "A photo of a old aircraft",
+    "aircraft":   "A photo of a Boeing 747",
     "apple":      "A photo of a shiny red apple",
     "banana":     "A photo of a ripe banana on a table",
     "bedroom":    "A photo of a luxurious bedroom interior",
