@@ -60,7 +60,7 @@ def generate_job(model, computation_method, method, lam, clip, N, reg_type="scor
         --nu -1.0 \\
         --N {N} \\
         --max_iter {max_iter} \\
-        --num_images 1 \\
+        --num_images 100 \\
         --reg_type {reg_type} \\
         --interpolation_space {interpolation_space} \\
         --project_to_sphere {project_to_sphere} \\
