@@ -1209,11 +1209,13 @@ class ContextManager:
                 n_pca = 3
                 pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
                 eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
-
-                pga_curves = torch.stack([ivp_method(noisy_mean, 50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                
+                #pga_curves = torch.stack([ivp_method(noisy_mean, 50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                pga_curves_forward = torch.stack([ivp_method(noisy_mean, 50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                pga_curves_backward = torch.stack([ivp_method(noisy_mean, -50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
                 
                 # Sample coefficients along PCs
-                samples = 3
+                samples = 10
                 device = eigenvalues.device  # cuda:0
                 z = torch.randn(samples, n_pca, device=device) * torch.sqrt(eigenvalues)
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
@@ -1236,10 +1238,11 @@ class ContextManager:
                 pca_vectors = pca_vectors[:, :n_pca]  # (d, n_pca)
                 eigenvalues = eigenvalues[:n_pca]     # (n_pca,)
 
-                pga_curves = torch.stack([ivp_method(data_mean, 50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                pga_curves_forward = torch.stack([ivp_method(data_mean, 50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
+                pga_curves_backward = torch.stack([ivp_method(data_mean, -50.0*v) for v in pca_vectors.T.reshape(-1, *shape[1:])], dim=0)  # note: iterate over columns
                 
                 # Sample coefficients along PCs
-                samples = 3
+                samples = 10
                 device = eigenvalues.device  # cuda:0
                 z = torch.randn(samples, n_pca, device=device) * torch.sqrt(eigenvalues)
                 sample_directions = z @ pca_vectors.T                      # (samples, d)
@@ -1247,8 +1250,21 @@ class ContextManager:
                 
                 sample_curves = torch.stack([ivp_method(data_mean, 0.1*v) for v in sample_directions], dim=0)  # note: iterate over columns
                 
-                for counter, pga_curve in enumerate(pga_curves, start=0):
-                    base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
+                for counter, pga_curve in enumerate(pga_curves_forward, start=0):
+                    base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga_forward_{counter}/")
+                    self.sample_data_images(ldm, 
+                                            pga_curve, 
+                                            torch.randn_like(pga_curve),
+                                            cond1, 
+                                            uncond_base, 
+                                            cur_step, 
+                                            guide_scale, 
+                                            encoded_guide_scale,
+                                            new_dir,
+                                            cond_target=None,
+                                            )
+                for counter, pga_curve in enumerate(pga_curves_backward, start=0):
+                    base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga_backward_{counter}/")
                     self.sample_data_images(ldm, 
                                             pga_curve, 
                                             torch.randn_like(pga_curve),
@@ -1302,8 +1318,19 @@ class ContextManager:
             
             print(noisy_curve.shape)
 
-        for counter, pga_curve in enumerate(pga_curves, start=0):
-            base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga{counter}/")
+        for counter, pga_curve in enumerate(pga_curves_forward, start=0):
+            base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga_forward_{counter}/")
+            self.sample_images(ldm, 
+                               pga_curve, 
+                               cond1, 
+                               uncond_base, 
+                               cur_step, 
+                               guide_scale, 
+                               new_dir,
+                               )
+            
+        for counter, pga_curve in enumerate(pga_curves_backward, start=0):
+            base_dir, new_dir = self.create_out_dir(original_out_dir, f"pga/pga_backward_{counter}/")
             self.sample_images(ldm, 
                                pga_curve, 
                                cond1, 
