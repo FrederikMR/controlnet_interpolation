@@ -90,7 +90,7 @@ def loop_jobs(wait_time = 1.0):
     project_to_sphere = 1
     
     ################################### Noise Space ################################
-    model = ["flower", "face", "forest", "tree", "bedroom"] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
+    model = ["face"] #['afhq-cat', 'afhq-dog', 'afhq-wild', 'afhq', 'ffhq', 'coco', 'house', 'mountain', 'aircraft', "lion_tiger"]
     interpolation_space = ['noise']
     computation_methods = ['ivp', 'bvp'] #['ivp', 'bvp']
     

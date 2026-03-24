@@ -180,7 +180,7 @@ TARGET_MAP = {
     "cherry":     "A photo of fresh cherries",
     "cup":        "A photo of a ceramic cup",
     "eagle":      "A photo of an eagle in flight",
-    "face":       "A photo of a human face with open mouth",
+    "face":       "A photo of a man",
     "flower":     "A photo of a colorful flower",
     "forest":     "A photo of a dense forest",
     "grape":      "A photo of a bunch of grapes",
