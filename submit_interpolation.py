@@ -151,12 +151,14 @@ def loop_jobs(wait_time = 1.0):
     computation_methods = ['metrics']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
+    lam = [1.0, 5.0, 20.0, 100.0]
     method = ['ProbGEORCE']
     reg_types = ['prior']
     interpolation_space = ['noise']
     computation_methods = ['metrics']
     run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
+    lam = [1.0, 5.0, 20.0, 100.0]
     method = ['ProbGEORCE']
     reg_types = ['score']
     interpolation_space = ['data']
@@ -174,6 +176,21 @@ def loop_jobs(wait_time = 1.0):
     interpolation_space = ['data']
     computation_methods = ['pga']
     #run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    
+    ################################### Timing ################################
+    model = ['cat']
+    computation_methods = ['timing']
+    lam = [20.0]
+    
+    method = ['Linear', 'Spherical', 'NoiseDiffusion', 'ProbGEORCE']
+    reg_types = ['prior']
+    interpolation_space = ['noise']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
+    
+    method = ['ProbGEORCE']
+    reg_types = ['score']
+    interpolation_space = ['data']
+    run_model(computation_methods, model, method, clip, lam, N, reg_types, interpolation_space, max_iter, n_images, project_to_sphere, wait_time)
     
     return
                             

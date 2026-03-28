@@ -19,6 +19,7 @@ import argparse
 import os
 
 import cm
+import cm_timing
 from load_data import load_dataset
 
 #%% Args Parser
@@ -99,6 +100,14 @@ def run_interpolation()->None:
                            project_to_sphere = args.project_to_sphere,
                            )
     
+    CM_time = cm_timing.ContextManager(N=args.N, lam=args.lam, max_iter=args.max_iter, inter_method=args.method, clip=args.clip,
+                           mu = mu, nu = nu,
+                           ckpt_path=args.ckpt_path, num_images=args.num_images, seed=args.seed,
+                           reg_type=args.reg_type,
+                           interpolation_space=args.interpolation_space,
+                           project_to_sphere = args.project_to_sphere,
+                           )
+    
     guide_scale = 10.0 #guide_scale
     encoded_guide_scale = 1.0
     if args.computation_method == "ivp":
@@ -126,6 +135,9 @@ def run_interpolation()->None:
         
         CM.compute_metrics(imgs, real_dataloader=ds, prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale, 
                            encoded_guide_scale=encoded_guide_scale, out_dir=f'../figures/{args.img_types}/')
+    elif args.computation_method == "timing":
+        CM_time.bvp(imgs[0], imgs[1], prompt=prompt, n_prompt=n_prompt, ddim_steps=200,  guide_scale=guide_scale, 
+                    encoded_guide_scale=encoded_guide_scale, out_dir=f'../figures/{args.img_types}/')
         
     return
 

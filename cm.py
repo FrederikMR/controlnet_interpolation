@@ -1477,6 +1477,7 @@ class ContextManager:
         
         
         fake_count = 0
+        lengths = []
         for l1, l2, left_image, right_image in zip(start_images, end_images, left_images, right_images):
             print(f"Computing {fake_count+1}/{len(start_images)}")
             if self.inter_method=="Noise":
@@ -1564,6 +1565,12 @@ class ContextManager:
             fid.update(imgs, real=False)
             kid.update(imgs, real=False)
             
+            diffs = imgs[1:].float() - imgs[:-1].float()
+            step_lengths = diffs.view(diffs.shape[0], -1).norm(dim=1)  # L2 per step
+            transition_length = step_lengths.sum()
+            
+            lengths.append(transition_length.item())
+            
             fake_count += 1
             
         safe_subset_size = min(kid.subset_size, real_count, fake_count)
@@ -1572,10 +1579,13 @@ class ContextManager:
             
         fid_score = fid.compute().item()
         kid_mean, kid_std = kid.compute()
+        mean_length = sum(lengths) / len(lengths)
+        std_length = (sum((x - mean_length) ** 2 for x in lengths) / len(lengths)) ** 0.5
         out_file=f"{out_dir}/metrics.txt"
         with open(out_file, "w") as f:
             f.write(f"FID: {fid_score:.4f}\n")
             f.write(f"KID: {kid_mean.item():.6f} ± {kid_std.item():.6f}\n")
+            f.write(f"Length: {mean_length:.6f} ± {std_length:.6f}\n")
             f.write(f"Method: {self.inter_method}\n")
             f.write(f"Timestep: {cur_step}\n")
             f.write(f"Shared noise: True\n")
