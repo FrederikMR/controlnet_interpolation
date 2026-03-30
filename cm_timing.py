@@ -832,7 +832,7 @@ class ContextManager:
             if self.interpolation_space == "noise":
                 noisy_curve = bvp_method(l1, l2)
                 
-                timing = timeit.repeat(lambda: self.bvp_method(l1, l2), 
+                timing = timeit.repeat(lambda: bvp_method(l1, l2), 
                                        number=5, 
                                        repeat=5)
                 
@@ -843,7 +843,7 @@ class ContextManager:
                 
                 data_curve = bvp_method(left_image, right_image)
                 
-                timing = timeit.repeat(lambda: self.bvp_method(left_image, right_image), 
+                timing = timeit.repeat(lambda: bvp_method(left_image, right_image), 
                                        number=5, 
                                        repeat=5)
                 
