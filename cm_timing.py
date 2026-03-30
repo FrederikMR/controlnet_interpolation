@@ -735,7 +735,7 @@ class ContextManager:
             min_steps = int(ddim_steps * min_steps)
         if max_steps < 1:
             max_steps = int(ddim_steps * max_steps)
-        base_dir, out_dir = self.create_out_dir(out_dir, "bvp")
+        base_dir, out_dir = self.create_out_dir(out_dir, "bvp_timing")
         
         if isinstance(img1, Image.Image):
             img1.save(f'{base_dir}/{0:03d}.png')
